@@ -1,0 +1,1088 @@
+# 単体テスト（Red）: 実装の前
+
+## バックエンド
+$ uv run pytest tests/unit/ -q -p no:cacheprovider --continue-on-collection-errors --basetemp=/tmp/mod335/pytest
+（/tmp/pytest-of-shuhei2441 が別のユーザーの所有のため --basetemp を指定した）
+........................................................................ [ 11%]
+...............................................................F........ [ 23%]
+......................................................FFFFFFFF........FF [ 34%]
+FFF..................................................................... [ 46%]
+...................................................................FF... [ 57%]
+..................................FF.................................... [ 69%]
+........................................................................ [ 80%]
+........................................................................ [ 92%]
+................................................                         [100%]
+==================================== ERRORS ====================================
+_______ ERROR collecting tests/unit/dev_docs/features/view/test_edit.py ________
+ImportError while importing test module '/home/shuhei2441/repo/dev-docs/.claude/worktrees/feat-doc-view-edit-document-body/tests/unit/dev_docs/features/view/test_edit.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+tests/unit/dev_docs/features/view/test_edit.py:10: in <module>
+    from dev_docs.features.view.edit import (
+E   ModuleNotFoundError: No module named 'dev_docs.features.view.edit'
+=================================== FAILURES ===================================
+___________________ test_schema_to_markdown_when_item_ranges ___________________
+
+make_document = <function make_document.<locals>._make at 0x7464ad166f00>
+
+    def test_schema_to_markdown_when_item_ranges(make_document: Callable[..., Document]) -> None:
+        """項目の範囲を記録する（正常系）。"""
+        # 準備
+        ranges: list[tuple[str, str]] = []
+>       context = RenderContext(links={}, issue_url=None, path="notes/n1.yaml", item_ranges=ranges)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: RenderContext.__init__() got an unexpected keyword argument 'item_ranges'
+
+tests/unit/dev_docs/features/convert/test_markdown.py:906: TypeError
+______________________________ test_commit_edits _______________________________
+
+fake_index = FakeIndex(configs={'sample': {'_source': 'sample', '_git': True, 'nav': None, 'documents': [{'id': 'terms', 'paths': [...ne, 'diff': 'd2'}], 'commit': {'sha': '0a1b2c3', 'branch': 'develop', 'retried': False}})}, refused=False, requests=[])
+make_client = <function make_client.<locals>._make at 0x7464ad1d4ca0>
+caplog = <_pytest.logging.LogCaptureFixture object at 0x7464ad3ee900>
+
+    def test_commit_edits(
+        fake_index: FakeIndex,
+        make_client: Callable[..., ProjectIndexClient],
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """変更ごとの結果に戻す（正常系）。"""
+        # 準備
+        _prepare(
+            fake_index,
+            200,
+            {
+                "applied": True,
+                "results": [
+                    {
+                        "kind": "write",
+                        "index": 0,
+                        "id": "n1",
+                        "status": "updated",
+                        "version": "v2",
+                        "diff": "d0",
+                    },
+                    {
+                        "kind": "write",
+                        "index": 1,
+                        "id": "kind",
+                        "status": "created",
+                        "version": "v3",
+                        "diff": "d1",
+                    },
+                    {
+                        "kind": "delete",
+                        "index": 0,
+                        "id": "old-name",
+                        "status": "deleted",
+                        "version": None,
+                        "diff": "d2",
+                    },
+                ],
+                "commit": {"sha": "0a1b2c3", "branch": "develop", "retried": False},
+            },
+        )
+        request = _request()
+        caplog.set_level(logging.INFO, logger="dev_docs.features.metadata.commits")
+        # 実行
+>       result = asyncio.run(commit_edits(make_client(), "sample", request, convert=ConvertService()))
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: commit_edits() got an unexpected keyword argument 'convert'
+
+tests/unit/dev_docs/features/metadata/test_commits.py:217: TypeError
+___________________ test_commit_edits_when_validation_failed ___________________
+
+fake_index = FakeIndex(configs={'sample': {'_source': 'sample', '_git': True, 'nav': None, 'documents': [{'id': 'terms', 'paths': [... 'detail': '検査に合格しませんでした', 'errors': [{'path': 'writes[1].name', 'reason': '必須のキーが無い'}]})}, refused=False, requests=[])
+make_client = <function make_client.<locals>._make at 0x7464ad1d5640>
+
+    def test_commit_edits_when_validation_failed(
+        fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+    ) -> None:
+        """422 の違反を変更へ戻す（異常系）。"""
+        # 準備
+        _prepare(
+            fake_index,
+            422,
+            {
+                "title": "ValidationFailedError",
+                "status": 422,
+                "detail": "検査に合格しませんでした",
+                "errors": [{"path": "writes[1].name", "reason": "必須のキーが無い"}],
+            },
+        )
+        request = _request()
+        # 実行
+        with pytest.raises(EditsRejectedError) as caught:
+>           asyncio.run(commit_edits(make_client(), "sample", request, convert=ConvertService()))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: commit_edits() got an unexpected keyword argument 'convert'
+
+tests/unit/dev_docs/features/metadata/test_commits.py:248: TypeError
+_____________________ test_commit_edits_when_not_permitted _____________________
+
+fake_index = FakeIndex(configs={'sample': {'_source': 'sample', '_git': True, 'nav': None, 'documents': [{'id': 'terms', 'paths': [...kinds': ['note'], 'nextSteps': ['sources[].direct_commit.write_api_kinds に種類を追加してください']})}, refused=False, requests=[])
+make_client = <function make_client.<locals>._make at 0x7464ad1d5e80>
+
+    def test_commit_edits_when_not_permitted(
+        fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+    ) -> None:
+        """403 の種類を変更へ戻す（異常系）。"""
+        # 準備
+        _prepare(
+            fake_index,
+            403,
+            {
+                "title": "DirectCommitNotPermittedError",
+                "status": 403,
+                "detail": "直コミットを許可していない種類があります",
+                "kinds": ["note"],
+                "nextSteps": ["sources[].direct_commit.write_api_kinds に種類を追加してください"],
+            },
+        )
+        request = _request()
+        # 実行
+        with pytest.raises(EditsRejectedError) as caught:
+>           asyncio.run(commit_edits(make_client(), "sample", request, convert=ConvertService()))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: commit_edits() got an unexpected keyword argument 'convert'
+
+tests/unit/dev_docs/features/metadata/test_commits.py:275: TypeError
+_______________________ test_commit_edits_when_timed_out _______________________
+
+fake_index = FakeIndex(configs={'sample': {'_source': 'sample', '_git': True, 'nav': None, 'documents': [{'id': 'terms', 'paths': [...200, {'path': 'notes/n1.yaml', 'itemVersions': {'id': 'i1', 'name': 'm1', 'tags': 't1'}})}, refused=False, requests=[])
+make_client = <function make_client.<locals>._make at 0x7464ad1d66c0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7464ad2f2b30>
+
+    def test_commit_edits_when_timed_out(
+        fake_index: FakeIndex,
+        make_client: Callable[..., ProjectIndexClient],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """待ちの上限（異常系）。"""
+    
+        # 準備
+        async def timed_out(*_: Any, **__: Any) -> Any:
+            raise ProjectIndexTimeoutError(address="http://127.0.0.1:8786", reason="72 秒")
+    
+        fake_index.configs["sample"] = config_json(documents=CONFIG_ROWS)
+        fake_index.responses[N1_PATH] = (200, {"path": "notes/n1.yaml", "itemVersions": N1_VERSIONS})
+        client = make_client()
+        monkeypatch.setattr(client, "commit_documents", timed_out)
+        request = _request()
+        # 実行
+        with pytest.raises(EditsRejectedError) as caught:
+>           asyncio.run(commit_edits(client, "sample", request, convert=ConvertService()))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: commit_edits() got an unexpected keyword argument 'convert'
+
+tests/unit/dev_docs/features/metadata/test_commits.py:300: TypeError
+________________________ test_commit_edits_when_dry_run ________________________
+
+fake_index = FakeIndex(configs={'sample': {'_source': 'sample', '_git': True, 'nav': None, 'documents': [{'id': 'terms', 'paths': [...ST', '/sources/sample/commits'): (200, {'applied': False, 'results': [], 'commit': None})}, refused=False, requests=[])
+make_client = <function make_client.<locals>._make at 0x7464ad1d6fb0>
+
+    def test_commit_edits_when_dry_run(
+        fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+    ) -> None:
+        """差分確認でも説明を送信する（正常系）。"""
+        # 準備
+        _prepare(fake_index, 200, {"applied": False, "results": [], "commit": None})
+        request = _request(message=None, dry_run=True)
+        # 実行
+>       asyncio.run(commit_edits(make_client(), "sample", request, convert=ConvertService()))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: commit_edits() got an unexpected keyword argument 'convert'
+
+tests/unit/dev_docs/features/metadata/test_commits.py:314: TypeError
+______________________ test_commit_edits_when_mapped_tags ______________________
+
+fake_index = FakeIndex(configs={'sample': {'_source': 'sample', '_git': True, 'nav': None, 'documents': [{'id': 'note', 'paths': ['...ST', '/sources/sample/commits'): (200, {'applied': False, 'results': [], 'commit': None})}, refused=False, requests=[])
+make_client = <function make_client.<locals>._make at 0x7464ad1d7740>
+
+    def test_commit_edits_when_mapped_tags(
+        fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+    ) -> None:
+        """対応づけた配列の項目の列でも文書を取得しない（正常系）。"""
+        # 準備
+        note_row = {
+            "id": "note",
+            "paths": ["notes/*.yaml"],
+            "alias_type": "doc",
+            "metadata": {"tags": "tags[].name"},
+        }
+        fake_index.configs["sample"] = config_json(documents=[note_row])
+        fake_index.responses[N1_PATH] = (200, {"path": "notes/n1.yaml", "itemVersions": N1_VERSIONS})
+        fake_index.responses[COMMITS_PATH] = (
+            200,
+            {"applied": False, "results": [], "commit": None},
+        )
+        edit = Edit(
+            key="tags:n1:update",
+            kind="tags",
+            op="update",
+            doc_id="n1",
+            doc_kind="note",
+            expected_version="c3d4e5",
+            doc_path="notes/n1.yaml",
+            values={"tags": ["topic:a", "topic:b"]},
+        )
+        request = CommitRequest(edits=[edit], dry_run=True, base_commit=BASE_COMMIT)
+        # 実行
+>       asyncio.run(commit_edits(make_client(), "sample", request, convert=ConvertService()))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: commit_edits() got an unexpected keyword argument 'convert'
+
+tests/unit/dev_docs/features/metadata/test_commits.py:351: TypeError
+_________________ test_commit_edits_when_base_commit_unusable __________________
+
+fake_index = FakeIndex(configs={'sample': {'_source': 'sample', '_git': True, 'nav': None, 'documents': [{'id': 'terms', 'paths': [...', 'status': 409, 'detail': '編集を始めたときのコミットが既定のブランチの祖先ではありません', 'reason': 'not_ancestor'})}, refused=False, requests=[])
+make_client = <function make_client.<locals>._make at 0x7464ad090040>
+
+    def test_commit_edits_when_base_commit_unusable(
+        fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+    ) -> None:
+        """編集を始めたときのコミットが使用できない（異常系）。"""
+        # 準備
+        _prepare(
+            fake_index,
+            409,
+            {
+                "title": "BaseCommitUnusableError",
+                "status": 409,
+                "detail": "編集を始めたときのコミットが既定のブランチの祖先ではありません",
+                "reason": "not_ancestor",
+            },
+        )
+        # 実行
+        with pytest.raises(EditsRejectedError) as caught:
+>           asyncio.run(commit_edits(make_client(), "sample", _request(), convert=ConvertService()))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: commit_edits() got an unexpected keyword argument 'convert'
+
+tests/unit/dev_docs/features/metadata/test_commits.py:381: TypeError
+_______________________ test_commit_edits_when_conflict ________________________
+
+fake_index = FakeIndex(configs={'sample': {'_source': 'sample', '_git': True, 'nav': None, 'documents': [{'id': 'terms', 'paths': [... 'timedOut': False, 'stdout': 'pushed\nhttps://github.com/o/r/pull/9\n', 'stderr': ''}}})}, refused=False, requests=[])
+make_client = <function make_client.<locals>._make at 0x7464ad0907d0>
+
+    def test_commit_edits_when_conflict(
+        fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+    ) -> None:
+        """衝突してブランチに残した（正常系）。"""
+        # 準備
+        _prepare(
+            fake_index,
+            200,
+            {
+                "applied": False,
+                "results": [],
+                "commit": None,
+                "conflict": {
+                    "branch": "project-index/conflict/20261123-103000-0a1b2c3",
+                    "commit": "1b2c3d4",
+                    "baseCommit": BASE_COMMIT,
+                    "errors": [{"path": "writes[0].tags", "reason": "tags が変わっています"}],
+                    "script": {
+                        "exitCode": 0,
+                        "timedOut": False,
+                        "stdout": "pushed\nhttps://github.com/o/r/pull/9\n",
+                        "stderr": "",
+                    },
+                },
+            },
+        )
+        # 実行
+        result = asyncio.run(
+>           commit_edits(make_client(), "sample", _request(), convert=ConvertService())
+        )
+E       TypeError: commit_edits() got an unexpected keyword argument 'convert'
+
+tests/unit/dev_docs/features/metadata/test_commits.py:417: TypeError
+_________________________ test_to_operations_when_body _________________________
+
+    def test_to_operations_when_body() -> None:
+        """本文の変更を変換する（正常系）。"""
+        # 準備
+        edits = [
+>           _body_edit("body:n1:#items[i1].body", "#items[i1].body", "修正後の本文"),
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            _body_edit("body:n1:@file", "@file", "id: n1\nname: 修正後\n"),
+            _body_edit("body:guide:@file", "@file", "# 修正後\n", doc_path="guide.md"),
+        ]
+
+tests/unit/dev_docs/features/metadata/test_commits.py:620: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+key = 'body:n1:#items[i1].body', path = '#items[i1].body', value = '修正後の本文'
+doc_path = 'notes/n1.yaml'
+
+    def _body_edit(key: str, path: str, value: Any, *, doc_path: str = "notes/n1.yaml") -> Edit:
+        """文書 n1 の本文の変更を作る。"""
+>       return Edit(
+            key=key,
+            kind="body",
+            op="update",
+            doc_id="n1",
+            doc_kind="note",
+            expected_version="c3d4e5",
+            doc_path=doc_path,
+            values={path: value},
+        )
+E       pydantic_core._pydantic_core.ValidationError: 1 validation error for Edit
+E       kind
+E         Input should be 'terms', 'aliases', 'tags', 'rules' or 'files' [type=literal_error, input_value='body', input_type=str]
+E           For further information visit https://errors.pydantic.dev/2.14/v/literal_error
+
+tests/unit/dev_docs/features/metadata/test_commits.py:604: ValidationError
+________________ test_to_operations_when_whole_file_unparsable _________________
+
+    def test_to_operations_when_whole_file_unparsable() -> None:
+        """読み込めないファイル全体（異常系）。"""
+        # 準備
+>       edit = _body_edit("body:n1:@file", "@file", "id: n1\nname: a\n\tsummary: b\n")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/metadata/test_commits.py:657: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+key = 'body:n1:@file', path = '@file', value = 'id: n1\nname: a\n\tsummary: b\n'
+doc_path = 'notes/n1.yaml'
+
+    def _body_edit(key: str, path: str, value: Any, *, doc_path: str = "notes/n1.yaml") -> Edit:
+        """文書 n1 の本文の変更を作る。"""
+>       return Edit(
+            key=key,
+            kind="body",
+            op="update",
+            doc_id="n1",
+            doc_kind="note",
+            expected_version="c3d4e5",
+            doc_path=doc_path,
+            values={path: value},
+        )
+E       pydantic_core._pydantic_core.ValidationError: 1 validation error for Edit
+E       kind
+E         Input should be 'terms', 'aliases', 'tags', 'rules' or 'files' [type=literal_error, input_value='body', input_type=str]
+E           For further information visit https://errors.pydantic.dev/2.14/v/literal_error
+
+tests/unit/dev_docs/features/metadata/test_commits.py:604: ValidationError
+____________ test_commit_edits_when_body_path_unknown[unknown-path] ____________
+
+fake_index = FakeIndex(configs={}, docs={}, unreadable={}, details={}, decisions={}, decision_texts={}, sources=[], search_results=...fs_results={}, settings={'settingsPath': '/pi/settings.yaml', 'sources': []}, responses={}, refused=False, requests=[])
+make_client = <function make_client.<locals>._make at 0x7464ad0935e0>
+target = ('body:n1:#items[x].id', '#items[x].id', 'x2', 'notes/n1.yaml')
+docs = [{'id': 'n1', 'path': 'notes/n1.yaml', 'kind': 'note', 'value': {'id': 'n1', 'name': 'm1'}}]
+
+    @pytest.mark.parametrize(
+        ("target", "docs"),
+        [
+            pytest.param(
+                ("body:n1:#items[x].id", "#items[x].id", "x2", "notes/n1.yaml"),
+                [
+                    {
+                        "id": "n1",
+                        "path": "notes/n1.yaml",
+                        "kind": "note",
+                        "value": {"id": "n1", "name": "m1"},
+                    }
+                ],
+                id="unknown-path",
+            ),
+            pytest.param(
+                ("body:tool:@file", "@file", "x = 2\n", "tool.py"),
+                [
+                    {
+                        "id": "n1",
+                        "path": "docs/files.yml",
+                        "kind": "files",
+                        "bodyPath": "tool.py",
+                        "value": {"path": "tool.py"},
+                    }
+                ],
+                id="not-editable",
+            ),
+        ],
+    )
+    def test_commit_edits_when_body_path_unknown(
+        fake_index: FakeIndex,
+        make_client: Callable[..., ProjectIndexClient],
+        target: tuple[str, str, str, str],
+        docs: list[dict[str, Any]],
+    ) -> None:
+        """修正できない項目のパス（異常系）。"""
+        # 準備
+        key, path, value, doc_path = target
+>       edit = _body_edit(key, path, value, doc_path=doc_path)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/metadata/test_commits.py:706: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+key = 'body:n1:#items[x].id', path = '#items[x].id', value = 'x2'
+doc_path = 'notes/n1.yaml'
+
+    def _body_edit(key: str, path: str, value: Any, *, doc_path: str = "notes/n1.yaml") -> Edit:
+        """文書 n1 の本文の変更を作る。"""
+>       return Edit(
+            key=key,
+            kind="body",
+            op="update",
+            doc_id="n1",
+            doc_kind="note",
+            expected_version="c3d4e5",
+            doc_path=doc_path,
+            values={path: value},
+        )
+E       pydantic_core._pydantic_core.ValidationError: 1 validation error for Edit
+E       kind
+E         Input should be 'terms', 'aliases', 'tags', 'rules' or 'files' [type=literal_error, input_value='body', input_type=str]
+E           For further information visit https://errors.pydantic.dev/2.14/v/literal_error
+
+tests/unit/dev_docs/features/metadata/test_commits.py:604: ValidationError
+____________ test_commit_edits_when_body_path_unknown[not-editable] ____________
+
+fake_index = FakeIndex(configs={}, docs={}, unreadable={}, details={}, decisions={}, decision_texts={}, sources=[], search_results=...fs_results={}, settings={'settingsPath': '/pi/settings.yaml', 'sources': []}, responses={}, refused=False, requests=[])
+make_client = <function make_client.<locals>._make at 0x7464ad093e20>
+target = ('body:tool:@file', '@file', 'x = 2\n', 'tool.py')
+docs = [{'id': 'n1', 'path': 'docs/files.yml', 'kind': 'files', 'bodyPath': 'tool.py', ...}]
+
+    @pytest.mark.parametrize(
+        ("target", "docs"),
+        [
+            pytest.param(
+                ("body:n1:#items[x].id", "#items[x].id", "x2", "notes/n1.yaml"),
+                [
+                    {
+                        "id": "n1",
+                        "path": "notes/n1.yaml",
+                        "kind": "note",
+                        "value": {"id": "n1", "name": "m1"},
+                    }
+                ],
+                id="unknown-path",
+            ),
+            pytest.param(
+                ("body:tool:@file", "@file", "x = 2\n", "tool.py"),
+                [
+                    {
+                        "id": "n1",
+                        "path": "docs/files.yml",
+                        "kind": "files",
+                        "bodyPath": "tool.py",
+                        "value": {"path": "tool.py"},
+                    }
+                ],
+                id="not-editable",
+            ),
+        ],
+    )
+    def test_commit_edits_when_body_path_unknown(
+        fake_index: FakeIndex,
+        make_client: Callable[..., ProjectIndexClient],
+        target: tuple[str, str, str, str],
+        docs: list[dict[str, Any]],
+    ) -> None:
+        """修正できない項目のパス（異常系）。"""
+        # 準備
+        key, path, value, doc_path = target
+>       edit = _body_edit(key, path, value, doc_path=doc_path)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/metadata/test_commits.py:706: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+key = 'body:tool:@file', path = '@file', value = 'x = 2\n', doc_path = 'tool.py'
+
+    def _body_edit(key: str, path: str, value: Any, *, doc_path: str = "notes/n1.yaml") -> Edit:
+        """文書 n1 の本文の変更を作る。"""
+>       return Edit(
+            key=key,
+            kind="body",
+            op="update",
+            doc_id="n1",
+            doc_kind="note",
+            expected_version="c3d4e5",
+            doc_path=doc_path,
+            values={path: value},
+        )
+E       pydantic_core._pydantic_core.ValidationError: 1 validation error for Edit
+E       kind
+E         Input should be 'terms', 'aliases', 'tags', 'rules' or 'files' [type=literal_error, input_value='body', input_type=str]
+E           For further information visit https://errors.pydantic.dev/2.14/v/literal_error
+
+tests/unit/dev_docs/features/metadata/test_commits.py:604: ValidationError
+____________________ test_item_expected_versions_when_body _____________________
+
+fake_index = FakeIndex(configs={'sample': {'_source': 'sample', '_git': True, 'nav': None, 'documents': [{'id': 'terms', 'paths': [...l'): (200, {'path': 'notes/n1.yaml', 'itemVersions': {'items': 't-items', 'name': 'm1'}})}, refused=False, requests=[])
+make_client = <function make_client.<locals>._make at 0x7464ad014720>
+
+    def test_item_expected_versions_when_body(
+        fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+    ) -> None:
+        """本文の変更の最上位のキー（正常系）。"""
+        # 準備
+        fake_index.configs["sample"] = config_json(documents=CONFIG_ROWS)
+        fake_index.responses[N1_PATH] = (
+            200,
+            {"path": "notes/n1.yaml", "itemVersions": {"items": "t-items", "name": "m1"}},
+        )
+        request = _request(
+            edits=[
+>               _body_edit("body:n1:#items[i1].body", "#items[i1].body", "修正後"),
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                _body_edit("body:n1:@file", "@file", "id: n1\n"),
+            ]
+        )
+
+tests/unit/dev_docs/features/metadata/test_commits.py:741: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+key = 'body:n1:#items[i1].body', path = '#items[i1].body', value = '修正後'
+doc_path = 'notes/n1.yaml'
+
+    def _body_edit(key: str, path: str, value: Any, *, doc_path: str = "notes/n1.yaml") -> Edit:
+        """文書 n1 の本文の変更を作る。"""
+>       return Edit(
+            key=key,
+            kind="body",
+            op="update",
+            doc_id="n1",
+            doc_kind="note",
+            expected_version="c3d4e5",
+            doc_path=doc_path,
+            values={path: value},
+        )
+E       pydantic_core._pydantic_core.ValidationError: 1 validation error for Edit
+E       kind
+E         Input should be 'terms', 'aliases', 'tags', 'rules' or 'files' [type=literal_error, input_value='body', input_type=str]
+E           For further information visit https://errors.pydantic.dev/2.14/v/literal_error
+
+tests/unit/dev_docs/features/metadata/test_commits.py:604: ValidationError
+_________________________ test_get_document_when_edit __________________________
+
+fake_index = FakeIndex(configs={'sample': {'_source': 'sample', '_git': True, 'nav': None, 'documents': [{'id': 'rules', 'paths': [...1111111111&values=true&common_keys=true')>, <Request('GET', 'http://127.0.0.1:8786/sources/sample/docs/docs/a.yaml')>])
+make_handlers = <function make_handlers.<locals>._make at 0x7464ac22ba00>
+
+    def test_get_document_when_edit(fake_index: FakeIndex, make_handlers: Callable[..., Any]) -> None:
+        """本文の編集の情報（正常系）。"""
+        # 準備
+        _serve_editable(fake_index)
+        # 実行
+        response = _get(make_handlers(), "docs/a")
+        # 検証
+>       assert response.edit is not None
+               ^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/view/test_document.py:572: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = DocumentResponse(source='sample', ref='develop', path='docs/a', body_path=None, markdown='# A\n\n**id**: [A](a.yaml)\n...ff=None, updated_at=datetime.datetime(2026, 11, 1, 10, 0, tzinfo=datetime.timezone(datetime.timedelta(seconds=32400))))
+item = 'edit'
+
+    def __getattr__(self, item: str) -> Any:
+        private_attributes = object.__getattribute__(self, '__private_attributes__')
+        if item in private_attributes:
+            attribute = private_attributes[item]
+            if hasattr(attribute, '__get__'):
+                return attribute.__get__(self, type(self))  # type: ignore
+    
+            try:
+                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
+                return self.__pydantic_private__[item]  # type: ignore
+            except KeyError as exc:
+                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+        else:
+            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
+            # See `BaseModel.__repr_args__` for more details
+            try:
+                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
+            except AttributeError:
+                pydantic_extra = None
+    
+            if pydantic_extra and item in pydantic_extra:
+                return pydantic_extra[item]
+            else:
+                if hasattr(self.__class__, item):
+                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
+                else:
+                    # this is the current error
+>                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+E                   AttributeError: 'DocumentResponse' object has no attribute 'edit'
+
+.venv/lib/python3.14/site-packages/pydantic/main.py:1105: AttributeError
+____________________ test_get_document_when_edit_other_ref _____________________
+
+fake_index = FakeIndex(configs={'sample': {'_source': 'sample', '_git': True, 'nav': None, 'documents': [{'id': 'rules', 'paths': [...Request('GET', 'http://127.0.0.1:8786/sources/sample/docs/docs/a.yaml?ref=2222222222222222222222222222222222222222')>])
+make_handlers = <function make_handlers.<locals>._make at 0x7464ac2996f0>
+
+    def test_get_document_when_edit_other_ref(
+        fake_index: FakeIndex, make_handlers: Callable[..., Any]
+    ) -> None:
+        """既定のブランチでないリビジョン（正常系）。"""
+        # 準備
+        _serve_editable(fake_index)
+        # 実行
+        response = _get(make_handlers(), "docs/a", ref=OLD_COMMIT)
+        # 検証
+>       assert response.edit is None
+               ^^^^^^^^^^^^^
+
+tests/unit/dev_docs/features/view/test_document.py:588: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = DocumentResponse(source='sample', ref='2222222222222222222222222222222222222222', path='docs/a', body_path=None, markd...ff=None, updated_at=datetime.datetime(2026, 11, 1, 10, 0, tzinfo=datetime.timezone(datetime.timedelta(seconds=32400))))
+item = 'edit'
+
+    def __getattr__(self, item: str) -> Any:
+        private_attributes = object.__getattribute__(self, '__private_attributes__')
+        if item in private_attributes:
+            attribute = private_attributes[item]
+            if hasattr(attribute, '__get__'):
+                return attribute.__get__(self, type(self))  # type: ignore
+    
+            try:
+                # Note: self.__pydantic_private__ cannot be None if self.__private_attributes__ has items
+                return self.__pydantic_private__[item]  # type: ignore
+            except KeyError as exc:
+                raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}') from exc
+        else:
+            # `__pydantic_extra__` can fail to be set if the model is not yet fully initialized.
+            # See `BaseModel.__repr_args__` for more details
+            try:
+                pydantic_extra = object.__getattribute__(self, '__pydantic_extra__')
+            except AttributeError:
+                pydantic_extra = None
+    
+            if pydantic_extra and item in pydantic_extra:
+                return pydantic_extra[item]
+            else:
+                if hasattr(self.__class__, item):
+                    return super().__getattribute__(item)  # Raises AttributeError if appropriate
+                else:
+                    # this is the current error
+>                   raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+E                   AttributeError: 'DocumentResponse' object has no attribute 'edit'
+
+.venv/lib/python3.14/site-packages/pydantic/main.py:1105: AttributeError
+_____________________ test_build_view_router_when_preview ______________________
+
+sample_index = FakeIndex(configs={'sample': {'_source': 'sample', '_git': True, 'nav': None, 'documents': [{'id': 'rules', 'paths': [...commits': []}, settings={'settingsPath': '/pi/settings.yaml', 'sources': []}, responses={}, refused=False, requests=[])
+make_handlers = <function make_handlers.<locals>._make at 0x7464a6e3b060>
+
+    def test_build_view_router_when_preview(
+        sample_index: FakeIndex, make_handlers: Callable[..., Any]
+    ) -> None:
+        """本文のプレビュー（正常系）。"""
+        # 準備
+        client = _client(make_handlers())
+        # 実行
+        response = client.post(
+            "/_api/sources/sample/preview", json={"path": "docs/a", "content": "id: a\nname: 修正後\n"}
+        )
+        # 検証
+        body = response.json()
+>       assert response.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/unit/dev_docs/features/view/test_route.py:195: AssertionError
+_________________ test_build_view_router_when_preview_not_yaml _________________
+
+sample_index = FakeIndex(configs={'sample': {'_source': 'sample', '_git': True, 'nav': None, 'documents': [{'id': 'files', 'paths': [...commits': []}, settings={'settingsPath': '/pi/settings.yaml', 'sources': []}, responses={}, refused=False, requests=[])
+make_handlers = <function make_handlers.<locals>._make at 0x7464a6f7a560>
+
+    def test_build_view_router_when_preview_not_yaml(
+        sample_index: FakeIndex, make_handlers: Callable[..., Any]
+    ) -> None:
+        """YAML の文書でない（異常系）。"""
+        # 準備
+        sample_index.configs["sample"] = config_json(
+            "sample",
+            documents=[
+                {"id": "files", "paths": ["docs/files.yml"], "records": "files", "schema": {}},
+            ],
+        )
+        sample_index.docs["sample"] = {
+            None: [
+                doc_json(
+                    "guide", "docs/files.yml", kind="files", body_path="guide.md", body="# ガイド\n"
+                )
+            ]
+        }
+        client = _client(make_handlers())
+        # 実行
+        response = client.post(
+            "/_api/sources/sample/preview", json={"path": "guide.md", "content": "# 書き換え\n"}
+        )
+        # 検証
+>       assert response.status_code == 400
+E       assert 404 == 400
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests/unit/dev_docs/features/view/test_route.py:225: AssertionError
+=========================== short test summary info ============================
+ERROR tests/unit/dev_docs/features/view/test_edit.py
+FAILED tests/unit/dev_docs/features/convert/test_markdown.py::test_schema_to_markdown_when_item_ranges
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_commit_edits
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_commit_edits_when_validation_failed
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_commit_edits_when_not_permitted
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_commit_edits_when_timed_out
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_commit_edits_when_dry_run
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_commit_edits_when_mapped_tags
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_commit_edits_when_base_commit_unusable
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_commit_edits_when_conflict
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_to_operations_when_body
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_to_operations_when_whole_file_unparsable
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_commit_edits_when_body_path_unknown[unknown-path]
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_commit_edits_when_body_path_unknown[not-editable]
+FAILED tests/unit/dev_docs/features/metadata/test_commits.py::test_item_expected_versions_when_body
+FAILED tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_edit
+FAILED tests/unit/dev_docs/features/view/test_document.py::test_get_document_when_edit_other_ref
+FAILED tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_preview
+FAILED tests/unit/dev_docs/features/view/test_route.py::test_build_view_router_when_preview_not_yaml
+18 failed, 606 passed, 1 error in 7.08s
+exit=1
+
+## フロントエンド
+$ npm run test:unit
+
+> test:unit
+> vitest run --config frontend/vitest.config.ts
+
+
+ RUN  v5.0.5 /home/shuhei2441/repo/dev-docs/.claude/worktrees/feat-doc-view-edit-document-body
+
+ ❯ tests/unit/frontend/src/features/metadata/metadata/metadata-screen.test.tsx (0 test)
+ ❯ tests/unit/frontend/src/features/docs/doc-view/doc-view-screen.test.tsx (0 test)
+ ❯ tests/unit/frontend/src/shared/components/pending-panel/pending-panel.test.tsx (0 test)
+ ❯ tests/unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx (0 test)
+ ❯ tests/unit/frontend/src/features/docs/doc-view/edit.test.ts (0 test)
+ ❯ tests/unit/frontend/src/shared/stores/pending-edits-store.test.ts (0 test)
+ ❯ tests/unit/frontend/src/shared/components/pending-panel/queries.test.tsx (0 test)
+ ❯ tests/unit/frontend/src/features/docs/doc-view/components/doc-edit-bar.test.tsx (0 test)
+ ❯ tests/unit/frontend/src/features/docs/doc-view/components/doc-field-editor.test.tsx (0 test)
+ ❯ tests/unit/frontend/src/features/docs/doc-view/components/markdown-preview.test.tsx (1 test | 1 failed) 1105ms
+   × test_markdown_preview 1097ms
+ ❯ tests/unit/frontend/src/features/docs/doc-view/components/markdown-field-panel.test.tsx (0 test)
+ ❯ tests/unit/frontend/src/features/docs/doc-view/components/whole-file-editor.test.tsx (0 test)
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 11 ⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/frontend/src/shared/stores/pending-edits-store.test.ts [ tests/unit/frontend/src/shared/stores/pending-edits-store.test.ts ]
+Error: Failed to resolve import "@/shared/stores/pending-edits-store" from "tests/unit/frontend/src/shared/stores/pending-edits-store.test.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/shuhei2441/repo/dev-docs/.claude/worktrees/feat-doc-view-edit-document-body/tests/unit/frontend/src/shared/stores/pending-edits-store.test.ts:7:7
+  1  |  import { beforeEach, expect, test } from "vitest";
+  2  |  import { toCommitEdits, usePendingEditsStore } from "@/shared/stores/pending-edits-store";
+     |                                                       ^
+  3  |  const edit = (overrides = {}) => ({
+  4  |  	key: "tags:n1:update",
+ ❯ TransformPluginContext._formatLog node_modules/vite/dist/node/chunks/node.js:8803:39
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/node.js:8800:14
+ ❯ resolveId node_modules/vite/dist/node/chunks/node.js:26594:18
+ ❯ node_modules/vite/dist/node/chunks/node.js:26693:23
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/node.js:26666:4
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/node.js:8582:14
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/node.js:20155:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/12]⎯
+
+ FAIL  tests/unit/frontend/src/features/docs/doc-view/doc-view-screen.test.tsx [ tests/unit/frontend/src/features/docs/doc-view/doc-view-screen.test.tsx ]
+Error: Failed to resolve import "@/shared/stores/pending-edits-store" from "tests/unit/frontend/src/features/docs/doc-view/doc-view-screen.test.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/shuhei2441/repo/dev-docs/.claude/worktrees/feat-doc-view-edit-document-body/tests/unit/frontend/src/features/docs/doc-view/doc-view-screen.test.tsx:7:0
+  5  |  const __vi_import_2__ = await import("msw");
+  6  |  const __vi_import_3__ = await import("@/shared/stores/preferences");
+  7  |  const __vi_import_4__ = await import("@/shared/stores/pending-edits-store");
+     |                                       ^
+  8  |  const __vi_import_5__ = await import("@tests/helpers/fixtures");
+  9  |  const __vi_import_6__ = await import("@tests/helpers/msw-server");
+ ❯ TransformPluginContext._formatLog node_modules/vite/dist/node/chunks/node.js:8803:39
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/node.js:8800:14
+ ❯ resolveId node_modules/vite/dist/node/chunks/node.js:26594:18
+ ❯ node_modules/vite/dist/node/chunks/node.js:26693:23
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/node.js:26666:4
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/node.js:8582:14
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/node.js:20155:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/12]⎯
+
+ FAIL  tests/unit/frontend/src/features/docs/doc-view/edit.test.ts [ tests/unit/frontend/src/features/docs/doc-view/edit.test.ts ]
+Error: Failed to resolve import "@/shared/stores/pending-edits-store" from "tests/unit/frontend/src/features/docs/doc-view/edit.test.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/shuhei2441/repo/dev-docs/.claude/worktrees/feat-doc-view-edit-document-body/tests/unit/frontend/src/features/docs/doc-view/edit.test.ts:12:37
+  2  |  import { beforeEach, expect, test } from "vitest";
+  3  |  import { WHOLE_FILE, bodyEditKey, previewQueryOptions, upsertBodyEdit, usePendingBodyMode } from "@/features/docs/doc...
+  4  |  import { usePendingEditsStore } from "@/shared/stores/pending-edits-store";
+     |                                        ^
+  5  |  import { docEdit } from "@tests/helpers/fixtures";
+  6  |  import { server } from "@tests/helpers/msw-server";
+ ❯ TransformPluginContext._formatLog node_modules/vite/dist/node/chunks/node.js:8803:39
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/node.js:8800:14
+ ❯ resolveId node_modules/vite/dist/node/chunks/node.js:26594:18
+ ❯ node_modules/vite/dist/node/chunks/node.js:26693:23
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/node.js:26666:4
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/node.js:8582:14
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/node.js:20155:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/12]⎯
+
+ FAIL  tests/unit/frontend/src/features/metadata/metadata/metadata-screen.test.tsx [ tests/unit/frontend/src/features/metadata/metadata/metadata-screen.test.tsx ]
+Error: Failed to resolve import "@/shared/stores/pending-edits-store" from "tests/unit/frontend/src/features/metadata/metadata/metadata-screen.test.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/shuhei2441/repo/dev-docs/.claude/worktrees/feat-doc-view-edit-document-body/tests/unit/frontend/src/features/metadata/metadata/metadata-screen.test.tsx:6:37
+  3  |  import { HttpResponse, http } from "msw";
+  4  |  import { beforeEach, expect, test } from "vitest";
+  5  |  import { usePendingEditsStore } from "@/shared/stores/pending-edits-store";
+     |                                        ^
+  6  |  import { PROBLEM_HEADERS, metadataResponse, problem, refsResponse, settingsSource, settingsView } from "@tests/helper...
+  7  |  import { server } from "@tests/helpers/msw-server";
+ ❯ TransformPluginContext._formatLog node_modules/vite/dist/node/chunks/node.js:8803:39
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/node.js:8800:14
+ ❯ resolveId node_modules/vite/dist/node/chunks/node.js:26594:18
+ ❯ node_modules/vite/dist/node/chunks/node.js:26693:23
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/node.js:26666:4
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/node.js:8582:14
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/node.js:20155:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/12]⎯
+
+ FAIL  tests/unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx [ tests/unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx ]
+Error: Failed to resolve import "@/shared/stores/pending-edits-store" from "tests/unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/shuhei2441/repo/dev-docs/.claude/worktrees/feat-doc-view-edit-document-body/tests/unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx:6:37
+  3  |  import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+  4  |  import { MetadataTable } from "@/features/metadata/metadata/metadata-table";
+  5  |  import { usePendingEditsStore } from "@/shared/stores/pending-edits-store";
+     |                                        ^
+  6  |  import { metadataResponse, metadataRow } from "@tests/helpers/fixtures";
+  7  |  import { renderInRouter } from "@tests/helpers/render";
+ ❯ TransformPluginContext._formatLog node_modules/vite/dist/node/chunks/node.js:8803:39
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/node.js:8800:14
+ ❯ resolveId node_modules/vite/dist/node/chunks/node.js:26594:18
+ ❯ node_modules/vite/dist/node/chunks/node.js:26693:23
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/node.js:26666:4
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/node.js:8582:14
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/node.js:20155:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/12]⎯
+
+ FAIL  tests/unit/frontend/src/shared/components/pending-panel/pending-panel.test.tsx [ tests/unit/frontend/src/shared/components/pending-panel/pending-panel.test.tsx ]
+Error: Failed to resolve import "@/shared/components/pending-panel/pending-panel" from "tests/unit/frontend/src/shared/components/pending-panel/pending-panel.test.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/shuhei2441/repo/dev-docs/.claude/worktrees/feat-doc-view-edit-document-body/tests/unit/frontend/src/shared/components/pending-panel/pending-panel.test.tsx:7:29
+  4  |  import { HttpResponse, http } from "msw";
+  5  |  import { beforeEach, expect, test, vi } from "vitest";
+  6  |  import { PendingPanel } from "@/shared/components/pending-panel/pending-panel";
+     |                                ^
+  7  |  import { usePendingEditsStore } from "@/shared/stores/pending-edits-store";
+  8  |  import { PROBLEM_HEADERS, metadataResponse, problem } from "@tests/helpers/fixtures";
+ ❯ TransformPluginContext._formatLog node_modules/vite/dist/node/chunks/node.js:8803:39
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/node.js:8800:14
+ ❯ resolveId node_modules/vite/dist/node/chunks/node.js:26594:18
+ ❯ node_modules/vite/dist/node/chunks/node.js:26693:23
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/node.js:26666:4
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/node.js:8582:14
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/node.js:20155:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/12]⎯
+
+ FAIL  tests/unit/frontend/src/shared/components/pending-panel/queries.test.tsx [ tests/unit/frontend/src/shared/components/pending-panel/queries.test.tsx ]
+Error: Failed to resolve import "@/shared/components/pending-panel/queries" from "tests/unit/frontend/src/shared/components/pending-panel/queries.test.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/shuhei2441/repo/dev-docs/.claude/worktrees/feat-doc-view-edit-document-body/tests/unit/frontend/src/shared/components/pending-panel/queries.test.tsx:7:53
+  3  |  import { HttpResponse, http } from "msw";
+  4  |  import { beforeEach, expect, test, vi } from "vitest";
+  5  |  import { useCommitEdits, useRestartFromLatest } from "@/shared/components/pending-panel/queries";
+     |                                                        ^
+  6  |  import { usePendingEditsStore } from "@/shared/stores/pending-edits-store";
+  7  |  import { AppError } from "@/shared/core/app-error";
+ ❯ TransformPluginContext._formatLog node_modules/vite/dist/node/chunks/node.js:8803:39
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/node.js:8800:14
+ ❯ resolveId node_modules/vite/dist/node/chunks/node.js:26594:18
+ ❯ node_modules/vite/dist/node/chunks/node.js:26693:23
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/node.js:26666:4
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/node.js:8582:14
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/node.js:20155:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/12]⎯
+
+ FAIL  tests/unit/frontend/src/features/docs/doc-view/components/doc-edit-bar.test.tsx [ tests/unit/frontend/src/features/docs/doc-view/components/doc-edit-bar.test.tsx ]
+Error: Failed to resolve import "@/shared/stores/pending-edits-store" from "tests/unit/frontend/src/features/docs/doc-view/components/doc-edit-bar.test.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/shuhei2441/repo/dev-docs/.claude/worktrees/feat-doc-view-edit-document-body/tests/unit/frontend/src/features/docs/doc-view/components/doc-edit-bar.test.tsx:8:37
+  4  |  import { DocEditBar } from "@/features/docs/doc-view/components/doc-edit-bar";
+  5  |  import { WHOLE_FILE, upsertBodyEdit } from "@/features/docs/doc-view/edit";
+  6  |  import { usePendingEditsStore } from "@/shared/stores/pending-edits-store";
+     |                                        ^
+  7  |  import { docEdit } from "@tests/helpers/fixtures";
+  8  |  var _jsxFileName = "/home/shuhei2441/repo/dev-docs/.claude/worktrees/feat-doc-view-edit-document-body/tests/unit/fron...
+ ❯ TransformPluginContext._formatLog node_modules/vite/dist/node/chunks/node.js:8803:39
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/node.js:8800:14
+ ❯ resolveId node_modules/vite/dist/node/chunks/node.js:26594:18
+ ❯ node_modules/vite/dist/node/chunks/node.js:26693:23
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/node.js:26666:4
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/node.js:8582:14
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/node.js:20155:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/12]⎯
+
+ FAIL  tests/unit/frontend/src/features/docs/doc-view/components/doc-field-editor.test.tsx [ tests/unit/frontend/src/features/docs/doc-view/components/doc-field-editor.test.tsx ]
+Error: Failed to resolve import "@/shared/stores/pending-edits-store" from "tests/unit/frontend/src/features/docs/doc-view/components/doc-field-editor.test.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/shuhei2441/repo/dev-docs/.claude/worktrees/feat-doc-view-edit-document-body/tests/unit/frontend/src/features/docs/doc-view/components/doc-field-editor.test.tsx:10:0
+  4  |  const __vi_import_1__ = await import("@testing-library/user-event");
+  5  |  const __vi_import_2__ = await import("@/features/docs/doc-view/components/doc-field-editor");
+  6  |  const __vi_import_3__ = await import("@/shared/stores/pending-edits-store");
+     |                                       ^
+  7  |  const __vi_import_4__ = await import("@tests/helpers/fixtures");
+  8  |  const __vi_import_5__ = await import("react/jsx-dev-runtime");
+ ❯ TransformPluginContext._formatLog node_modules/vite/dist/node/chunks/node.js:8803:39
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/node.js:8800:14
+ ❯ resolveId node_modules/vite/dist/node/chunks/node.js:26594:18
+ ❯ node_modules/vite/dist/node/chunks/node.js:26693:23
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/node.js:26666:4
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/node.js:8582:14
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/node.js:20155:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/12]⎯
+
+ FAIL  tests/unit/frontend/src/features/docs/doc-view/components/markdown-field-panel.test.tsx [ tests/unit/frontend/src/features/docs/doc-view/components/markdown-field-panel.test.tsx ]
+Error: Failed to resolve import "@/shared/stores/pending-edits-store" from "tests/unit/frontend/src/features/docs/doc-view/components/markdown-field-panel.test.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/shuhei2441/repo/dev-docs/.claude/worktrees/feat-doc-view-edit-document-body/tests/unit/frontend/src/features/docs/doc-view/components/markdown-field-panel.test.tsx:7:0
+  4  |  const __vi_import_1__ = await import("@testing-library/user-event");
+  5  |  const __vi_import_2__ = await import("@/features/docs/doc-view/components/markdown-field-panel");
+  6  |  const __vi_import_3__ = await import("@/shared/stores/pending-edits-store");
+     |                                       ^
+  7  |  const __vi_import_4__ = await import("@tests/helpers/fixtures");
+  8  |  const __vi_import_5__ = await import("react/jsx-dev-runtime");
+ ❯ TransformPluginContext._formatLog node_modules/vite/dist/node/chunks/node.js:8803:39
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/node.js:8800:14
+ ❯ resolveId node_modules/vite/dist/node/chunks/node.js:26594:18
+ ❯ node_modules/vite/dist/node/chunks/node.js:26693:23
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/node.js:26666:4
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/node.js:8582:14
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/node.js:20155:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/12]⎯
+
+ FAIL  tests/unit/frontend/src/features/docs/doc-view/components/whole-file-editor.test.tsx [ tests/unit/frontend/src/features/docs/doc-view/components/whole-file-editor.test.tsx ]
+Error: Failed to resolve import "@/shared/stores/pending-edits-store" from "tests/unit/frontend/src/features/docs/doc-view/components/whole-file-editor.test.tsx". Does the file exist?
+  Plugin: vite:import-analysis
+  File: /home/shuhei2441/repo/dev-docs/.claude/worktrees/feat-doc-view-edit-document-body/tests/unit/frontend/src/features/docs/doc-view/components/whole-file-editor.test.tsx:9:0
+  6  |  const __vi_import_3__ = await import("msw");
+  7  |  const __vi_import_4__ = await import("@/features/docs/doc-view/components/whole-file-editor");
+  8  |  const __vi_import_5__ = await import("@/shared/stores/pending-edits-store");
+     |                                       ^
+  9  |  const __vi_import_6__ = await import("@tests/helpers/fixtures");
+  10 |  const __vi_import_7__ = await import("@tests/helpers/msw-server");
+ ❯ TransformPluginContext._formatLog node_modules/vite/dist/node/chunks/node.js:8803:39
+ ❯ TransformPluginContext.error node_modules/vite/dist/node/chunks/node.js:8800:14
+ ❯ resolveId node_modules/vite/dist/node/chunks/node.js:26594:18
+ ❯ node_modules/vite/dist/node/chunks/node.js:26693:23
+ ❯ TransformPluginContext.transform node_modules/vite/dist/node/chunks/node.js:26666:4
+ ❯ EnvironmentPluginContainer.transform node_modules/vite/dist/node/chunks/node.js:8582:14
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/node.js:20155:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/12]⎯
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/frontend/src/features/docs/doc-view/components/markdown-preview.test.tsx > test_markdown_preview
+AssertionError: expected '# A' to be '# B' // Object.is equality
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head>[39m
+    [36m<link[39m
+      [33mhref[39m=[32m"https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@develop/dist/index.css"[39m
+      [33mrel[39m=[32m"stylesheet"[39m
+    [36m/>[39m
+  [36m</head>[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"min-w-0"[39m
+      [36m/>[39m
+    [36m</div>[39m
+  [36m</body>[39m
+[36m</html>[39m
+
+Expected: "# B"
+Received: "# A"
+
+ ❯ tests/unit/frontend/src/features/docs/doc-view/components/markdown-preview.test.tsx:29:7
+     27|     expect(
+     28|       (mount.mock.calls.at(-1)?.[1] as { markdown: string }).markdown,
+     29|     ).toBe("# B"),
+       |       ^
+     30|   );
+     31|   const options = mount.mock.calls.at(-1)?.[1] as {
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/12]⎯
+
+
+ Test Files  12 failed | 55 passed (67)
+      Tests  1 failed | 188 passed (189)
+   Start at  23:56:36
+   Duration  16.55s (environment 54%, tests 19%, setup 12%, import 12%, transform 3%, worker 1%)
+
+Environment  jsdom was created 67 times · 54.14s total, 54% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+
+exit=1
