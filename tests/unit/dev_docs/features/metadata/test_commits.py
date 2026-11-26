@@ -790,7 +790,10 @@ def test_check_edits_when_whole_file_mixed() -> None:
         check_edits(edits)
     # 検証
     assert caught.value.status_code == 400
-    assert sorted(item.key for item in caught.value.errors) == ["body:n1:@file", "body:n1:summary"]
+    assert sorted(str(item.key) for item in caught.value.errors) == [
+        "body:n1:@file",
+        "body:n1:summary",
+    ]
 
 
 def test_check_edits_when_whole_file_unparsable() -> None:

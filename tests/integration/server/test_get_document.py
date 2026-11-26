@@ -1621,7 +1621,7 @@ def test_normal_when_not_editable(
     """書き込みの API が断る文書と既定のブランチでないリビジョンには edit を返却しない（正常系）。"""
     # 準備
     text = {"type": "string"}
-    documents = [
+    documents: list[dict[str, Any]] = [
         {"id": "memo", "paths": ["memos/*.yaml"], "schema": "schemas/memo.schema.yaml"},
         {
             "id": "log",

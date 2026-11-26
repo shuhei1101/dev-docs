@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, test, vi } from "vitest";
 
 import { DocEditBar } from "@/features/docs/doc-view/components/doc-edit-bar";
-import { WHOLE_FILE, upsertBodyEdit } from "@/features/docs/doc-view/edit";
+import { upsertBodyEdit } from "@/features/docs/doc-view/edit";
 import type { DocumentEdit } from "@/shared/api/generated/model";
 import { usePendingEditsStore } from "@/shared/stores/pending-edits-store";
 import { docEdit } from "@tests/helpers/fixtures";
