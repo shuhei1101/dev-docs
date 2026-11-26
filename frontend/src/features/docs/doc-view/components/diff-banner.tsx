@@ -59,7 +59,7 @@ export const DiffBanner = ({ base, head, refs, onChange, onClear }: Props) => (
     aria-label="差分"
     className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2 text-sm"
   >
-    <span className="text-muted-foreground">比較元</span>
+    <span className="text-foreground">比較元</span>
     <Picker
       label="比較元"
       value={base}
@@ -67,7 +67,7 @@ export const DiffBanner = ({ base, head, refs, onChange, onClear }: Props) => (
       onValueChange={(next) => onChange({ base: next, rev: head })}
     />
     <span aria-hidden="true">→</span>
-    <span className="text-muted-foreground">比較先</span>
+    <span className="text-foreground">比較先</span>
     <Picker
       label="比較先"
       value={head}
