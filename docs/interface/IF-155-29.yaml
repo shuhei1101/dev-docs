@@ -1,6 +1,6 @@
 id: IF-155-29
 title: 編集中の変更の直コミット
-lead: 画面の編集中の変更を配信元ごとに受け、種類ごとに修正できるキーに絞った書き込みと削除にして project-index の書き込みの API へ 1 回で送信し、変更ごとの差分・結果か理由を返却する直コミットの入出力を定め、直コミットを修正するときに参照する。
+lead: 画面の編集中の変更（メタデータの行と文書の本文）を配信元ごとに受け、修正できるキーを確認した書き込みと削除にして project-index の書き込みの API へ 1 回で送信し、変更ごとの差分・結果か理由を返却する直コミットの入出力を定め、直コミットを修正するときに参照する。
 entry:
   kind: endpoint
   value: POST `/_api/sources/{source}/commits`
@@ -19,6 +19,9 @@ callers:
   - SC-155-15#scenarios[正常シナリオ（衝突してスクリプトの指定が無い）]
   - SC-155-15#scenarios[異常シナリオ（衝突してスクリプトが失敗する）]
   - SC-155-15#scenarios[異常シナリオ（編集を始めたときのコミットが使用できない）]
+  - SC-155-15#scenarios[正常シナリオ（文書の画面で本文を編集する）]
+  - SC-155-15#scenarios[異常シナリオ（本文の変更が検査に合格しない）]
+  - SC-155-15#scenarios[正常シナリオ（ファイル全体の編集の後に同じ文書の別の項目が変わっている）]
 request:
   - name: source
     type: str
@@ -37,16 +40,16 @@ request:
     location: body
     description: 画面が振った変更の識別子。応答の `results[].key`・`errors[].key` で同じ値を返却する
   - name: edits[].kind
-    type: Literal['terms', 'aliases', 'tags', 'rules', 'files']
+    type: Literal['terms', 'aliases', 'tags', 'rules', 'files', 'body']
     required: true
     location: body
-    description: メタデータの種類（メタデータの取得の `kinds[].id`。`config` は修正できない）
+    description: メタデータの種類（メタデータの取得の `kinds[].id`。`config` は修正できない）か、文書の本文の `body`
   - name: edits[].op
     type: Literal['update', 'add', 'delete']
     required: true
     location: body
     description: 行の修正・追加・削除
-    constraints: '`add`・`delete` は `kind` が `terms`・`rules` のときだけ'
+    constraints: '`add`・`delete` は `kind` が `terms`・`rules` のときだけ。`body` は `update` だけ'
   - name: edits[].docId
     type: str
     required: true
@@ -57,22 +60,22 @@ request:
     required: true
     location: body
     default: なし（`update`・`delete` は使用しない）
-    description: '対象の文書の種類（`documents[].id`）。`update`・`delete` はメタデータの取得の `rows[].docKind`、`add` は `kinds[].createKind`'
+    description: '対象の文書の種類（`documents[].id`）。`update`・`delete` はメタデータの取得の `rows[].docKind`、`add` は `kinds[].createKind`、`body` は文書の取得の `edit.kind`'
     notes: '列と文書のキーの対応を引く種類と、403 の `kinds` を変更の `key` へ戻すのに使用する。取り違えた種類は project-index の検査と `expected_version` の照合で断られる'
   - name: edits[].expectedVersion
     type: str | None
     required: false
     location: body
     default: なし（`add` は使用しない）
-    description: 取得した文書のバージョン（メタデータの取得の `rows[].version`）
+    description: 取得した文書のバージョン（メタデータの取得の `rows[].version`。`body` は文書の取得の `edit.version`）
     notes: '`update`・`delete` のときは必須'
   - name: edits[].values
-    type: dict[str, str | list[str]]
+    type: dict[str, str | list[str] | list[dict[str, str]]]
     required: false
     location: body
     default: '`{}`'
-    description: 修正後の値。キーはメタデータの取得の `columns[].key` で、`columns[].type` が `list` の列は文字列の配列にする
-    constraints: '制約「修正できるキー」の列のうち、メタデータの取得で `editable: true` の列だけ'
+    description: 修正後の値。キーはメタデータの取得の `columns[].key` で、`columns[].type` が `list` の列は文字列の配列にする。`body` はキーが項目のパス（文書の取得の `edit.blocks[].path`・`edit.titleBlock.path`）か、ファイル全体の `@file` で、`table` の項目は行の配列にする
+    constraints: '制約「修正できるキー」のキーだけ。`@file` はほかのキーと並べず、同じ `docId` のほかの `body` の変更とも同じ要求に並べない'
   - name: message
     type: str
     required: false
@@ -96,7 +99,7 @@ request:
     type: str
     required: true
     location: body
-    description: 編集を始めたときの既定のブランチのコミット（メタデータの取得の `baseCommit`）
+    description: 編集を始めたときの既定のブランチのコミット（メタデータの取得の `baseCommit` か文書の取得の `edit.baseCommit`）
     constraints: 7〜40 桁の 16 進数
     notes: 画面は配信元ごとに、編集中の変更の最初の 1 件を追加したときの値を 1 つ記録して送信する
   - name: edits[].docPath
@@ -104,7 +107,7 @@ request:
     required: false
     location: body
     default: なし（`add`・`delete` は使用しない）
-    description: 対象の文書のパス（メタデータの取得の `rows[].docPath`）
+    description: 対象の文書のパス（メタデータの取得の `rows[].docPath`。`body` は文書の取得の `edit.filePath`）
     notes: '`update` のときは必須。編集を始めたときの項目ごとのバージョンを取得する文書の取得に使用する'
 request_example: |-
   ```json
@@ -171,7 +174,7 @@ status_codes:
   - code: '200'
     condition: 'コミット・プッシュした、衝突して修正をブランチに残した（`conflict` を入れる）、または `dryRun: true` で検査に合格した'
   - code: '400'
-    condition: '本文の型の検証に通らない（`edits` が空・`key` の重複・`op` と `kind` の組み合わせ・必須の欠け・修正できないキー・元のキーへ戻せない列・`dryRun: false` で `message` が空）'
+    condition: '本文の型の検証に通らない（`edits` が空・`key` の重複・`op` と `kind` の組み合わせ・必須の欠け・修正できないキー・元のキーへ戻せない列・YAML として読み込めない `@file`・同じ文書の `@file` とほかの `body` の変更が並ぶ要求・`dryRun: false` で `message` が空）'
     notes: project-index へ送信しない。`errors[]` に `{key, path, reason}`（`key` は該当する変更、本文全体の違反は `null`）
   - code: '403'
     condition: 別のオリジンの要求、または project-index が直コミットを許可していない種類があると返却した（`DirectCommitNotPermittedError`）
@@ -199,10 +202,9 @@ constraints:
   - item: オリジンの確認
     constraint: 端末の設定の保存と同じく、画面と別のオリジンの要求を 403 で断る
   - item: 修正できるキー
-    constraint: '`terms`: `name`・`aliases`・`description`。`aliases`: `name`・`aliases`。`tags`: `tags`。`rules`: `rule`・`paths`・`tools`（`args` はオブジェクトのため修正できない）。`files`: `description`。ほかのキーは 400 で断り、project-index へ送信しない'
-    notes: 規約の本文・テンプレート・スキーマは画面から書き換えない（要件の直コミットの対象）
+    constraint: 'メタデータの種類は、メタデータの取得で `editable: true` の列（IF-155-28 の制約「列と文書のキーの対応」で元のキーへ戻せる列）だけ。`body` は、文書の取得が `edit` を返却する文書（IF-155-10 の制約「本文を編集できる文書」）の、`edit.blocks[].path`・`edit.titleBlock.path` か `@file` だけ。ほかのキーは 400 で断り、project-index へ送信しない'
   - item: 書き込みと削除への変換
-    constraint: '列のキーは共通のキー（IF-155-28 の制約「列と文書のキーの対応」）のまま、値も画面が送信したまま書き込みの操作に入れる。project-index の書き込みの API が、配信元の設定の行の `metadata` の対応で文書の実際のキーへ戻す（`{キー}[].{項目}` の列は、名前の配列から、残る要素の `main` などほかの項目を保った配列にする）。dev-docs は元のキーへ戻せる列かだけを確認し、戻せない列（入れ子のパス・絞り込み）は送信せずに 400 にする。`update` は `write_docs` の `update` 操作（`id`・`expected_version`・`set` に組み立てた最上位のキー）、`add` は `create` 操作（`id`・`kind`・`data`）、`delete` は `deletes[]`（`id`・`expectedVersion`）にし、`edits` の並び順で `writes`・`deletes` に入れる'
+    constraint: '列のキーは共通のキー（IF-155-28 の制約「列と文書のキーの対応」）のまま、値も画面が送信したまま書き込みの操作に入れる。project-index の書き込みの API が、配信元の設定の行の `metadata` の対応で文書の実際のキーへ戻す（`{キー}[].{項目}` の列は、名前の配列から、残る要素の `main` などほかの項目を保った配列にする）。dev-docs は元のキーへ戻せる列かだけを確認し、戻せない列（入れ子のパス・絞り込み）は送信せずに 400 にする。`update` は `write_docs` の `update` 操作（`id`・`expected_version`・`set` に組み立てた最上位のキー）、`add` は `create` 操作（`id`・`kind`・`data`）、`delete` は `deletes[]`（`id`・`expectedVersion`）にし、`edits` の並び順で `writes`・`deletes` に入れる。`body` の変更は、項目のパスのキーを項目のパスのまま `update` 操作の `set` に入れ（`table` の項目は行の配列）、YAML の文書の `@file` は書き換えた YAML を読み込んだ値を `replace` 操作（`id`・`expected_version`・`data`）にし、Markdown の文書の `@file` は `update` 操作の `set` の `@body` にする。YAML として読み込めない `@file` は送信せずに 400（`path` が `@file`、`reason` に行と列）にする'
   - item: project-index への送信
     constraint: '`POST /sources/{source}/commits` を `Origin` を付けずに 1 回だけ呼ぶ。`writes`・`deletes`・`message`・`dryRun`・`baseCommit` を送信し、`branch`・`onReferenced` は送信しない（既定のブランチ・`fail`）'
   - item: 書き込みの API の待ち
@@ -211,13 +213,13 @@ constraints:
   - item: 認可
     constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）。直コミットの許可は project-index が判定する
   - item: JSON のキー
-    constraint: 要求と応答のキーは camelCase。`values` の中のキーはメタデータの取得の `columns[].key` のまま
+    constraint: 要求と応答のキーは camelCase。`values` の中のキーはメタデータの取得の `columns[].key` のまま（`body` は項目のパスか `@file`）
   - item: operationId
     constraint: '`{tag}-{関数名}` の `metadata-post_commits`'
   - item: ログ
     constraint: 送信ごとに、配信元の ID・`dryRun`・変更の件数・project-index の状態コード・コミットの SHA（待ちの上限で打ち切ったときはその旨）を 1 行のログに出力する。値の中身とコミットの説明は出力しない
   - item: 項目ごとのバージョン
-    constraint: '`update` の変更ごとに、project-index の文書の取得（`GET /sources/{source}/docs/{docPath}?ref={baseCommit}&id={docId}`）で編集を始めたときの `itemVersions` を取得し、`set` に組み立てた列が戻る文書の最上位のキー（制約「書き込みと削除への変換」の対応で戻したキー）だけのバージョンの辞書を `expected_version` にする。そのキーのどれかが `itemVersions` に無い変更（編集を始めたときの文書に無い項目を加える）は、辞書ではなく要求の `expectedVersion`（文書の全体のバージョン）を送信する（空の辞書は project-index の照合で常に一致し、ほかの変更が同じ項目を加えていても衝突にならないため）。`delete` は `expectedVersion`（文書の全体のバージョン）のまま、`add` は使用しない'
+    constraint: '`update` の変更ごとに、project-index の文書の取得（`GET /sources/{source}/docs/{docPath}?ref={baseCommit}&id={docId}`）で編集を始めたときの `itemVersions` を取得し、`set` に組み立てた列が戻る文書の最上位のキー（制約「書き込みと削除への変換」の対応で戻したキー）だけのバージョンの辞書を `expected_version` にする。そのキーのどれかが `itemVersions` に無い変更（編集を始めたときの文書に無い項目を加える）は、辞書ではなく要求の `expectedVersion`（文書の全体のバージョン）を送信する（空の辞書は project-index の照合で常に一致し、ほかの変更が同じ項目を加えていても衝突にならないため）。`body` の項目のパスの変更は、項目のパスの最上位のキー（`#items[i1].body` は `items`）のバージョンの辞書にし、`@file` は要求の `expectedVersion`（文書の全体のバージョン）を送信する。`delete` は `expectedVersion`（文書の全体のバージョン）のまま、`add` は使用しない'
     notes: 文書の取得が 404 の変更は、project-index へ送信せずに 404 の `errors[]` に入れる
     decided_by: NFR-155-1#requirements[project-index への問い合わせの制限時間]
   - item: 衝突の結果への変換
@@ -673,6 +675,155 @@ flows:
       - 200 で `applied` が `false`、`conflict.branch` と `conflict.script` が `null`、`conflict.reasons` に n1 の変更の `key` がある
       - リモートとワークツリーが変わらず、クローンに `project-index/conflict/` で始まるブランチが増えない
     test: test_normal_when_dry_run_conflicted
+  - name: 正常系（文書の本文の変更）
+    summary: 項目のパスへの修正とファイル全体の編集を 1 つのコミットにしてプッシュする
+    setup:
+      - name: Mock
+        description: なし（正常系と同じテストの中で起動した project-index）
+      - name: 配信元
+        description: 正常系の sample に、文書の取得の正常系（本文の編集の情報を返す）と同じ `note` のスキーマと Markdown の種類 `guide` を加え、`direct_commit.kinds` と端末の設定の `write_api_kinds` を `[note, terms, guide]` にしたもの
+        notes: '`note` の文書 n1・n2 と `guide.md`'
+      - name: 入力
+        description: n1 の `summary`・`rows`（2 行目の `replacement` を変えた行の配列）・`#items[i1].body` の `body` の変更 3 件、n2 の `@file`（`summary` を書き換えた YAML）、`guide.md` の `@file`（1 行書き換えた本文）と `message`
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+        participant PI as project-index
+
+        C->>E: edits（body 5 件）, message, baseCommit
+        E->>PI: 編集を始めたときの n1・n2・guide.md（ref: baseCommit）
+        PI-->>E: 値・itemVersions
+        E->>E: n1 は set、n2 は replace、guide.md は set の @body にする
+        E->>PI: POST /sources/sample/commits
+        PI-->>E: 200 applied, results, commit
+        E-->>C: 200 変更ごとの結果とコミット
+      ```
+
+      <!-- /map -->
+    expected:
+      - 200 で `applied` が `true`、`results` に 5 件の変更の `key` と `updated` がある
+      - リモートの `develop` に 1 コミットだけ増え、変わったファイルが n1・n2 の YAML と `guide.md` だけ
+      - n1 の `summary`・`rows`・`#items[i1].body` が送信した値で、修正していない項目の値が変わらない
+      - n2 の `summary` が書き換えた値、`guide.md` の内容が送信した本文
+    test: test_normal_when_document_body_edited
+  - name: 正常系（ファイル全体の変更の後に同じ文書の別の項目が変わっている）
+    summary: ファイル全体の変更は文書の全体のバージョンで照合し、別の項目が変わっていれば修正をブランチに残した結果を返却する
+    setup:
+      - name: Mock
+        description: なし（正常系と同じテストの中で起動した project-index）
+      - name: 配信元
+        description: 正常系（文書の本文の変更）と同じ sample。端末の設定の sample の行に、正常系（衝突したら修正をブランチに残す）と同じ衝突したときのスクリプトを登録する
+      - name: 他の変更
+        description: 文書の取得の後に、リモートの `develop` へ n1 の `rows` を変えるコミットをプッシュする
+        notes: 利用者が書き換えていない項目だけが変わる
+      - name: 入力
+        description: 取得した `edit.baseCommit` と、n1 の `@file`（`summary` を書き換えた YAML）と `message`
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+        participant PI as project-index
+
+        C->>E: edits（n1 の @file）, message, baseCommit
+        E->>PI: POST /sources/sample/commits（replace、文書の全体のバージョン、baseCommit）
+        PI->>PI: 今のブランチでは n1 のバージョンが合わず、修正をブランチに残す
+        PI-->>E: 200 conflict
+        E-->>C: 200（conflict つき）
+      ```
+
+      <!-- /map -->
+    expected:
+      - 200 で `applied` が `false`、`conflict.branch` が `project-index/conflict/` で始まり、`conflict.reasons[].key` に n1 の変更の `key` がある
+      - '`conflict.script.prUrl` がスクリプトの出力した URL'
+      - リモートの `develop` に、他の変更のコミットより後のコミットが増えない
+    test: test_normal_when_whole_file_edit_conflicted
+  - name: 異常系（読み込めないファイル全体・400）
+    summary: YAML として読み込めない `@file` を、project-index へ送信せずに断る
+    setup:
+      - name: Mock
+        description: 受けた要求を記録する project-index の書き込みの API のモック
+      - name: 入力
+        description: n2 の `@file` で、3 行目の行頭にタブを入れた YAML
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+
+        C->>E: edits（n2 の @file）, message
+        E->>E: YAML として読み込めない
+        E-->>C: 400 problem+json（errors[]）
+      ```
+
+      <!-- /map -->
+    expected:
+      - 400 で、`errors` に n2 の変更の `key`、`path` が `@file`、`reason` に 3 行目と列がある
+      - モックが要求を受けていない
+    test: test_error_when_whole_file_unparsable
+  - name: 異常系（本文の変更が検査に合格しない・422）
+    summary: ファイル全体の変更の検査の違反を、変更の `key` と項目のパスで返却する
+    setup:
+      - name: Mock
+        description: なし（正常系と同じテストの中で起動した project-index）
+      - name: 配信元
+        description: 正常系（文書の本文の変更）と同じ sample
+      - name: 入力
+        description: 'n1 の `@file` で `summary`（スキーマは 1 文字以上）を空の文字列にした YAML（合格しない）と、`guide.md` の `@file`（合格する）と `dryRun: true`'
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+        participant PI as project-index
+
+        C->>E: edits（n1・guide.md の @file）, dryRun: true
+        E->>PI: POST /sources/sample/commits（dryRun）
+        PI-->>E: 422（writes[0] の違反）
+        E-->>C: 422（n1 の key と違反）
+      ```
+
+      <!-- /map -->
+    expected:
+      - 422 で、`errors` に n1 の変更の `key` と `path` の `summary` がある
+      - '`guide.md` の変更の `key` は `errors` に無い'
+      - リモートとワークツリーが変わらない
+    test: test_error_when_document_body_invalid
+  - name: 異常系（同じ文書のファイル全体と項目の変更が並ぶ・400）
+    summary: 同じ文書の `@file` と項目のパスの変更が並ぶ要求を、project-index へ送信せずに断る
+    setup:
+      - name: Mock
+        description: 受けた要求を記録する project-index の書き込みの API のモック
+      - name: 入力
+        description: n1 の `@file` の変更と、n1 の `summary` の変更と `message`
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/commits
+
+        C->>E: edits（n1 の @file・n1 の summary）, message
+        E->>E: 同じ文書の @file と項目の変更が並ぶ
+        E-->>C: 400 problem+json（errors[]）
+      ```
+
+      <!-- /map -->
+    expected:
+      - 400 で、`errors` に n1 の `@file` の変更の `key` と `summary` の変更の `key` がある
+      - モックが要求を受けていない
+    test: test_error_when_whole_file_and_item_edits_mixed
 refs:
   - to: API-155-1
     type: requires

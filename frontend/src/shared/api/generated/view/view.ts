@@ -27,6 +27,8 @@ import type {
   ColumnsRequest,
   DocumentResponse,
   HTTPValidationError,
+  PreviewRequest,
+  PreviewResponse,
   RefsResponse,
   ScreenSearchResult,
   ViewGetDocumentDefaultParams,
@@ -295,7 +297,96 @@ export function useViewGetDocument<TData = Awaited<ReturnType<typeof viewGetDocu
 
 
 
-export const getViewSearchPageUrl = (source: string,
+export const getViewPostPreviewUrl = (source: string,) => {
+
+
+
+
+  return `/_api/sources/${source}/preview`
+}
+
+/**
+ * 書き換えた YAML を変換し、見つからなかったときは何が無いかを追加した 404 にする。
+ * @summary Post Preview
+ */
+export const viewPostPreview = async (source: string,
+    previewRequest: PreviewRequest, options?: Parameters<typeof apiClient>[1]): Promise<PreviewResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return apiClient<PreviewResponse>(getViewPostPreviewUrl(source),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(previewRequest)
+  }
+);}
+
+
+
+
+
+export const getViewPostPreviewMutationKey = () => ['viewPostPreview'] as const;
+
+export const getViewPostPreviewMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof viewPostPreview>>, TError,ViewPostPreviewMutationVariables, TContext>, request?: SecondParameter<typeof apiClient>}
+): UseMutationOptions<Awaited<ReturnType<typeof viewPostPreview>>, TError,ViewPostPreviewMutationVariables, TContext> => {
+
+const mutationKey = getViewPostPreviewMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof viewPostPreview>>, ViewPostPreviewMutationVariables> = (props) => {
+          const {source,data} = props ?? {};
+
+          return  viewPostPreview(source,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ViewPostPreviewMutationResult = NonNullable<Awaited<ReturnType<typeof viewPostPreview>>>
+    export type ViewPostPreviewMutationBody = PreviewRequest
+    export type ViewPostPreviewMutationError = HTTPValidationError
+    export type ViewPostPreviewMutationVariables = {source: string;data: PreviewRequest}
+
+    /**
+ * @summary Post Preview
+ */
+export const useViewPostPreview = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof viewPostPreview>>, TError,ViewPostPreviewMutationVariables, TContext>, request?: SecondParameter<typeof apiClient>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof viewPostPreview>>,
+        TError,
+        ViewPostPreviewMutationVariables,
+        TContext
+      > => {
+      return useMutation(getViewPostPreviewMutationOptions(options), queryClient);
+    }
+    export const getViewSearchPageUrl = (source: string,
     params: ViewSearchPageParams,) => {
   const normalizedParams = new URLSearchParams();
 

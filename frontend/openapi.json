@@ -222,6 +222,59 @@
         }
       }
     },
+    "/_api/sources/{source}/preview": {
+      "post": {
+        "tags": [
+          "view"
+        ],
+        "summary": "Post Preview",
+        "description": "書き換えた YAML を変換し、見つからなかったときは何が無いかを追加した 404 にする。",
+        "operationId": "view-post_preview",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Source"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/_api/sources/{source}/search": {
       "get": {
         "tags": [
@@ -975,6 +1028,73 @@
         "title": "DocumentDiff",
         "description": "文書の取得の `diff`（比べたリビジョンと、返却した文書の変化・変わった項目）。"
       },
+      "DocumentEdit": {
+        "properties": {
+          "docId": {
+            "type": "string",
+            "title": "Docid"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "filePath": {
+            "type": "string",
+            "title": "Filepath"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "baseCommit": {
+            "type": "string",
+            "title": "Basecommit"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "yaml",
+              "markdown"
+            ],
+            "title": "Language"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/EditBlock"
+            },
+            "type": "array",
+            "title": "Blocks"
+          },
+          "titleBlock": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EditBlock"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "docId",
+          "kind",
+          "filePath",
+          "version",
+          "baseCommit",
+          "language",
+          "source",
+          "blocks",
+          "titleBlock"
+        ],
+        "title": "DocumentEdit",
+        "description": "文書の取得の `edit`（文書の画面で本文を編集するときの元の内容と項目）。"
+      },
       "DocumentResponse": {
         "properties": {
           "source": {
@@ -1083,6 +1203,16 @@
             "type": "string",
             "format": "date-time",
             "title": "Updatedat"
+          },
+          "edit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentEdit"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -1116,7 +1246,8 @@
               "aliases",
               "tags",
               "rules",
-              "files"
+              "files",
+              "body"
             ],
             "title": "Kind"
           },
@@ -1170,6 +1301,15 @@
                     "type": "string"
                   },
                   "type": "array"
+                },
+                {
+                  "items": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "type": "object"
+                  },
+                  "type": "array"
                 }
               ]
             },
@@ -1187,6 +1327,87 @@
         ],
         "title": "Edit",
         "description": "編集中の変更 1 件。"
+      },
+      "EditBlock": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "string",
+              "enum",
+              "markdown",
+              "table"
+            ],
+            "title": "Type"
+          },
+          "markdown": {
+            "type": "string",
+            "title": "Markdown"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Value"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Options"
+          },
+          "columns": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Columns"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "label",
+          "type",
+          "markdown",
+          "value"
+        ],
+        "title": "EditBlock",
+        "description": "表示した場所で修正できる項目 1 つ。"
       },
       "EditResult": {
         "properties": {
@@ -1585,6 +1806,62 @@
         ],
         "title": "NavTab",
         "description": "上のタブ 1 つとそのサイドバー。"
+      },
+      "PreviewRequest": {
+        "properties": {
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "path",
+          "content"
+        ],
+        "title": "PreviewRequest",
+        "description": "POST `/_api/sources/{source}/preview` の本文。"
+      },
+      "PreviewResponse": {
+        "properties": {
+          "markdown": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Markdown"
+          },
+          "conversionError": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConversionError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fallback": {
+            "type": "boolean",
+            "title": "Fallback"
+          }
+        },
+        "type": "object",
+        "required": [
+          "markdown",
+          "conversionError",
+          "fallback"
+        ],
+        "title": "PreviewResponse",
+        "description": "POST `/_api/sources/{source}/preview` の 200 の応答。"
       },
       "RefItem": {
         "properties": {

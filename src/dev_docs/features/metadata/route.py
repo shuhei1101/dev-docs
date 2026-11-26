@@ -31,6 +31,6 @@ def build_metadata_router(handlers: Handlers) -> APIRouter:
         dependencies=[Depends(require_same_origin)],
     )
     async def post_commits(source: str, body: CommitRequest) -> CommitResult:
-        return await commit_edits(handlers.project_index, source, body)
+        return await commit_edits(handlers.project_index, source, body, convert=handlers.converter)
 
     return router

@@ -5,4 +5,4 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type EditValues = {[key: string]: string | string[]};
+export type EditValues = {[key: string]: string | string[] | {[key: string]: string}[]};

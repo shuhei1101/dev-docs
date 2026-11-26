@@ -62,13 +62,13 @@ export const metadataPostCommitsBodyBaseCommitRegExp = new RegExp('^[0-9a-f]{7,4
 export const MetadataPostCommitsBody = zod.object({
   "edits": zod.array(zod.object({
   "key": zod.string(),
-  "kind": zod.enum(['terms', 'aliases', 'tags', 'rules', 'files']),
+  "kind": zod.enum(['terms', 'aliases', 'tags', 'rules', 'files', 'body']),
   "op": zod.enum(['update', 'add', 'delete']),
   "docId": zod.string(),
   "docKind": zod.string(),
   "expectedVersion": zod.union([zod.string(),zod.null()]).optional(),
   "docPath": zod.union([zod.string(),zod.null()]).optional(),
-  "values": zod.record(zod.string(), zod.union([zod.string(),zod.array(zod.string())])).optional()
+  "values": zod.record(zod.string(), zod.union([zod.string(),zod.array(zod.string()),zod.array(zod.record(zod.string(), zod.string()))])).optional()
 }).describe('編集中の変更 1 件。')).min(1),
   "message": zod.union([zod.string(),zod.null()]).optional(),
   "dryRun": zod.boolean().default(metadataPostCommitsBodyDryRunDefault),

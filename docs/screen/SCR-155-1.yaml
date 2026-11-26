@@ -39,7 +39,7 @@ elements:
     position: 画面の上
     description: 配信元・リビジョンの切り替え、検索、コメント、設定、明暗の切り替え。スクロールしても画面に残す
     visible_when: 常時
-    action: '`sourceSelect` でその配信元のトップ（`/{配信元の ID}`）を開く。`refSelect` で `rev` を書き換えて同じ文書を再度開く。`compareStart` で `base` に、開いているリビジョンが `defaultRef` 以外なら `defaultRef`、`defaultRef` なら最近の commit の 2 件目を入れて再度開く。`searchOpen` で検索のダイアログ、`commentPanelToggle` でコメントのパネル、`sidebarOpen` で文書の一覧のドロワーを開く。`colorSchemeToggle` で明暗を切り替え、ブラウザに保存する。メタデータのボタンでその配信元のメタデータの画面を開き、`pendingPanelToggle` でメタデータの画面を開いて編集中のパネルを開く'
+    action: '`sourceSelect` でその配信元のトップ（`/{配信元の ID}`）を開く。`refSelect` で `rev` を書き換えて同じ文書を再度開く。`compareStart` で `base` に、開いているリビジョンが `defaultRef` 以外なら `defaultRef`、`defaultRef` なら最近の commit の 2 件目を入れて再度開く。`searchOpen` で検索のダイアログ、`commentPanelToggle` でコメントのパネル、`sidebarOpen` で文書の一覧のドロワーを開く。`colorSchemeToggle` で明暗を切り替え、ブラウザに保存する。メタデータのボタンでその配信元のメタデータの画面を開き、`pendingPanelToggle` でこの画面の編集中のパネルを開閉する'
     action_ref: IF-155-6#
   - name: 種類のタブ
     kind: tab
@@ -474,6 +474,176 @@ elements:
     action: ドラッグで幅を変え、本文の左端をその分だけ動かす。←→ で 16px、Home で最小、End で最大にし、ダブルクリックで既定の幅（240）に戻す。最小・最大を超えない。変えた幅をブラウザに保存する
     notes:
       読み上げ名: '`サイドバーの幅`（`role="separator"`・`aria-valuenow`・`aria-valuemin`・`aria-valuemax`）'
+  - name: 編集のボタン
+    kind: button
+    position: 本文の上 > 文書のタイトルの右
+    description: 文書の本文の編集を始める
+    label: 鉛筆のアイコンと `編集`
+    visible_when: '`edit` が `null` でなく、編集していないとき'
+    source: 文書の取得.edit
+    action: クリックで `edit` を、YAML の文書（`edit.language` が `yaml`）は `fields`、Markdown の文書は `file` にして同じ文書を開く（履歴は置き換える）
+  - name: 編集の方式の切り替え
+    kind: toggle
+    position: 本文の上 > 文書のタイトルの右
+    description: YAML の文書の編集の方式を切り替える
+    label: '`表示した場所で修正`・`ファイル全体` の 2 つのボタン。無効のときはボタンの下に `{もう一方の方式の名前}の変更をコミットするか元に戻すと切り替えられます。` を出す'
+    visible_when: 編集していて、`edit.language` が `yaml` のとき
+    initial_value: '`edit` の方式のボタンを押した状態'
+    action: 押したボタンの方式に `edit` を書き換える（同じ文書の `@file` の変更と項目のパスの変更は並べられないため、もう一方の方式の編集中の変更がある間は切り替えられない）
+    notes:
+      読み上げ: 押した状態を `aria-pressed` で伝える
+    enabled_when: もう一方の方式のその文書の編集中の変更（「表示した場所で修正」は項目のパスの変更、「ファイル全体」は `@file` の変更）が無いとき
+  - name: 編集を終了
+    kind: button
+    position: 本文の上 > 文書のタイトルの右
+    description: 編集の表示をやめて参照の表示へ戻る
+    label: '`編集を終了`'
+    visible_when: 編集しているとき
+    action: クリックで `edit` を除外した同じ文書を開く（編集中の変更は残す）
+  - name: 項目のブロック
+    kind: section
+    position: 本文
+    description: 表示した場所で修正できる項目ごとに、変換した Markdown のその項目の範囲を mdmark で描き、右に項目の編集ボタンを並べる
+    visible_when: '`edit` が `fields` のとき（本文の代わり）'
+    source: 文書の取得.edit.blocks[]
+    notes:
+      編集中の値: 編集中の変更がある項目は、`markdown` の元の値の箇所を編集中の値に置き換えて描く（`table` は編集中の行で表を描き直す）
+      描き方: mdmark の右側の目次と先頭へ戻るボタンは出さない
+  - name: 項目の編集ボタン
+    kind: button
+    position: 項目のブロックの右（文書のタイトルはタイトルの右）
+    description: その項目の編集の部品を出す
+    label: 鉛筆のアイコン（アイコンだけ）。部品を出している間はチェックのアイコン
+    visible_when: 項目のブロックごとと、`edit` が `fields` で `edit.titleBlock` があるときの文書のタイトル
+    action: クリックで、`string`・`enum` はその場の入力欄、`table` は表のセルの入力欄、`markdown` は Markdown の項目のパネルを出す。チェックのアイコンのクリックで部品を閉じて描いた表示に戻す
+    notes:
+      読み上げ名: '`{項目の名前} を編集`（部品を出している間は `{項目の名前} の編集を終了`）'
+  - name: その場の入力欄
+    kind: input
+    position: 項目のブロック（文書のタイトルはタイトルの位置）
+    description: 短い文字列の項目の入力欄と、`enum` の項目の選択肢
+    io: 入力
+    type: 文字列
+    visible_when: '`string`・`enum` の項目と文書のタイトルで、項目の編集ボタンを押した後'
+    options: '`enum` は `edit.blocks[].options` の並び'
+    initial_value: 編集中の値（無ければ `edit.blocks[].value`）
+    autofocus: true
+    source: 文書の取得.edit.blocks[].value
+    target: 編集中の変更の直コミット.edits[].values（`kind` が `body`、キーは項目のパス）
+    action: 入力のたびに編集中の変更（変更前の値に編集を始めたときの値を持つ。`@file` は `edit.source`）に入れ、元の値に戻すと編集中の変更から除く。Enter・Esc・フォーカスが離れると入力欄を閉じる（入力した値は残す。変換中の Enter は受けない）
+    notes:
+      読み上げ名: 項目の名前
+  - name: 表のセルの入力欄
+    kind: input
+    position: 項目のブロック > 表のセル
+    description: '`table` の項目の行と列ごとの値'
+    io: 入力
+    type: 文字列
+    visible_when: '`table` の項目で、項目の編集ボタンを押した後（表の見出しと `edit.blocks[].columns` の列の見出しを残す）'
+    initial_value: 編集中の行（無ければ `edit.blocks[].value`）のその列の値
+    source: 文書の取得.edit.blocks[].value
+    target: 編集中の変更の直コミット.edits[].values（キーは項目のパス、値は行の配列）
+    action: 入力のたびに行の配列を編集中の変更（変更前の値に編集を始めたときの値を持つ）に入れる。行の追加・削除・並べ替えは持たない（ファイル全体の編集で修正する）
+    notes:
+      読み上げ名: '`{項目の名前} の {行の番号} 行目の {列名}`'
+  - name: 変更ありのバッジ
+    kind: badge
+    position: 項目の編集ボタンの左・Markdown の項目のエディタの見出し・ファイル全体のエディタの見出し
+    description: その項目かファイル全体に編集中の変更があること
+    label: '`変更あり`'
+    visible_when: その項目のパス（ファイル全体は `@file`）の編集中の変更があるとき
+  - name: Markdown の項目のパネル
+    kind: sheet
+    position: 画面の右（狭い幅では画面の下から出す面）
+    description: Markdown の文字列の項目のエディタとプレビュー。元の本文を参照しながら入力する
+    label: 見出し `{項目の名前} の編集` と、説明に項目のパス（等幅）
+    visible_when: '`markdown` の項目の項目の編集ボタンを押した後'
+    action: 閉じるボタン・Esc で閉じ、項目の編集ボタンへフォーカスを戻す（入力した値は残す）
+    notes:
+      モーダル: モーダルにせず、背景を暗くしない。外を押しても閉じない。編集中のパネル・コメントのパネルと同じく本文の上に重ねる
+  - name: Markdown の項目のエディタ
+    kind: textarea
+    position: Markdown の項目のパネル
+    description: 項目の Markdown の文字列
+    label: '`本文`'
+    io: 入力
+    type: 文字列
+    visible_when: Markdown の項目のパネルを開いているとき
+    initial_value: 編集中の値（無ければ `edit.blocks[].value`）
+    source: 文書の取得.edit.blocks[].value
+    target: 編集中の変更の直コミット.edits[].values（キーは項目のパス）
+    action: 入力のたびに編集中の変更（変更前の値に編集を始めたときの値を持つ。`@file` は `edit.source`）に入れ、元の値に戻すと編集中の変更から除く
+  - name: Markdown の項目のプレビュー
+    kind: section
+    position: Markdown の項目のパネル > エディタの下
+    description: エディタの値を mdmark で描いたもの。入力に追従する
+    visible_when: Markdown の項目のパネルを開いているとき
+    notes:
+      読み上げ名: '`プレビュー`'
+  - name: 元に戻す
+    kind: button
+    position: Markdown の項目のエディタ・ファイル全体のエディタの見出しの右
+    description: 編集中の変更を取り消して元の値に戻す
+    label: '`元に戻す`'
+    visible_when: そのエディタの編集中の変更があるとき
+    action: クリックでエディタを元の値に戻し、編集中の変更から除く
+  - name: ファイル全体のエディタ
+    kind: textarea
+    position: 本文（広い幅では左、狭い幅では上）
+    description: 元のファイルの内容を書き換える
+    label: ファイルのパス（`edit.filePath`）
+    io: 入力
+    type: 文字列
+    visible_when: '`edit` が `file` のとき（本文の代わり）'
+    initial_value: 編集中の値（無ければ `edit.source`）
+    source: 文書の取得.edit.source
+    target: 編集中の変更の直コミット.edits[].values（キーは `@file`）
+    action: 入力のたびに編集中の変更（変更前の値に編集を始めたときの値を持つ。`@file` は `edit.source`）に入れ、元の内容に戻すと編集中の変更から除く
+    notes:
+      配置: 本文の区画の幅が 48rem 以上のときはファイル全体のプレビューと左右に、未満のときは上下に並べる（画面幅ではなく区画の幅で切り替える）
+      文字: 等幅で、スマホの幅でも 16px 以上
+  - name: ファイル全体のプレビュー
+    kind: section
+    position: 本文（ファイル全体のエディタの右か下）
+    description: 書き換えた内容を描いたもの。入力に追従する
+    visible_when: '`edit` が `file` のとき'
+    source: 本文のプレビュー.markdown（YAML の文書）・ファイル全体のエディタの値（Markdown の文書）
+    action: YAML の文書は、入力が止まった後に本文のプレビューを呼び、返却した `markdown` を mdmark で描く。Markdown の文書はエディタの値をそのまま描く
+    action_ref: IF-155-31#
+    notes:
+      読み上げ名: '`プレビュー`'
+      変換できない間: 最後に変換できた内容を出したままにする（取得した直後は文書の取得の `markdown`）
+  - name: 標準の変換の注意
+    kind: label
+    position: ファイル全体のプレビューの上
+    description: 配信元の変換のスクリプトを指す種類のプレビューが、配信の表示と異なること
+    label: '`この種類のプレビューは、配信元の変換を使用できないため標準の変換で表示しています。`'
+    visible_when: 本文のプレビューの `fallback` が `true` のとき
+    source: 本文のプレビュー.fallback
+  - name: 解析できない書き換えの表示
+    kind: alert
+    position: 本文 > ファイル全体のエディタの上
+    description: 書き換えた YAML を解析できないことと、その場所と理由
+    label: '見出し `YAML として解析できません`。続けて `{行} 行 {列} 列: {理由}。このままでは差分確認とコミットでエラーが発生します。`'
+    visible_when: YAML の文書で、本文のプレビューが `conversionError` を返却したとき
+    source: 本文のプレビュー.conversionError
+    notes:
+      読み上げ: '`role="alert"` で、出たときに読み上げる。エディタに `aria-invalid` を付ける'
+  - name: 編集中のパネル
+    kind: sheet
+    component: CMP-155-4#
+    args:
+      - name: source
+        value: 文書の取得.source
+      - name: branch
+        value: リビジョンの一覧.defaultRef
+      - name: open
+        value: トップバーの `pendingPanelToggle` で開閉
+    position: 画面の右（狭い幅では画面の下から出す面）
+    description: 開いている配信元の編集中の変更の一覧と、差分確認・コミットの結果。本文を編集しながら開いたままにする
+    visible_when: トップバーの編集中のボタンを押したとき
+    action: '`locate` で、文書の本文の変更はその文書を編集の表示（項目のパスの変更は `edit=fields`、`@file` は `edit=file`）で開き、メタデータの変更はメタデータの画面のその行を開く。コミットした後は文書を再取得する'
+    action_ref: IF-155-29#
 screen: frontend/src/features/docs/doc-view/doc-view-screen.tsx
 mock: frontend/src/features/docs/doc-view/doc-view-screen.stories.tsx
 lead: '1 文書の本文を種類のタブ・サイドバー・パンくず・目次と一緒に参照する文書の画面の要素と振る舞いを定め、文書の画面を修正するときに参照する。'
@@ -484,7 +654,7 @@ input_checks:
     message: '`コメントを入力してください。`'
     position: 修正欄の下
 notes:
-  URL: '`/{配信元の ID}/{文書のパス}`。文書のパスを省いた `/{配信元の ID}` は配信元のトップ（一番左のタブの一番上の文書）。search パラメータは `rev`（開くリビジョン。省くと `defaultRef`）・`base`（比較元。省くと差分を出さない）・`tab`（選んだタブの番号。省くか、開いている文書がそのタブに無いときは `active` のタブ）で、TanStack Router の `validateSearch` と Zod で検査する。`/` は配信中の配信元の先頭のトップへ移り、配信中の配信元が無ければ設定画面へ移る'
+  URL: '`/{配信元の ID}/{文書のパス}`。文書のパスを省いた `/{配信元の ID}` は配信元のトップ（一番左のタブの一番上の文書）。search パラメータは `rev`（開くリビジョン。省くと `defaultRef`）・`base`（比較元。省くと差分を出さない）・`tab`（選んだタブの番号。省くか、開いている文書がそのタブに無いときは `active` のタブ）・`edit`（本文の編集の方式。`fields`（表示した場所で修正）・`file`（ファイル全体）。省くか、`edit` が `null` の文書では編集しない）・`panel`（`edits` なら編集中のパネルを開いて始める。メタデータの画面の編集中のパネルから文書の本文の変更へ移るときに付ける）で、TanStack Router の `validateSearch` と Zod で検査する。`/` は配信中の配信元の先頭のトップへ移り、配信中の配信元が無ければ設定画面へ移る'
   コメントの配置先: ブラウザのタブの `sessionStorage` に、配信元の ID・リビジョン・文書のパス・見出しの並び・`quote`・`prefix`・`suffix`・本文・選択を溜める。再読み込みしても残り、タブを閉じると消える。サーバーへは送信しない
   404 のとき: 文書の取得が 404 を返却したら、URL を変えずに見つからない画面を出す（`docs/screen/見つからない画面`）
   補足: 本文の文字列にコメントを溜め、まとめてコピー・起票できる。

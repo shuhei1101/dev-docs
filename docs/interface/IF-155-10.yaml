@@ -879,6 +879,75 @@ flows:
     expected:
       - '`tabs[].items[]` に文書 1 と文書 2 の page が並び、文書 2 の `excluded` が `true`、文書 1 が `false`'
     test: test_normal_when_search_excluded
+  - name: 正常系（本文の編集の情報を返す）
+    summary: 書き込みの API から直コミットできる YAML の文書と Markdown の文書に、ファイル全体の内容と表示した場所で修正できる項目を返却する
+    setup:
+      - name: Mock
+        description: なし（正常系と同じテストの中で起動した project-index）
+      - name: 直コミットを許可した配信元
+        description: '`note`（YAML）と、管理用の YAML `files.yml` を `records: files`・`body_file: path` で指す `guide`（Markdown）を持ち、`direct_commit.kinds` と端末の設定の `write_api_kinds` が `[note, guide]` の sample'
+        notes: '`note` のスキーマは、名前の項目 `title`、`enum` を持つ `status`、文字列の `summary`、`items[]`（`id` を `x-key` にし、Markdown の文字列の `body` を持つ）、`rows[]`（`word`・`replacement`）を持つ'
+      - name: 文書
+        description: '`note` の文書 n1（`items` は `id` が `i1` の要素 1 件）と、本文が 3 行の `guide.md`'
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant PI as project-index
+
+        C->>E: GET /_api/sources/sample/docs/{n1 のパス}
+        E->>PI: 配信元の設定・リビジョン・文書の一覧・端末の設定
+        E->>PI: 既定のブランチの先頭のコミットの n1
+        E->>E: n1 を変換し、項目ごとの範囲と部品の種類を求める
+        E-->>C: 200（edit つき）
+        C->>E: GET /_api/sources/sample/docs/guide
+        E-->>C: 200（edit つき）
+      ```
+
+      <!-- /map -->
+    expected:
+      - n1 の `edit.language` が `yaml`、`edit.source` を YAML として読み込んだ値が n1 の値と同じ
+      - n1 の `edit.baseCommit` がリビジョンの一覧の `defaultRef` の行の `commit`、`edit.version` が文書の一覧の n1 の `version`、`edit.kind` が `note`
+      - n1 の `edit.blocks[].path` が `markdown` の中の順に `status`・`summary`・`#items[i1].body`・`rows` で、`type` がそれぞれ `enum`・`string`・`markdown`・`table`
+      - '`status` の `options` がスキーマの `enum` の並び、`rows` の `columns` が `word`・`replacement` で `value` が行の配列'
+      - 各 `blocks[].markdown` が `markdown` に含まれ、`edit.titleBlock.path` が `title` で `blocks` に `title` が無い
+      - '`guide.md` の `edit.language` が `markdown`、`edit.source` が本文の 3 行、`edit.blocks` が空、`edit.titleBlock` が `null`'
+    test: test_normal_when_edit_returned
+  - name: 正常系（編集できない文書）
+    summary: 書き込みの API が断る文書と、既定のブランチでないリビジョンの文書には `edit` を返却しない
+    setup:
+      - name: Mock
+        description: なし（正常系と同じテストの中で起動した project-index）
+      - name: 直コミットを許可した配信元
+        description: '正常系（本文の編集の情報を返す）の sample の `direct_commit.kinds` の `guide` を `{id: guide, body: false}` にし、`write_api_kinds` に無い種類 `memo` と、SQLite の表の行の種類 `log` を加えたもの'
+        notes: '`log` も `write_api_kinds` に記載する'
+      - name: 古い commit
+        description: n1 の `summary` を変える前の commit
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/docs/{path}
+        participant PI as project-index
+
+        C->>E: GET /_api/sources/sample/docs/guide
+        E->>PI: 配信元の設定（metadataOnlyKinds）・端末の設定（writeApiKinds）
+        E-->>C: 200（edit: null）
+        C->>E: GET /_api/sources/sample/docs/{n1 のパス}?ref={古い commit}
+        E-->>C: 200（edit: null）
+      ```
+
+      <!-- /map -->
+    expected:
+      - '`guide.md`・`memo` の文書・`log` の行の文書の `edit` が `null` で、`markdown` は返却する'
+      - '`ref` に古い commit を指した n1 の `edit` が `null`'
+      - '`ref` を省いた n1 の `edit` は `null` でない'
+    test: test_normal_when_not_editable
 lead: '配信元の文書を変換した Markdown とタブ・サイドバー・差分の項目・画面の状態を返却する文書の取得の入出力を定め、文書の取得を修正するときに参照する。'
 identifier: get_document
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -1011,6 +1080,64 @@ response:
     type: bool
     description: page の文書が検索から除外される文書（配信元の設定の `documents[].search_exclude` に該当する文書）か
     notes: 'group と、削除した文書（`change: deleted`）の page は `false`'
+  - name: edit
+    type: DocumentEdit | None
+    description: 文書の画面で本文を編集するときの、元の内容・バージョン・表示した場所で修正できる項目
+    notes: 制約「本文を編集できる文書」に当たらない文書は `null`
+  - name: edit.docId
+    type: str
+    description: 文書の ID
+    notes: 直コミットの `edits[].docId` に指定する
+  - name: edit.kind
+    type: str
+    description: 文書の種類（`documents[].id`）
+    notes: 直コミットの `edits[].docKind` に指定する
+  - name: edit.filePath
+    type: str
+    description: 文書のファイルか本文のファイルのパス（配信元の直下から、拡張子つき）
+    notes: 直コミットの `edits[].docPath` に指定する
+  - name: edit.version
+    type: str
+    description: 文書のバージョン（project-index の文書の一覧の `version`）
+    notes: 直コミットの `edits[].expectedVersion` に指定する
+  - name: edit.baseCommit
+    type: str
+    description: 返却した内容のコミット（既定のブランチの先頭のコミット。40 桁）
+    notes: 画面は、編集中の変更の最初の 1 件を追加したときにこの値を記録し、直コミットの `baseCommit` に送信する
+  - name: edit.language
+    type: Literal['yaml', 'markdown']
+    description: ファイル全体の編集の言語
+  - name: edit.source
+    type: str
+    description: ファイル全体の編集の元の内容（制約「編集の元の内容」）
+  - name: edit.blocks[].path
+    type: str
+    description: 表示した場所で修正できる項目のパス（`summary`・`#items[i1].body`・`rows`）
+    notes: 直コミットの `edits[].values` のキーに指定する。Markdown の文書と `converters[]` を指す種類は `blocks` が空
+  - name: edit.blocks[].label
+    type: str
+    description: 項目の名前（制約「表示した場所で修正できる項目」）
+  - name: edit.blocks[].type
+    type: Literal['string', 'enum', 'markdown', 'table']
+    description: スキーマの型から選んだ編集の部品の種類
+  - name: edit.blocks[].markdown
+    type: str
+    description: '`markdown` のうち、この項目を描いた範囲の Markdown'
+  - name: edit.blocks[].value
+    type: str | list[dict[str, str]]
+    description: 項目の今の値。`table` は行ごとの列の値の配列、それ以外は文字列
+  - name: edit.blocks[].options
+    type: list[str] | None
+    description: '`enum` の選択肢（スキーマの `enum` の並び）'
+    notes: '`enum` 以外は `null`'
+  - name: edit.blocks[].columns
+    type: list[str] | None
+    description: '`table` の列のキー（配列の要素のスキーマの `properties` の並び）'
+    notes: '`table` 以外は `null`'
+  - name: edit.titleBlock
+    type: EditBlock | None
+    description: 文書のタイトルに描く項目（共通のキー `name` に対応する最上位のキー）。`blocks[]` の要素と同じ構造
+    notes: '`blocks` には含めない。Markdown の文書・`converters[]` を指す種類は `null`'
 response_notes: '本文の描画（mdmark）・リンクの組み立て・コメント・本文の差分の強調は画面が持つ。差分の強調は、`ref` を `diff.base` にして取った `markdown` を mdmark の `baseMarkdown` に指定して付ける。'
 status_codes:
   - code: '200'
@@ -1085,6 +1212,17 @@ constraints:
     notes: 管理の MCP（`/_admin/mcp`）の応答は圧縮しない
   - item: 検索から除外される文書
     constraint: サイドバーの page の `excluded` は、返却するリビジョンの project-index の文書の一覧の `documents[].excluded` の値にする。除外される文書もサイドバーから除かない
+  - item: 本文を編集できる文書
+    constraint: '`ref` を省いたか既定のブランチの名前を指した要求で、文書の種類が端末の設定の `sources[].directCommit.writeApiKinds`（`GET /settings/sources`）にあり、配信元の設定の `documents[]` の行が `sqlite` を持たない文書だけ `edit` を返却する。本文のファイルを持つ文書は、本文のファイルが `.md` で終わり、種類が配信元の設定の `directCommit.metadataOnlyKinds` に無いときだけ。YAML の文書は `conversionError` が `null` のときだけ'
+    notes: 書き込みの API が断る文書に編集のボタンを出さないため。`writeApiKinds` の既定は空で、画面から編集できる配信元と種類は端末の設定の `write_api_kinds` だけで決定する
+  - item: 編集の元の内容
+    constraint: YAML の文書は、文書の値をキーの順のままブロック形式の YAML に書き出した文字列。Markdown の文書は、project-index の文書の取得の `body`
+    notes: YAML の文書のコメントと元の書き方は保たない（直コミットの `replace` が値で置き換えるため）
+  - item: 表示した場所で修正できる項目
+    constraint: 'スキーマ駆動で変換する YAML の文書の、`markdown` に描いた項目を、`markdown` の中の順に並べる。`enum` を持つ文字列は `enum`、`contentMediaType` が `text/markdown` の文字列は `markdown`、それ以外の文字列は `string`、要素が文字列（`enum` を含む）の項目だけを持つオブジェクトの配列は `table` で、要素の中の項目を別の項目にしない。ただし `x-key` を持ち `x-shape: sections` で描く配列は `table` にしない。`table` にしないオブジェクトの配列のうちスキーマが `x-key` を持つ配列は、要素の中の項目も同じ規則で `#{配列のキー}[{要素の x-key の値}].{キー}`（project-index の書き込みの参照の型の項目のパス）の 1 項目にし、`x-key` を持たない配列の要素の中の項目は含めない。`x-hidden: true` の項目・図（`x-shape: diagram`）・入れ子のオブジェクト・数と真偽値の項目と、数・真偽値の列を持つ配列は含めない（ファイル全体の編集で修正する）。`label` はスキーマの `title`、配列の要素の中の項目は `{要素の x-key の値} の {title}`'
+  - item: 編集の情報の問い合わせ
+    constraint: '`edit` を返却する要求では、端末の設定（`GET /settings/sources`）を、配信元の設定・リビジョン・文書の一覧と同時に問い合わせる。`edit.baseCommit` はリビジョンの一覧の `defaultRef` の行の `commit`、`edit.version` は文書の一覧の同じ文書の `version` にし、文書はそのコミットをリビジョンにして取得する'
+    notes: '`edit.source`・`blocks[].value` と `edit.baseCommit` を同じコミットの内容にする'
 refs:
   - to: SC-155-10
     item: scenarios[異常シナリオ（project-index につながらない）]
@@ -1099,6 +1237,8 @@ callers:
   - SC-155-7#scenarios[正常シナリオ（設計書の検討事項のリンクを開く）]
   - SC-155-7#scenarios[正常シナリオ（配信元を再度開く）]
   - SC-155-7#scenarios[正常シナリオ（差分つきの文書を続けて開く）]
+  - SC-155-15#scenarios[正常シナリオ（文書の画面で本文を編集する）]
+  - SC-155-15#scenarios[正常シナリオ（編集できない文書には編集のボタンを出さない）]
 notes:
   補足: '`path` を省くと一番左のタブのサイドバーの一番上の文書を返却する。'
 tags:

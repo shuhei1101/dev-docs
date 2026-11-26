@@ -33,6 +33,9 @@ SAME_ORIGIN = {"Sec-Fetch-Site": "same-origin"}
 # 衝突したときのスクリプトと、文書の取得の `itemVersions` を持つ commit（develop の 7153469）。
 # 直コミットを確かめるテストだけがこの commit の project-index を相手にする
 PROJECT_INDEX_WRITE_COMMIT = "7153469bf6e3ac45a26848e32d2ddda91bade001"
+# 配信元の設定の取得が本文の直コミットを断る種類（`directCommit.metadataOnlyKinds`）を返却する commit（develop の b59c3ae）。
+# 文書の本文の編集を確かめるテストだけがこの commit の project-index を相手にする
+PROJECT_INDEX_BODY_COMMIT = "b59c3ae4882f3f8656973370bb088c35aa665cde"
 # 起動の待ち受けを待つ上限。2026-11-12 の実測で、負荷の低いときは 1 回 18 秒、
 # ロードアベレージ 20 では 30 秒を超えたため、30 秒 + 50% の余裕を持たせて 60 秒にする
 SERVE_WAIT_SEC = 60
@@ -1278,6 +1281,38 @@ def write_index(
     index.stop()
 
 
+@pytest.fixture(scope="session")
+def body_index_clone() -> Path:
+    """本文の直コミットを断る種類を返却する commit の project-index のクローンを返却する（実行ごとに 1 回用意する）。"""
+    return project_index_clone(PROJECT_INDEX_BODY_COMMIT)
+
+
+@pytest.fixture
+def body_index(
+    tmp_path: Path,
+    body_index_clone: Path,
+    free_port: Callable[[], int],
+    monkeypatch: pytest.MonkeyPatch,
+) -> Iterator[RealIndex]:
+    """文書の本文の編集を確かめる本物の project-index を返却する（終了時に止める）。
+
+    project-index が打つコミットの作成者を固定し、端末の git の設定を読ませない。
+    """
+    for name, value in {
+        "GIT_AUTHOR_NAME": "test",
+        "GIT_AUTHOR_EMAIL": "test@example.com",
+        "GIT_COMMITTER_NAME": "test",
+        "GIT_COMMITTER_EMAIL": "test@example.com",
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_CONFIG_SYSTEM": "/dev/null",
+    }.items():
+        monkeypatch.setenv(name, value)
+    index = RealIndex(tmp_path / "body-index", body_index_clone, free_port())
+    index.root.mkdir()
+    yield index
+    index.stop()
+
+
 def _schema(required: list[str], **properties: Any) -> str:
     """文書の種類のスキーマ（JSON は YAML として読み込める）。"""
     return json.dumps(
@@ -1417,5 +1452,140 @@ def metadata_source(
         files=files,
         config=config,
         write_api_kinds=["note", "terms"] if write_api_kinds is None else write_api_kinds,
+        on_conflict=on_conflict,
+    )
+
+
+# 本文の編集を確かめる種類 note のスキーマ（名前・enum・文字列・セクションの x-key の配列・表）
+NOTE_BODY_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "required": ["id", "title", "summary"],
+    "properties": {
+        "id": {"type": "string", "title": "ID", "x-hidden": True},
+        "title": {"type": "string", "title": "タイトル"},
+        "status": {"type": "string", "title": "状態", "enum": ["draft", "current"]},
+        "summary": {"type": "string", "title": "概要", "minLength": 1},
+        "items": {
+            "type": "array",
+            "title": "項目",
+            "x-heading": "項目",
+            "x-shape": "sections",
+            "x-key": "id",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string", "title": "ID", "x-hidden": True},
+                    "body": {
+                        "type": "string",
+                        "title": "本文",
+                        "contentMediaType": "text/markdown",
+                    },
+                },
+            },
+        },
+        "rows": {
+            "type": "array",
+            "title": "置き換え",
+            "x-heading": "置き換え",
+            "x-shape": "table",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "word": {"type": "string", "title": "単語"},
+                    "replacement": {"type": "string", "title": "置き換え先"},
+                },
+            },
+        },
+    },
+}
+GUIDE_BODY = "# 案内\n\n1 行目の説明\n"
+
+
+def note_value(note_id: str, **values: Any) -> dict[str, Any]:
+    """種類 note の文書の値（`items` は `i1` の 1 件、`rows` は 2 行）。"""
+    return {
+        "id": note_id,
+        "title": f"メモ {note_id}",
+        "status": "draft",
+        "summary": "概要",
+        "items": [{"id": "i1", "body": "**本文**"}],
+        "rows": [
+            {"word": "a", "replacement": "b"},
+            {"word": "c", "replacement": "d"},
+        ],
+        **values,
+    }
+
+
+def body_source(
+    index: RealIndex,
+    *,
+    source_id: str = "sample",
+    kinds: list[Any] | None = None,
+    write_api_kinds: list[str] | None = None,
+    extra_documents: list[dict[str, Any]] | None = None,
+    extra_files: dict[str, str] | None = None,
+    on_conflict: list[str] | None = None,
+) -> DirectSource:
+    """本文を編集できる種類 note（YAML）・guide（Markdown）と用語集 terms を持つ直コミットの配信元を作る。
+
+    文書 n1・n2（`notes/*.yaml`）と、管理用の YAML `files.yaml` の行が指す `guide.md`。
+    """
+    text = {"type": "string"}
+    documents: list[dict[str, Any]] = [
+        {
+            "id": "note",
+            "paths": ["notes/*.yaml"],
+            "alias_type": "doc",
+            "schema": "schemas/note.schema.yaml",
+        },
+        {
+            "id": "guide",
+            "paths": ["files.yaml"],
+            "records": "files",
+            "body_file": "path",
+            "schema": "schemas/guide.schema.yaml",
+        },
+        {
+            "id": "terms",
+            "paths": ["glossary.yaml"],
+            "records": "terms",
+            "alias_type": "term",
+            "schema": "schemas/terms.schema.yaml",
+        },
+        *(extra_documents or []),
+    ]
+    files = {
+        "schemas/note.schema.yaml": json.dumps(NOTE_BODY_SCHEMA, ensure_ascii=False),
+        "schemas/guide.schema.yaml": _schema(["path"], path=text, description=text),
+        "schemas/terms.schema.yaml": _schema(["id", "name"], id=text, name=text),
+        "notes/n1.yaml": json.dumps(note_value("n1"), ensure_ascii=False),
+        "notes/n2.yaml": json.dumps(note_value("n2"), ensure_ascii=False),
+        # 本文を書き込むと project-index が末尾に改行を付けて書き出すため、元から改行で終える
+        "files.yaml": json.dumps(
+            {"files": [{"path": "guide.md", "description": "案内"}]}, ensure_ascii=False
+        )
+        + "\n",
+        "guide.md": GUIDE_BODY,
+        "glossary.yaml": json.dumps(
+            {"terms": [{"id": "source", "name": "配信元"}]}, ensure_ascii=False
+        ),
+        **(extra_files or {}),
+    }
+    config = {
+        "name": source_id,
+        "default_ref": "develop",
+        "documents": documents,
+        "direct_commit": {
+            "branch": "develop",
+            "kinds": ["note", "terms", "guide"] if kinds is None else kinds,
+        },
+    }
+    return direct_source(
+        index,
+        source_id,
+        files=files,
+        config=config,
+        write_api_kinds=["note", "terms", "guide"] if write_api_kinds is None else write_api_kinds,
         on_conflict=on_conflict,
     )

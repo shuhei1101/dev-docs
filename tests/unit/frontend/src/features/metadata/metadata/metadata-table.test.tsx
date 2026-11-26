@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { MetadataTable } from "@/features/metadata/metadata/metadata-table";
-import { usePendingEditsStore } from "@/features/metadata/shared/pending-edits-store";
+import { usePendingEditsStore } from "@/shared/stores/pending-edits-store";
 import { metadataResponse, metadataRow } from "@tests/helpers/fixtures";
 import { renderInRouter } from "@tests/helpers/render";
 

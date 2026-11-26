@@ -16,7 +16,9 @@ from .conftest import (
     MockIndex,
     RealIndex,
     ServerEnv,
+    body_source,
     metadata_source,
+    note_value,
 )
 
 URL = "/_api/sources/sample/commits"
@@ -558,3 +560,199 @@ def test_normal_when_dry_run_conflicted(
     assert [reason["key"] for reason in data["conflict"]["reasons"]] == ["tags:n1:update"]
     assert _git(source.repo, "branch", "--list", "project-index/conflict/*") == branches
     assert not (tmp_path / "received.env").exists()
+
+
+def _doc_edit(env: ServerEnv, path: str) -> dict[str, Any]:
+    """文書の取得の `edit`（本文の編集の情報）。"""
+    return dict(env.client.get(f"/_api/sources/sample/docs/{path}").json()["edit"])
+
+
+def _body_edit(edit: dict[str, Any], path: str, value: Any) -> dict[str, Any]:
+    """文書の取得の `edit` から、本文の項目のパスかファイル全体の変更を作る。"""
+    return {
+        "key": f"body:{edit['docId']}:{path}",
+        "kind": "body",
+        "op": "update",
+        "docId": edit["docId"],
+        "docKind": edit["kind"],
+        "expectedVersion": edit["version"],
+        "docPath": edit["filePath"],
+        "values": {path: value},
+    }
+
+
+def _replaced(edit: dict[str, Any], old: str, new: str) -> str:
+    """ファイル全体の元の内容の 1 か所を書き換える。"""
+    assert old in edit["source"]
+    return str(edit["source"]).replace(old, new, 1)
+
+
+def test_normal_when_document_body_edited(
+    body_index: RealIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """項目のパスへの修正とファイル全体の編集を 1 つのコミットにしてプッシュする（正常系）。"""
+    # 準備
+    source = body_source(body_index)
+    env = make_server(body_index)
+    n1 = _doc_edit(env, "notes/n1")
+    n2 = _doc_edit(env, "notes/n2")
+    guide = _doc_edit(env, "files/guide.md")
+    rows = [{"word": "a", "replacement": "b"}, {"word": "c", "replacement": "e"}]
+    guide_body = guide["source"].replace("1 行目の説明", "修正後の説明")
+    edits = [
+        _body_edit(n1, "summary", "修正後の概要"),
+        _body_edit(n1, "rows", rows),
+        _body_edit(n1, "#items[i1].body", "修正後の本文"),
+        _body_edit(n2, "@file", _replaced(n2, "summary: 概要", "summary: 修正後")),
+        _body_edit(guide, "@file", guide_body),
+    ]
+    before = _git(source.bare, "rev-parse", "develop")
+    # 実行
+    response = env.client.post(
+        URL,
+        json={"edits": edits, "message": MESSAGE, "baseCommit": n1["baseCommit"]},
+        headers=SAME_ORIGIN,
+    )
+    # 検証
+    data = response.json()
+    assert response.status_code == 200, data
+    assert data["applied"] is True
+    assert sorted((item["key"], item["status"]) for item in data["results"]) == sorted(
+        (edit["key"], "updated") for edit in edits
+    )
+    assert _git(source.bare, "rev-parse", "develop~1") == before
+    changed = _git(source.bare, "diff", "--name-only", f"{before}..develop").splitlines()
+    assert sorted(changed) == ["guide.md", "notes/n1.yaml", "notes/n2.yaml"]
+    written = _remote_file(source, "notes/n1.yaml")
+    assert written == note_value(
+        "n1", summary="修正後の概要", rows=rows, items=[{"id": "i1", "body": "修正後の本文"}]
+    )
+    assert _remote_file(source, "notes/n2.yaml")["summary"] == "修正後"
+    assert _git(source.bare, "show", "develop:guide.md") == guide_body.rstrip("\n")
+
+
+def test_normal_when_whole_file_edit_conflicted(
+    tmp_path: Path, body_index: RealIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """ファイル全体の変更の後に同じ文書の別の項目が変わっていれば、修正をブランチに残す（正常系）。"""
+    # 準備
+    source = body_source(body_index, on_conflict=_script(tmp_path, CONFLICT_SCRIPT))
+    env = make_server(body_index)
+    n1 = _doc_edit(env, "notes/n1")
+    edit = _body_edit(n1, "@file", _replaced(n1, "summary: 概要", "summary: 修正後"))
+    pushed = _push_other(
+        source,
+        tmp_path,
+        "notes/n1.yaml",
+        note_value("n1", rows=[{"word": "x", "replacement": "y"}]),
+    )
+    # 実行
+    response = env.client.post(
+        URL,
+        json={"edits": [edit], "message": MESSAGE, "baseCommit": n1["baseCommit"]},
+        headers=SAME_ORIGIN,
+    )
+    # 検証
+    data = response.json()
+    assert response.status_code == 200, data
+    assert data["applied"] is False
+    conflict = data["conflict"]
+    assert conflict["branch"].startswith("project-index/conflict/")
+    assert [reason["key"] for reason in conflict["reasons"]] == [edit["key"]]
+    assert conflict["script"]["prUrl"] == "https://github.com/o/r/pull/9"
+    assert _git(source.bare, "rev-parse", "develop") == pushed
+
+
+def test_error_when_whole_file_unparsable(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """YAML として読み込めない @file を、project-index へ送信せずに断る（異常系）。"""
+    # 準備
+    mock_index.serve("sample", IndexSource())
+    env = make_server(mock_index)
+    edit = {
+        "key": "body:n2:@file",
+        "kind": "body",
+        "op": "update",
+        "docId": "n2",
+        "docKind": "note",
+        "expectedVersion": "v1",
+        "docPath": "notes/n2.yaml",
+        "values": {"@file": "id: n2\ntitle: メモ\n\tsummary: 概要\n"},
+    }
+    # 実行
+    response = env.client.post(
+        URL,
+        json={"edits": [edit], "message": MESSAGE, "baseCommit": "0a1b2c3"},
+        headers=SAME_ORIGIN,
+    )
+    # 検証
+    data = response.json()
+    assert response.status_code == 400, data
+    [error] = data["errors"]
+    assert (error["key"], error["path"]) == ("body:n2:@file", "@file")
+    assert "3" in error["reason"]
+    assert not [item for item in mock_index.received if item[1].endswith("/commits")]
+
+
+def test_error_when_document_body_invalid(
+    body_index: RealIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """ファイル全体の変更の検査の違反を、変更の key と項目のパスで返却する（異常系）。"""
+    # 準備
+    source = body_source(body_index)
+    env = make_server(body_index)
+    n1 = _doc_edit(env, "notes/n1")
+    guide = _doc_edit(env, "files/guide.md")
+    edits = [
+        _body_edit(n1, "@file", _replaced(n1, "summary: 概要", "summary: ''")),
+        _body_edit(guide, "@file", guide["source"] + "追記\n"),
+    ]
+    before = _state(source)
+    # 実行
+    response = env.client.post(
+        URL,
+        json={"edits": edits, "dryRun": True, "baseCommit": n1["baseCommit"]},
+        headers=SAME_ORIGIN,
+    )
+    # 検証
+    data = response.json()
+    assert response.status_code == 422, data
+    keys = {item.get("key") for item in data["errors"]}
+    assert edits[0]["key"] in keys
+    assert any(
+        item.get("key") == edits[0]["key"] and "summary" in str(item.get("path"))
+        for item in data["errors"]
+    )
+    assert edits[1]["key"] not in keys
+    assert _state(source) == before
+
+
+def test_error_when_whole_file_and_item_edits_mixed(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """同じ文書の @file と項目のパスの変更が並ぶ要求を、project-index へ送信せずに断る（異常系）。"""
+    # 準備
+    mock_index.serve("sample", IndexSource())
+    env = make_server(mock_index)
+    common = {
+        "kind": "body",
+        "op": "update",
+        "docId": "n1",
+        "docKind": "note",
+        "expectedVersion": "v1",
+        "docPath": "notes/n1.yaml",
+    }
+    edits = [
+        {**common, "key": "body:n1:@file", "values": {"@file": "id: n1\ntitle: メモ\n"}},
+        {**common, "key": "body:n1:summary", "values": {"summary": "修正後"}},
+    ]
+    # 実行
+    response = env.client.post(
+        URL, json={"edits": edits, "message": MESSAGE, "baseCommit": "0a1b2c3"}, headers=SAME_ORIGIN
+    )
+    # 検証
+    data = response.json()
+    assert response.status_code == 400, data
+    assert {item["key"] for item in data["errors"]} == {"body:n1:@file", "body:n1:summary"}
+    assert not [item for item in mock_index.received if item[1].endswith("/commits")]

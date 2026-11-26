@@ -16,6 +16,8 @@ import type {
 import type {
   ColumnsRequest,
   DocumentResponse,
+  PreviewRequest,
+  PreviewResponse,
   RefsResponse,
   ScreenSearchResult
 } from '../model';
@@ -24,11 +26,12 @@ import {
   getViewGetDocumentDefaultResponseMock,
   getViewGetDocumentResponseMock,
   getViewListRefsResponseMock,
+  getViewPostPreviewResponseMock,
   getViewPutColumnsResponseMock,
   getViewSearchPageResponseMock
 } from './view.faker';
 
-export { getViewGetDocumentDefaultResponseMock, getViewGetDocumentResponseMock, getViewSearchPageResponseMock, getViewListRefsResponseMock, getViewPutColumnsResponseMock } from './view.faker';
+export { getViewGetDocumentDefaultResponseMock, getViewGetDocumentResponseMock, getViewPostPreviewResponseMock, getViewSearchPageResponseMock, getViewListRefsResponseMock, getViewPutColumnsResponseMock } from './view.faker';
 
 
 export const getViewGetDocumentDefaultMockHandler = (overrideResponse?: DocumentResponse | ((info: Parameters<HttpResponseResolver<{ source: string }>>[0]) => Promise<DocumentResponse> | DocumentResponse), options?: RequestHandlerOptions) => {
@@ -50,6 +53,18 @@ export const getViewGetDocumentMockHandler = (overrideResponse?: DocumentRespons
     return HttpResponse.json(overrideResponse !== undefined
     ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
     : getViewGetDocumentResponseMock(),
+      { status: 200
+      })
+  }, options)
+}
+
+export const getViewPostPreviewMockHandler = (overrideResponse?: PreviewResponse | ((info: Parameters<HttpResponseResolver<{ source: string }, PreviewRequest>>[0]) => Promise<PreviewResponse> | PreviewResponse), options?: RequestHandlerOptions) => {
+  return http.post<{ source: string }, PreviewRequest>('*/_api/sources/:source/preview', async (info: Parameters<HttpResponseResolver<{ source: string }, PreviewRequest>>[0]) => {
+
+
+    return HttpResponse.json(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getViewPostPreviewResponseMock(),
       { status: 200
       })
   }, options)
@@ -93,6 +108,7 @@ export const getViewPutColumnsMockHandler = (overrideResponse?: ColumnsRequest |
 export const getViewMock = () => [
   getViewGetDocumentDefaultMockHandler(),
   getViewGetDocumentMockHandler(),
+  getViewPostPreviewMockHandler(),
   getViewSearchPageMockHandler(),
   getViewListRefsMockHandler(),
   getViewPutColumnsMockHandler()

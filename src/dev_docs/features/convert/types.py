@@ -73,3 +73,5 @@ class RenderContext:
     item_anchor: Callable[[str, str], str | None] = field(default=lambda document_id, item: None)
     # 検討事項の文書を探した結果の ID。`decisions` の値のうち、この ID だけを検討事項の文書へのリンクにする
     decisions: frozenset[str] = field(default_factory=frozenset)
+    # スキーマ駆動の変換が、組み立てた項目のパスとその項目の Markdown の組を入れるリスト。`None` は記録しない
+    item_ranges: list[tuple[str, str]] | None = None

@@ -18,7 +18,18 @@ import pytest
 from dev_docs.features.view.document_lists import DOCUMENT_LIST_CACHE_SIZE
 from dev_docs.shared.yaml_io import load_yaml
 
-from .conftest import REPO_ROOT, IndexSource, MockIndex, RealIndex, ServerEnv, doc, row
+from .conftest import (
+    GUIDE_BODY,
+    REPO_ROOT,
+    IndexSource,
+    MockIndex,
+    RealIndex,
+    ServerEnv,
+    body_source,
+    doc,
+    note_value,
+    row,
+)
 
 TABLE_DATA = {
     "id": "doc-1",
@@ -1549,3 +1560,125 @@ def test_normal_when_search_excluded(
     }
     assert response.status_code == 200
     assert pages == {"docs/doc-1": False, "docs/doc-2": True}
+
+
+def test_normal_when_edit_returned(
+    body_index: RealIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """直コミットできる YAML と Markdown の文書に、本文の編集の情報を返却する（正常系）。"""
+    # 準備
+    body_source(body_index)
+    env = make_server(body_index)
+    refs = env.client.get("/_api/sources/sample/refs").json()
+    head = next(item["commit"] for item in refs["branches"] if item["name"] == refs["defaultRef"])
+    listed = httpx.get(f"{body_index.address}/sources/sample/docs", timeout=60).json()
+    version = next(item["version"] for item in listed["documents"] if item["id"] == "n1")
+    # 実行
+    note = env.client.get("/_api/sources/sample/docs/notes/n1")
+    guide = env.client.get("/_api/sources/sample/docs/files/guide.md")
+    # 検証
+    assert note.status_code == 200, note.json()
+    body = note.json()
+    edit = body["edit"]
+    assert edit["language"] == "yaml"
+    assert load_yaml(edit["source"]) == note_value("n1")
+    assert head.startswith(edit["baseCommit"]) or edit["baseCommit"].startswith(head)
+    assert (edit["version"], edit["kind"]) == (version, "note")
+    assert [(block["path"], block["type"]) for block in edit["blocks"]] == [
+        ("status", "enum"),
+        ("summary", "string"),
+        ("#items[i1].body", "markdown"),
+        ("rows", "table"),
+    ]
+    blocks = {block["path"]: block for block in edit["blocks"]}
+    assert blocks["status"]["options"] == ["draft", "current"]
+    assert blocks["rows"]["columns"] == ["word", "replacement"]
+    assert blocks["rows"]["value"] == note_value("n1")["rows"]
+    assert all(block["markdown"] in body["markdown"] for block in edit["blocks"])
+    assert edit["titleBlock"]["path"] == "title"
+    assert "title" not in blocks
+    assert guide.status_code == 200, guide.json()
+    guide_edit = guide.json()["edit"]
+    assert guide_edit["language"] == "markdown"
+    assert guide_edit["source"] == GUIDE_BODY
+    assert (guide_edit["blocks"], guide_edit["titleBlock"]) == ([], None)
+
+
+def _sqlite_log(path: Path) -> None:
+    """SQLite の表 logs（行 1 件）のファイルを作る。"""
+    import sqlite3
+    from contextlib import closing
+
+    with closing(sqlite3.connect(path)) as connection:
+        connection.execute("create table logs (id text, message text)")
+        connection.execute("insert into logs values ('l1', 'ログ')")
+        connection.commit()
+
+
+def test_normal_when_not_editable(
+    body_index: RealIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """書き込みの API が断る文書と既定のブランチでないリビジョンには edit を返却しない（正常系）。"""
+    # 準備
+    text = {"type": "string"}
+    documents: list[dict[str, Any]] = [
+        {"id": "memo", "paths": ["memos/*.yaml"], "schema": "schemas/memo.schema.yaml"},
+        {
+            "id": "log",
+            "sqlite": {
+                "file": "logs.db",
+                "table": "logs",
+                "columns": [
+                    {"name": "id", "description": "ID"},
+                    {"name": "message", "description": "内容"},
+                ],
+            },
+        },
+    ]
+    files = {
+        "schemas/memo.schema.yaml": json.dumps(
+            {"type": "object", "properties": {"id": text, "name": text}}
+        ),
+        "memos/m1.yaml": json.dumps({"id": "m1", "name": "メモ"}, ensure_ascii=False),
+    }
+    source = body_source(
+        body_index,
+        kinds=["note", "terms", {"id": "guide", "body": False}, "log"],
+        write_api_kinds=["note", "terms", "guide", "log"],
+        extra_documents=documents,
+        extra_files=files,
+    )
+    old = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=source.develop, check=True, capture_output=True, text=True
+    ).stdout.strip()
+    (source.develop / "notes" / "n1.yaml").write_text(
+        json.dumps(note_value("n1", summary="修正後の概要"), ensure_ascii=False), encoding="utf-8"
+    )
+    for args in (["commit", "-qam", "概要"], ["push", "-q"]):
+        subprocess.run(["git", *args], cwd=source.develop, check=True, capture_output=True)
+    # SQLite の表は配信元のフォルダのファイルを読み込む
+    _sqlite_log(source.repo / "logs.db")
+    env = make_server(body_index)
+    log_path = next(
+        item["path"]
+        for tab in env.client.get("/_api/sources/sample/docs/notes/n1").json()["tabs"]
+        for item in tab["items"]
+        if tab["title"] == "log"
+    )
+    # 実行
+    responses = {
+        name: env.client.get(f"/_api/sources/sample/docs/{path}")
+        for name, path in {
+            "guide": "files/guide.md",
+            "memo": "memos/m1",
+            "log": log_path,
+            "old": f"notes/n1?ref={old}",
+            "latest": "notes/n1",
+        }.items()
+    }
+    # 検証
+    for name in ("guide", "memo", "log", "old"):
+        assert responses[name].status_code == 200, (name, responses[name].json())
+        assert responses[name].json()["edit"] is None, name
+        assert responses[name].json()["markdown"], name
+    assert responses["latest"].json()["edit"] is not None

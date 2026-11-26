@@ -12,6 +12,7 @@ EXPECTED_OPERATION_IDS = [
     "view-get_document",
     "view-get_document_default",
     "view-list_refs",
+    "view-post_preview",
     "view-put_columns",
     "view-search_page",
 ]
@@ -39,4 +40,5 @@ def test_normal(sample_index: MockIndex, make_server: Callable[..., ServerEnv]) 
     assert len(set(operation_ids)) == len(operation_ids)
     assert "conversionError" in document_properties
     assert "tableKeys" in document_properties
+    assert "edit" in document_properties
     assert "conversion_error" not in document_properties

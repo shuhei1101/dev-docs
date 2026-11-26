@@ -110,7 +110,6 @@ constraints:
     constraint: 配信元の設定（`GET /sources/{source}/config`）・文書の一覧（`GET /sources/{source}/docs?values=true&common_keys=true`）・リビジョンの一覧（`GET /sources/{source}/refs`）・端末の設定（`GET /settings/sources`）を問い合わせる。`ref` を省いたときは、先にリビジョンの一覧で既定のブランチの先頭のコミットを取得し、文書の一覧はそのコミットをリビジョンにして問い合わせる（`baseCommit` と返却する内容を同じコミットにする）。`ref` を指定したときはそのコミットをリビジョンにして、リビジョンの一覧と同時に問い合わせる。配信元の設定と端末の設定は、どちらのときもそれらと同時に問い合わせる
   - item: 種類ごとの行と列
     constraint: '`terms`: `commonKeys.alias_type` が `term` の文書。列は用語（`name`）・別名（`aliases`）・説明（`description`）。`aliases`: `commonKeys.alias_type` が `term` 以外の文書。列は名前（`name`）・別名（`aliases`）・文書（`path`。修正できない）。`tags`: 全ての文書。列は文書（`path`。修正できない）・タグ（`tags`）。`rules`: 種類 `rule_index` の文書。列は規約（`rule`）・適用するパス（`paths`）・ツール（`tools`）・引数（`args`。オブジェクトのため修正できない）。`config`: 配信元の設定の `documents[]` の行。列は種類（`id`）・パス（`paths`）・行（`records`）・エイリアスの種類（`alias_type`）・直コミット（端末の設定の `write_api_kinds` にあれば ✓）で、修正できない。`files`: 配信元の設定の行が `records` と `body_file` を持つ種類の文書。列は行（`records`。種類の ID）・ファイル（`path`。修正できない）・概要（`description`）'
-    notes: 修正できる列を種類ごとのキーに絞り、規約の本文やテンプレートを画面から書き換えない（要件の直コミットの対象）
   - item: 直コミットできるか
     constraint: '行の文書の種類が端末の設定の `sources[].directCommit.writeApiKinds` にあれば `editable: true`。配信元の設定の `direct_commit.kinds[]` は読み取り API が返却しないため判定に使用せず、無い種類の修正は直コミットの 422 で行ごとに返る'
   - item: タイムアウト

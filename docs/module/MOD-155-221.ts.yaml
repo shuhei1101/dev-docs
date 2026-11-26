@@ -1,20 +1,20 @@
 id: MOD-155-221
-title: 画面 / メタデータの画面 / pending-edits-store.ts
-lead: 配信元ごとの編集中の変更をブラウザのタブに保つストアを受け持ち、メタデータの画面の pending-edits-store.ts を修正するときに参照する。
+title: 画面 / 共通 / pending-edits-store.ts
+lead: 配信元ごとの編集中の変更（メタデータの行と文書の本文）をブラウザのタブに保つストアを受け持ち、共通の pending-edits-store.ts を修正するときに参照する。
 data_models:
   - name: PendingEdit
     title: 編集中の変更
-    container: features/metadata/shared/pending-edits-store.ts
+    container: shared/stores/pending-edits-store.ts
     usecase: 画面で編集中の変更をまとめて直コミットする
     role: DTO
     summary: 1 件の変更。IF-155-29 の `edits[]` と、パネルに出す値を持つ
     properties:
       - name: key
         type: string
-        description: '`{kind}:{docId}:{op}`'
+        description: '`{kind}:{docId}:{op}`（本文の変更は `body:{docId}:{項目のパス}`）'
       - name: kind
-        type: '"terms" | "aliases" | "tags" | "rules" | "files"'
-        description: メタデータの種類
+        type: '"terms" | "aliases" | "tags" | "rules" | "files" | "body"'
+        description: メタデータの種類か、文書の本文の `body`
       - name: op
         type: '"update" | "add" | "delete"'
         description: 変更の種類
@@ -28,22 +28,22 @@ data_models:
         type: string | null
         description: 取得したバージョン
       - name: values
-        type: Record<string, string | string[]>
+        type: Record<string, string | string[] | Array<Record<string, string>>>
         description: 変更後の値
       - name: before
-        type: Record<string, string | string[]>
+        type: Record<string, string | string[] | Array<Record<string, string>>>
         description: 変更前の値（パネルの `{変更前} → {変更後}`）
       - name: label
         type: string
-        description: '`{種類の title}: {行の名前}`'
+        description: '`{種類の title}: {行の名前}`（本文の変更は `{項目の名前}（{ファイルのパス}）`）'
       - name: docPath
         type: string | null
-        description: 文書のパス（行の `docPath`。`add` は `null`）
+        description: 文書のパス（行の `docPath`、本文の変更は `edit.filePath`。`add` は `null`）
 functions:
   - name: toCommitEdits
     title: 直コミットの要求への変換
     kind: 関数
-    container: features/metadata/shared/pending-edits-store.ts
+    container: shared/stores/pending-edits-store.ts
     usecase: 画面で編集中の変更をまとめて直コミットする
     role: 変換
     summary: 編集中の変更を IF-155-29 の `edits` にする
@@ -68,7 +68,7 @@ functions:
 stores:
   - name: usePendingEditsStore
     title: 編集中の変更のストア
-    container: features/metadata/shared/pending-edits-store.ts
+    container: shared/stores/pending-edits-store.ts
     usecase: 画面で編集中の変更をまとめて直コミットする
     role: ストア
     summary: Zustand の `persist`（`sessionStorage`、キー `dev-docs:pending-edits`、`version` 2。`version` 1 からの移行は編集中の変更を捨てる）で保存する、配信元の ID ごとの編集中の変更と編集を始めたときのコミット
@@ -179,11 +179,16 @@ stores:
             required: true
             passing: positional
             description: 再取得したメタデータの種類・行の ID ごとの `values`
+          - name: latestBody
+            type: Record<string, Record<string, string | Array<Record<string, string>>>>
+            required: true
+            passing: positional
+            description: 再取得した文書の ID ごとの、項目のパス（`blocks[].path`・`titleBlock.path`・`@file`）と値。編集できなくなった文書は空
         returns:
           type: PendingEdit[]
           description: 取り消した変更
         process: |-
-          1. `update` の変更ごとに、`latest[変更の kind][変更の docId]` の列の値を `before` と比べ、どれかが違う（行が無いものも含む）変更を `bySource[source]` から除く
+          1. `update` の変更ごとに、メタデータの変更は `latest[変更の kind][変更の docId]` の列の値、本文の変更は `latestBody[変更の docId]` の項目のパスの値を `before` と比べ、どれかが違う（行・文書・項目が無いものも含む）変更を `bySource[source]` から除く
           2. 変更が残っていれば `baseCommitBySource[source]` を `baseCommit` にし、0 件になったら除く
           3. 除いた変更を返却する
         unit_tests:
@@ -199,14 +204,23 @@ stores:
             condition: '`aaa1111` でタグの `update`（`before` が `[topic:a]`）と用語の `add` を追加し、`latest` のその行のタグが `[topic:x]` で `ccc3333` で更新する'
             mock: なし
             expected: 戻り値がタグの変更 1 件で、残る変更が `add` 1 件、`baseCommitBySource` が `ccc3333`
+          - name: test_rebase_when_body_changed
+            case: 正常
+            summary: 最新の本文と食い違う変更を取り消す
+            condition: '`summary` の本文の変更（`before` が `A`）と `@file` の本文の変更を追加し、`latestBody` のその文書の `summary` が `X`・`@file` が `before` と同じ'
+            mock: なし
+            expected: 戻り値が `summary` の変更 1 件で、`@file` の変更が残る
 refs:
   - to: SCR-155-4
     type: requires
     when: 編集中の変更の持ち方を変えるときに、編集中のパネルの保存先と突き合わせる。
+  - to: CMP-155-4
+    type: requires
+    when: 編集中の変更の持ち方を変えるときに、編集中のパネルの一覧と突き合わせる。
 tags:
   - name: topic:メタデータ
   - name: topic:画面
   - name: topic:ストア
   - name: topic:直コミット
 test_files:
-  - tests/unit/frontend/src/features/metadata/shared/pending-edits-store.test.ts
+  - tests/unit/frontend/src/shared/stores/pending-edits-store.test.ts

@@ -1,13 +1,6 @@
 id: MOD-155-218
 title: 開発ドキュメントサーバー / メタデータ / commits.py
 lead: 画面の編集中の変更を文書の書き込みと削除に変えて project-index の書き込みの API へ送信し、結果と理由を変更ごとに戻す処理を受け持ち、メタデータの commits.py を修正するときに参照する。
-constants:
-  - name: EDITABLE_COLUMNS
-    title: 修正できる列
-    container: features/metadata/commits.py
-    usecase: 画面で編集中の変更をまとめて直コミットする
-    summary: 種類ごとに修正できる列のキー
-    value: IF-155-29 の制約「修正できるキー」のとおり
 data_models:
   - name: Edit
     title: 編集中の変更
@@ -20,8 +13,8 @@ data_models:
         type: str
         description: 変更の識別子
       - name: kind
-        type: Literal['terms', 'aliases', 'tags', 'rules', 'files']
-        description: メタデータの種類
+        type: Literal['terms', 'aliases', 'tags', 'rules', 'files', 'body']
+        description: メタデータの種類か、文書の本文の `body`
       - name: op
         type: Literal['update', 'add', 'delete']
         description: 変更の種類
@@ -35,9 +28,9 @@ data_models:
         type: str | None
         description: 取得したバージョン
       - name: values
-        type: dict[str, str | list[str]]
+        type: dict[str, str | list[str] | list[dict[str, str]]]
         default: '{}'
-        description: 変更後の値
+        description: 変更後の値（`body` はキーが項目のパスか `@file`）
       - name: doc_path
         type: str | None
         description: 文書のパス（`update` のときは必須）
@@ -169,7 +162,8 @@ functions:
       description: '`writes`・`deletes` と、それぞれの添字と変更の `key` の対応'
     process: |-
       1. 変更ごとに、`doc_kind` の `metadata`（`mappings[doc_kind]`）で列のキーを列と文書のキーの対応の解決にかけ、戻せない列は `EditsRejectedError`（400）を送出する。列のキーと値はそのまま入れ、文書の実際のキーへは project-index の書き込みの API が戻す
-      2. `update` は `{op: update, id, expected_version, set}`（`expected_version` は `expected_versions[変更の key]` の辞書）、`add` は `{op: create, id, kind, data}`、`delete` は `deletes` の `{id, expectedVersion}` にし、変更の並び順で入れる
+      2. `body` の変更は、項目のパスのキーをそのまま `{op: update, id, expected_version, set}` の `set` に入れる。`@file` は、YAML の文書（`doc_path` が `.md` で終わらない）なら 共通の YAML の読み込み（`load_yaml`、`file` は `doc_path`）で読み込んだ値を `{op: replace, id, expected_version, data}`、Markdown の文書なら `{op: update, id, expected_version, set: {"@body": 値}}` にする。`YamlLoadError` は `EditsRejectedError`（400、`path` が `@file`、`reason` が `YamlLoadError` の文字列（ファイル・行・列と理由））を送出する
+      3. `update` は `{op: update, id, expected_version, set}`（`expected_version` は `expected_versions[変更の key]` の辞書）、`add` は `{op: create, id, kind, data}`、`delete` は `deletes` の `{id, expectedVersion}` にし、変更の並び順で入れる
     unit_tests:
       - name: test_to_operations
         case: 正常
@@ -196,6 +190,19 @@ functions:
         condition: '`doc_kind` が `skill`（`metadata: {name: title}`）の `name` の `update`'
         mock: なし
         expected: '`set` が共通のキーの `{name: 値}` のまま'
+      - name: test_to_operations_when_body
+        case: 正常
+        summary: 本文の変更を変換する
+        condition: '`#items[i1].body` の `body` の変更、YAML の文書の `@file`、`guide.md` の `@file`'
+        mock: なし
+        expected: '`set` が `{"#items[i1].body": 値}` の `update`、読み込んだ値を `data` にした `replace`、`set` が `{"@body": 値}` の `update`'
+      - name: test_to_operations_when_whole_file_unparsable
+        case: 異常
+        summary: 読み込めないファイル全体
+        condition: 3 行目の行頭にタブを入れた YAML の `@file`
+        mock: なし
+        expected: '`EditsRejectedError`（400）で、`errors[0].path` が `@file`、`reason` に 3 行目'
+        exception: 読み込めない `@file`
   - name: commit_edits
     title: 編集中の変更の直コミット
     kind: 関数
@@ -223,15 +230,21 @@ functions:
         required: true
         passing: positional
         description: 検証済みの本文
+      - name: convert
+        title: 変換
+        type: ConvertService
+        required: true
+        passing: keyword
+        description: 修正できる項目のパスの取得に指定する
     returns:
       type: CommitResult
       description: IF-155-29 の 200 の応答
     process: |-
-      1. 変更ごとの列が `EDITABLE_COLUMNS` にあるかを確認し、無ければ `EditsRejectedError`（400）を送出する
+      1. 送信の前の変更の確認を呼ぶ。続けて `body` の変更は、文書ごとに修正できる項目のパスの取得（`doc_path`・`doc_id`・`base_commit`・`convert`）にキーがあるかを確認し、無ければ `EditsRejectedError`（400）を送出する。メタデータの変更の列は、書き込みと削除への変換で元のキーへ戻せるかを確認する
       2. project-indexの呼び出し.配信元の設定の取得で `metadata` を取得する
       3. 編集を始めたときの項目ごとのバージョンで、`update` の変更ごとの `expected_version` の辞書を求める
       4. 書き込みと削除への変換をし、project-indexの呼び出し.直コミットの書き込みを呼ぶ（`message` は要求の説明、`dry_run` のときは固定の説明 `差分確認`。project-index の書き込みの API は `message` を必須にしている。`baseCommit` は要求の `base_commit`）
-      5. 200 は `results[]` の `kind`（`write`・`delete`）・`index` を変更の `key` に戻し、`conflict` があれば衝突の結果への変換をして `CommitResult` を返却する
+      5. 200 は `results[]` の `kind`（`write`・`delete`）・`index` を変更の `key` に戻し（`status` の `replaced` は `updated` にする）、`conflict` があれば衝突の結果への変換をして `CommitResult` を返却する
       6. 409 の `BaseCommitUnusableError` は `title` を `BaseCommitUnusableError`、`detail` を project-index の理由にした `EditsRejectedError`（409、`errors[]` なし）を送出する。403・404・409・422 は `errors[]`（`path` の先頭の `writes[{添字}]`・`deletes[{添字}]`）と `kinds`（変更の `doc_kind` と照合する）・`docId` を変更の `key` へ戻した `EditsRejectedError` を送出する。500・502 は 502、504 と待ちの上限の打ち切りは 504 にする
       7. 送信ごとに、配信元の ID・`dryRun`・変更の件数・状態コード・コミットの SHA（衝突したときは残したブランチ、打ち切ったときはその旨）を 1 行のログに出力する
     unit_tests:
@@ -287,6 +300,19 @@ functions:
         condition: 偽物が `conflict`（`branch`・`errors[]` の `writes[0]`・`script.stdout` に PR の URL）を持つ 200 を返却する
         mock: project-indexの呼び出し（要求を記録する偽物）
         expected: '`conflict.branch` が偽物の値、`conflict.reasons[0].key` が 1 件目の変更、`conflict.script.pr_url` が URL。送信した本文の `baseCommit` が要求の値、`update` の `expected_version` が辞書'
+      - name: test_commit_edits_when_body_path_unknown
+        case: 異常
+        summary: 修正できない項目のパス
+        condition: 修正できる項目のパスの取得に無い `#items[x].id` の `body` の変更と、`body_path` が `.py` の編集できない文書の `@file` の変更（それぞれ 1 件で送信する）
+        mock: project-indexの呼び出し（偽物）
+        expected: 'どちらも `EditsRejectedError`（400）で、書き込みの API を呼ばない'
+        exception: 修正できない項目のパス
+      - name: test_commit_edits_when_replaced
+        case: 正常
+        summary: ファイル全体の置き換えの結果
+        condition: YAML の文書の `@file` の変更と、`results[0].status` が `replaced` の 200 を返却する偽物
+        mock: project-indexの呼び出し（偽物）
+        expected: '`results[0].status` が `updated`'
     exceptions:
       - name: EditsRejectedError
         condition: 本文の検証・編集を始めたときの文書が無い・編集を始めたときのコミットが使用できない・project-index の 4xx・5xx・待ちの上限
@@ -330,6 +356,7 @@ functions:
       type: dict[str, dict[str, str] | str]
       description: '変更の `key` ごとの `{最上位のキー: バージョン}` か文書の全体のバージョン'
     process: |-
+      0. `body` の項目のパスの変更は、項目のパスの最上位のキー（`#items[i1].body` は `items`）を求めるキーにし、`@file` の変更は辞書を求めずに要求の `expected_version` にする
       1. `update` の変更ごとに、`asyncio.gather` で project-indexの呼び出し.項目ごとのバージョンの取得（`doc_path`・`ref` は `base_commit`・`document_id` は `doc_id`）を呼ぶ
       2. 変更の `values` の列ごとに、`mappings[doc_kind]` で列と文書のキーの対応の解決をして最上位のキーを求め、そのキーのバージョンだけを辞書にする。そのキーのどれかが `itemVersions` に無い変更は、辞書ではなく `expected_version`（文書の全体のバージョン）にする
       3. `RefNotFoundError`（編集を始めたときのコミットがクローンに無い）は、`title` を `BaseCommitUnusableError` にした `EditsRejectedError`（409、`errors[]` なし）を送出する
@@ -361,6 +388,12 @@ functions:
         mock: project-indexの呼び出し（偽物）
         expected: '`EditsRejectedError`（409）で、`name` が `BaseCommitUnusableError`、`errors[]` が空'
         exception: 編集を始めたときのコミットが使用できない
+      - name: test_item_expected_versions_when_body
+        case: 正常
+        summary: 本文の変更の最上位のキー
+        condition: '`#items[i1].body` の `body` の変更と `@file` の変更（`expected_version` が `c3d4e5`）'
+        mock: project-indexの呼び出し（偽物）
+        expected: '1 件目が `{items: 偽物の items のバージョン}`、2 件目が文字列の `c3d4e5`'
     exceptions:
       - name: EditsRejectedError
         condition: 編集を始めたときの文書が無い
@@ -421,6 +454,60 @@ functions:
         condition: '`errors[]` が `path: n1` の 1 件で、n1 のタグの `update` と用語の `add` を送信した'
         mock: なし
         expected: '`reasons` が `key: tags:n1:update` の 1 件'
+  - name: check_edits
+    title: 送信の前の変更の確認
+    kind: 関数
+    container: features/metadata/commits.py
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    role: 検証
+    summary: project-index へ問い合わせる前に、種類の列・同じ文書の `@file` とほかの本文の変更の並び・`@file` の YAML を確認する
+    scope: public
+    args:
+      - name: edits
+        type: list[Edit]
+        required: true
+        passing: positional
+        description: 編集中の変更
+    returns:
+      type: None
+      description: 確認に合格した
+    process: |-
+      1. メタデータの変更の `values` のキーが、種類ごとの列（metadata.py の `KIND_SPECS` の `kind` の行）のうち `editable` が真の列かを確認し、無い列は `errors[]` に `{key, path: 列, reason: この列は修正できません}` を入れる
+      2. 同じ `doc_id` に `@file` の `body` の変更とほかの `body` の変更があれば、その文書の全ての `body` の変更を `errors[]` に `{key, path: キー, reason: 同じ文書のファイル全体の変更と並べられません}` で入れる
+      3. YAML の文書（`doc_path` が `.md` で終わらない）の `@file` を共通の YAML の読み込み（`load_yaml`、`file` は `doc_path`）で読み込み、`YamlLoadError` は `errors[]` に `{key, path: @file, reason: YamlLoadError の文字列}` を入れる
+      4. `errors[]` があれば `EditsRejectedError`（400）を送出する
+    unit_tests:
+      - name: test_check_edits
+        case: 正常
+        summary: 修正できる列と本文の変更
+        condition: タグの `tags` の `update`、用語の `add`、n1 の `summary`、n2 の読み込める `@file`
+        mock: なし
+        expected: 例外を送出しない
+      - name: test_check_edits_when_column_not_editable
+        case: 異常
+        summary: 種類に無い列
+        condition: '`tags` の変更の `values` が `{description: 説明}`（種類の列に無い）と `{path: notes/n1.yaml}`（`editable` が偽の列）（それぞれ 1 件で確認する）'
+        mock: なし
+        expected: '`EditsRejectedError`（400）で、`errors[0]` がその変更の `key`・`path` が `description`・`path`'
+        exception: 修正できない列
+      - name: test_check_edits_when_whole_file_mixed
+        case: 異常
+        summary: 同じ文書のファイル全体と項目の変更
+        condition: n1 の `@file` と n1 の `summary` の変更
+        mock: なし
+        expected: '`EditsRejectedError`（400）で、`errors[].key` が 2 件の変更の `key`'
+        exception: 同じ文書のファイル全体と項目の変更
+      - name: test_check_edits_when_whole_file_unparsable
+        case: 異常
+        summary: 読み込めないファイル全体
+        condition: 3 行目の行頭にタブを入れた YAML の `@file`
+        mock: なし
+        expected: '`EditsRejectedError`（400）で、`errors[0].path` が `@file`、`reason` に 3 行目'
+        exception: 読み込めない `@file`
+    exceptions:
+      - name: EditsRejectedError
+        condition: 修正できない列・同じ文書のファイル全体とほかの本文の変更・読み込めない `@file`
+        message: IF-155-29 の 400 の `title`・`detail`
 refs:
   - to: IF-155-29
     type: requires

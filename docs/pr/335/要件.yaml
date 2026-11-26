@@ -1,0 +1,53 @@
+use_cases:
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: changed
+    detail: 文書を参照する流れに、文書の画面で本文を編集して直コミットする流れを加える
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: 参照の流れは変わらない。文書の画面に編集のボタンと編集の表示を加えるため、参照を壊していないかを確認する。編集のボタンを出す条件は、画面で編集中の変更をまとめて直コミットするシナリオが持つ
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-15.yaml
+    impact: changed
+    detail: 文書の画面で本文を編集して、メタデータの変更と同じ編集中の変更・差分確認・コミットの確認で送信する。編集できない文書には編集のボタンを出さず、検査に合格しない本文の変更は項目のパスと理由を出す
+    depends_on:
+      - docs/scenario/SC-155-13.yaml
+  - kind: single
+    scenario: docs/scenario/SC-155-14.yaml
+    impact: run_only
+    detail: シナリオの記述は変わらない。メタデータの表の修正できる列の絞り込みを外す変更が、メタデータの参照を壊していないかを確認する
+    depends_on:
+      - docs/scenario/SC-155-15.yaml
+docs:
+  - page: docs/guide/画面で参照する.md
+    new: false
+    change: 文書の画面で本文を編集し、編集中の変更をまとめて直コミットする手順を加える
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-26T14:37:28.549705+00:00'
+  - page: docs/guide/設定.md
+    new: false
+    change: 画面から編集できる範囲の設定のキーと既定を加える
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-26T14:37:28.549705+00:00'
+  - page: docs/architecture/ARCH-155-1.yaml
+    new: false
+    change: project-index の書き込みの API の用途に、文書の画面からの本文の直コミットを加える
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-26T14:37:28.549705+00:00'
+scope_out:
+  - item: 種類ごとの編集画面
+    reason: Issue の見送った案。スキーマの型から部品を選ぶ方式にする
+    plan: none
+  - item: project-index の書き込みの API の変更
+    reason: 書き込みの API が `@body`・項目のパスへの `set`・`text_edits`・`replace` を既に受ける。設計で要ると分かったときに project-index の Issue として起票する
+    plan: none
+  - item: 配信元の設定（project-index.yaml）の画面からの書き換え
+    reason: 要望は文書の本文の編集で、配信元の設定は含まない
+    plan: none

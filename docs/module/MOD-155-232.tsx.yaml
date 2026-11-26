@@ -1,0 +1,143 @@
+id: MOD-155-232
+title: 画面 / 文書の画面 / doc-field-editor.tsx
+lead: 表示した場所で修正する項目のブロック・項目の編集ボタン・その場の入力欄・表のセルの入力欄と、文書のタイトルの修正を受け持ち、文書の画面の doc-field-editor.tsx を修正するときに参照する。
+test_files:
+  - tests/unit/frontend/src/features/docs/doc-view/components/doc-field-editor.test.tsx
+components:
+  - name: DocFieldEditor
+    title: 表示した場所で修正
+    kind: コンポーネント
+    container: features/docs/doc-view/components/doc-field-editor.tsx
+    usecase: 文書の本文を編集する
+    role: 部品
+    summary: '`edit.blocks` を順に、項目のブロックと項目の編集ボタンで並べる（本文の代わり）'
+    props:
+      - name: source
+        type: string
+        required: true
+        description: 配信元の ID
+      - name: docId
+        type: string
+        required: true
+        description: mdmark の `docId`（`{source}@{ref}:{path}`）
+      - name: edit
+        type: DocumentEdit
+        required: true
+        description: 文書の取得の `edit`
+      - name: onMarkdownOpen
+        type: '(block: EditBlock) => void'
+        required: true
+        description: '`markdown` の項目の項目の編集ボタンを押したとき（Markdown の項目のパネルを開く）'
+    state:
+      - name: editing
+        type: string | null
+        initial: 'null'
+        description: 部品を出している項目のパス（`string`・`enum`・`table` の項目）
+        notes: '`useState`'
+    description: 項目のブロックは、編集中の変更が無ければ `block.markdown` を、あれば次の Markdown を mdmark の `render` で描き（`table` は `columns` の見出しと編集中の行で表を描き直す。`string`・`enum`・`markdown` は `block.value` が `block.markdown` にちょうど 1 回現れるときだけその箇所を編集中の値に置き換え、それ以外は編集中の値をそのまま Markdown にする）、右側の目次と先頭へ戻るボタンを出さない。項目の編集ボタンは shadcn/ui の `Button`（`size="icon"`、`Pencil`・部品を出している間は `Check`、`aria-label` は `{label} を編集`・`{label} の編集を終了`）。`string` は `Input`、`enum` は `Select`（`block.options`）、`table` は行と列ごとの `Input` を並べた表を出し、入力のたびに本文の変更の追加を呼ぶ（`before` は `block.value`）。その場の入力欄は `autoFocus` で、Enter（`isComposing` の間は受けない）・Esc・フォーカスが離れると `editing` を `null` にする。変更ありのバッジ（shadcn/ui の `Badge`、`変更あり`）は、編集中の本文の値がある項目の項目の編集ボタンの左に出す
+    unit_tests:
+      - name: test_doc_field_editor
+        case: 正常
+        summary: 短い文字列の項目を修正する
+        condition: '`summary` の項目の編集ボタンを押し、`修正後の概要` を入力して Enter を押す'
+        mock: mdmark（`vi.mock`、`mount` を記録する偽物）
+        expected: 入力欄が閉じ、ストアに `summary` の変更があり、項目のブロックに `修正後の概要` が描かれ、変更ありのバッジが出る
+      - name: test_doc_field_editor_when_enum
+        case: 正常
+        summary: 選択肢の項目
+        condition: '`status`（`options` が `draft`・`current`）の項目の編集ボタンを押し、`current` を選ぶ'
+        mock: mdmark（`vi.mock`、`mount` を記録する偽物）
+        expected: 'ストアに `{status: current}` の変更がある'
+      - name: test_doc_field_editor_when_table
+        case: 正常
+        summary: 表のセルを修正する
+        condition: '`rows` の項目の編集ボタンを押し、2 行目の `replacement` を入力する'
+        mock: mdmark（`vi.mock`、`mount` を記録する偽物）
+        expected: ストアの `rows` の値が行の配列で、2 行目だけが変わり、行の追加・削除のボタンが無い
+      - name: test_doc_field_editor_when_composing
+        case: 正常
+        summary: 変換中の Enter
+        condition: '`isComposing` の間に Enter を押す'
+        mock: mdmark（`vi.mock`、`mount` を記録する偽物）
+        expected: 入力欄が閉じない
+      - name: test_doc_field_editor_when_markdown
+        case: 正常
+        summary: Markdown の項目
+        condition: '`#items[i1].body` の項目の編集ボタンを押す'
+        mock: mdmark（`vi.mock`、`mount` を記録する偽物）
+        expected: '`onMarkdownOpen` がその項目で呼ばれ、その場の入力欄が出ない'
+      - name: test_doc_field_editor_when_value_not_in_markdown
+        case: 正常
+        summary: 元の値が描いた Markdown にそのまま現れない項目
+        condition: '`[B](id:b)` を含む `markdown` の項目（`block.markdown` では相対パスのリンク）を `修正後の本文` に編集する'
+        mock: mdmark（`vi.mock`、`mount` を記録する偽物）
+        expected: 項目のブロックの `mount` に `修正後の本文` が渡り、変更ありのバッジが出る
+      - name: test_doc_field_editor_when_value_repeated
+        case: 正常
+        summary: 元の値が 2 回現れる項目
+        condition: '`block.value` が `block.markdown` に 2 回現れる `string` の項目を修正する'
+        mock: mdmark（`vi.mock`、`mount` を記録する偽物）
+        expected: '`mount` に渡る Markdown が編集中の値だけ'
+      - name: test_doc_field_editor_when_value_has_dollar
+        case: 正常
+        summary: 置き換えのパターンの文字を含む値
+        condition: "`string` の項目を `$&`・`$$`・`$'` を含む値に修正する"
+        mock: mdmark（`vi.mock`、`mount` を記録する偽物）
+        expected: 項目のブロックに渡る Markdown が入力した値をそのまま含む
+  - name: EditableTitle
+    title: 文書のタイトルの修正
+    kind: コンポーネント
+    container: features/docs/doc-view/components/doc-field-editor.tsx
+    usecase: 文書の本文を編集する
+    role: 部品
+    summary: '`edit.titleBlock` のある文書のタイトルを、項目の編集ボタンとその場の入力欄で修正する'
+    props:
+      - name: source
+        type: string
+        required: true
+        description: 配信元の ID
+      - name: edit
+        type: DocumentEdit
+        required: true
+        description: 文書の取得の `edit`
+      - name: block
+        type: EditBlock
+        required: true
+        description: '`edit.titleBlock`'
+    state:
+      - name: editing
+        type: boolean
+        initial: 'false'
+        description: その場の入力欄を出しているか
+        notes: '`useState`'
+    description: タイトルは編集中の本文の値（無ければ `block.value`）を見出し 1 に出し、右に項目の編集ボタンを並べる。入力欄の振る舞いは表示した場所で修正の `string` と同じ
+    unit_tests:
+      - name: test_editable_title
+        case: 正常
+        summary: タイトルを修正する
+        condition: 項目の編集ボタンを押し、`新しいタイトル` を入力して Esc を押す
+        mock: なし
+        expected: 見出し 1 が `新しいタイトル` で、ストアに `title` の変更がある
+refs:
+  - to: SCR-155-1
+    item: elements[項目のブロック]
+    type: requires
+    when: 項目のブロックの描き方を変えるときに突き合わせる。
+  - to: SCR-155-1
+    item: elements[その場の入力欄]
+    type: requires
+    when: その場の入力欄の振る舞いを変えるときに突き合わせる。
+  - to: SCR-155-1
+    item: elements[表のセルの入力欄]
+    type: requires
+    when: 表のセルの入力欄の振る舞いを変えるときに突き合わせる。
+  - to: SCR-155-1
+    item: elements[変更ありのバッジ]
+    type: requires
+    when: 変更ありのバッジの出し方を変えるときに突き合わせる。
+tags:
+  - name: topic:文書
+    main: true
+  - name: topic:画面
+  - name: action:修正
+  - name: topic:表

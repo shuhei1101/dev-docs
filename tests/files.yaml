@@ -47,6 +47,16 @@ files:
   related:
   - to: SCR-155-4
     type: see_also
+- path: integration/frontend/pending-panel.spec.ts
+  name: 編集中のパネルの結合テスト
+  description: 編集中のパネルの結合テストを受け持ち、編集中のパネルのストーリーの状態ごとの表示のテストを修正するときに参照する。
+  tags:
+  - topic:直コミット
+  - topic:パネル
+  - tool:storybook
+  related:
+  - to: CMP-155-4
+    type: see_also
 - path: integration/frontend/not-found-screen.spec.ts
   name: 見つからない画面の結合テスト
   description: 見つからない画面の結合テストを受け持ち、見つからない画面の振る舞いのテストを修正するときに参照する。
@@ -258,6 +268,16 @@ files:
   - tool:project-index
   related:
   - to: IF-155-29
+    type: see_also
+- path: integration/server/test_post_preview.py
+  name: 本文のプレビューの結合テスト
+  description: 本文のプレビューの結合テストを受け持ち、書き換えた YAML を文書の取得と同じ変換で Markdown にする振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:プレビュー
+  - topic:api
+  - tool:project-index
+  related:
+  - to: IF-155-31
     type: see_also
 - path: integration/server/test_on_conflict_script.py
   name: 衝突したときの PR の作成の結合テスト
@@ -593,6 +613,17 @@ files:
   related:
   - to: src/dev_docs/features/view/document.py
     type: tests
+- path: unit/dev_docs/features/view/test_edit.py
+  name: 文書の取得の本文の編集の情報と、本文のプレビューの単体テスト
+  description: 文書の取得の本文の編集の情報と、本文のプレビューの単体テストを受け持ち、edit.py の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:api
+  - topic:文書
+  - topic:プレビュー
+  - topic:単体テスト
+  related:
+  - to: src/dev_docs/features/view/edit.py
+    type: tests
 - path: unit/dev_docs/features/view/test_document_lists.py
   name: 配信元と commit の組ごとの文書の一覧の保持と、リビジョンの commit への解決の単体テスト
   description: 配信元と commit の組ごとの文書の一覧の保持と、リビジョンの commit への解決の単体テストを受け持ち、document_lists.py の振る舞いのテストを修正するときに参照する。
@@ -919,6 +950,66 @@ files:
   - tool:mdmark
   related:
   - to: frontend/src/features/docs/doc-view/components/doc-body.tsx
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/edit.test.ts
+  name: 文書の本文の変更の追加と、本文のプレビューの問い合わせの単体テスト
+  description: 文書の本文の変更の追加と、本文のプレビューの問い合わせの単体テストを受け持ち、edit.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:直コミット
+  - topic:単体テスト
+  related:
+  - to: frontend/src/features/docs/doc-view/edit.ts
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/components/doc-edit-bar.test.tsx
+  name: 編集のボタン・編集の方式の切り替え・編集を終了の単体テスト
+  description: 編集のボタン・編集の方式の切り替え・編集を終了の単体テストを受け持ち、doc-edit-bar.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:単体テスト
+  related:
+  - to: frontend/src/features/docs/doc-view/components/doc-edit-bar.tsx
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/components/doc-field-editor.test.tsx
+  name: 表示した場所で修正する項目のブロックと入力欄の単体テスト
+  description: 表示した場所で修正する項目のブロックと入力欄の単体テストを受け持ち、doc-field-editor.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:画面
+  - topic:単体テスト
+  related:
+  - to: frontend/src/features/docs/doc-view/components/doc-field-editor.tsx
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/components/markdown-field-panel.test.tsx
+  name: Markdown の項目のパネルの単体テスト
+  description: Markdown の項目のパネルの単体テストを受け持ち、markdown-field-panel.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:パネル
+  - topic:単体テスト
+  related:
+  - to: frontend/src/features/docs/doc-view/components/markdown-field-panel.tsx
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/components/markdown-preview.test.tsx
+  name: 編集の表示の Markdown のプレビューの単体テスト
+  description: 編集の表示の Markdown のプレビューの単体テストを受け持ち、markdown-preview.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:プレビュー
+  - topic:単体テスト
+  related:
+  - to: frontend/src/features/docs/doc-view/components/markdown-preview.tsx
+    type: tests
+- path: unit/frontend/src/features/docs/doc-view/components/whole-file-editor.test.tsx
+  name: ファイル全体のエディタとプレビューの単体テスト
+  description: ファイル全体のエディタとプレビューの単体テストを受け持ち、whole-file-editor.tsx の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:文書
+  - topic:プレビュー
+  - topic:単体テスト
+  related:
+  - to: frontend/src/features/docs/doc-view/components/whole-file-editor.tsx
     type: tests
 - path: unit/frontend/src/features/docs/doc-view/components/doc-breadcrumb.test.tsx
   name: 開いている文書の階層のパンくずの単体テスト
@@ -1481,7 +1572,7 @@ files:
   related:
   - to: src/dev_docs/features/metadata/route.py
     type: tests
-- path: unit/frontend/src/features/metadata/shared/pending-edits-store.test.ts
+- path: unit/frontend/src/shared/stores/pending-edits-store.test.ts
   name: 編集中の変更のストアの単体テスト
   description: 編集中の変更のストアと直コミットの要求への変換の単体テストを受け持ち、pending-edits-store.ts の振る舞いのテストを修正するときに参照する。
   tags:
@@ -1490,9 +1581,9 @@ files:
   - topic:直コミット
   - topic:単体テスト
   related:
-  - to: frontend/src/features/metadata/shared/pending-edits-store.ts
+  - to: frontend/src/shared/stores/pending-edits-store.ts
     type: tests
-- path: unit/frontend/src/features/metadata/metadata/queries.test.tsx
+- path: unit/frontend/src/shared/components/pending-panel/queries.test.tsx
   name: 編集中の変更の直コミットの mutation の単体テスト
   description: 編集中の変更の直コミットの mutation の単体テストを受け持ち、queries.ts の振る舞いのテストを修正するときに参照する。
   tags:
@@ -1501,7 +1592,7 @@ files:
   - topic:直コミット
   - topic:単体テスト
   related:
-  - to: frontend/src/features/metadata/metadata/queries.ts
+  - to: frontend/src/shared/components/pending-panel/queries.ts
     type: tests
 - path: unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx
   name: メタデータの種類の表の単体テスト
@@ -1514,7 +1605,7 @@ files:
   related:
   - to: frontend/src/features/metadata/metadata/metadata-table.tsx
     type: tests
-- path: unit/frontend/src/features/metadata/metadata/pending-panel.test.tsx
+- path: unit/frontend/src/shared/components/pending-panel/pending-panel.test.tsx
   name: 編集中のパネルの単体テスト
   description: 編集中のパネルとコミットの確認のダイアログの単体テストを受け持ち、pending-panel.tsx の振る舞いのテストを修正するときに参照する。
   tags:
@@ -1523,7 +1614,7 @@ files:
   - topic:パネル
   - topic:単体テスト
   related:
-  - to: frontend/src/features/metadata/metadata/pending-panel.tsx
+  - to: frontend/src/shared/components/pending-panel/pending-panel.tsx
     type: tests
 - path: unit/frontend/src/features/metadata/metadata/metadata-screen.test.tsx
   name: メタデータの画面の単体テスト

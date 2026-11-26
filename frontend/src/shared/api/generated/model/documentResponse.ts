@@ -7,6 +7,7 @@
 import type { AliasItem } from './aliasItem';
 import type { ConversionError } from './conversionError';
 import type { DocumentDiff } from './documentDiff';
+import type { DocumentEdit } from './documentEdit';
 import type { DocumentResponseColumns } from './documentResponseColumns';
 import type { GitHubTarget } from './gitHubTarget';
 import type { NavTab } from './navTab';
@@ -28,4 +29,5 @@ export interface DocumentResponse {
   aliases?: AliasItem[];
   diff: DocumentDiff | null;
   updatedAt: string;
+  edit?: DocumentEdit | null;
 }

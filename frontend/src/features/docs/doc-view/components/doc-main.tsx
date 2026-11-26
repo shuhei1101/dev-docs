@@ -2,13 +2,18 @@ import { ConversionErrorAlert } from "@/features/docs/doc-view/components/conver
 import { DiffBanner } from "@/features/docs/doc-view/components/diff-banner";
 import { DocBody } from "@/features/docs/doc-view/components/doc-body";
 import { DocBreadcrumb } from "@/features/docs/doc-view/components/doc-breadcrumb";
+import { DocEditBar } from "@/features/docs/doc-view/components/doc-edit-bar";
+import { DocFieldEditor, EditableTitle } from "@/features/docs/doc-view/components/doc-field-editor";
 import { DocHeader } from "@/features/docs/doc-view/components/doc-header";
 import { EmptyTab } from "@/features/docs/doc-view/components/empty-tab";
+import { WholeFileEditor } from "@/features/docs/doc-view/components/whole-file-editor";
+import { docEditOf } from "@/features/docs/doc-view/edit";
 import type { ActivePage } from "@/features/docs/doc-view/nav";
-import type { DocViewSearch } from "@/features/docs/doc-view/search";
-import type { DocComment } from "@/features/docs/shared/comments/comment-store";
+import type { DocEditMode, DocViewSearch } from "@/features/docs/doc-view/search";
+import { type DocComment, docIdOf } from "@/features/docs/shared/comments/comment-store";
 import type {
   DocumentResponse,
+  EditBlock,
   NavTab,
   RefsResponse,
 } from "@/shared/api/generated/model";
@@ -28,17 +33,74 @@ type Props = {
   onRetry: () => void;
   onCompare: (rev: string | undefined, base: string) => void;
   onClearDiff: () => void;
+  onEditModeChange: (mode: DocEditMode | undefined) => void;
+  onMarkdownFieldOpen: (block: EditBlock) => void;
 };
 
-type ContentProps = Omit<Props, "emptyTab" | "busy" | "search">;
+type ContentProps = Omit<Props, "emptyTab" | "busy"> & { editMode: DocEditMode | undefined };
+
+/** 本文か、編集の表示（表示した場所で修正・ファイル全体の編集） */
+const DocBodyOrEditor = ({ doc, editMode, ...handlers }: ContentProps) => {
+  const edit = docEditOf(doc);
+  // 編集できない文書は URL の `edit` を無視して本文を出す
+  if (edit !== null && editMode === "file") {
+    return (
+      <WholeFileEditor
+        key={doc.path}
+        source={doc.source}
+        path={doc.path}
+        docId={docIdOf(doc)}
+        markdown={doc.markdown ?? null}
+        edit={edit}
+      />
+    );
+  }
+  if (edit !== null && editMode === "fields" && edit.language === "yaml") {
+    return (
+      <DocFieldEditor
+        source={doc.source}
+        docId={docIdOf(doc)}
+        edit={edit}
+        onMarkdownOpen={handlers.onMarkdownFieldOpen}
+      />
+    );
+  }
+  return (
+    <DocBody
+      document={doc}
+      onCommentSaved={handlers.onCommentSaved}
+      locating={handlers.locating}
+      onLocated={handlers.onLocated}
+      baseMarkdown={handlers.baseMarkdown}
+    />
+  );
+};
+
+/** 表示した場所で修正するときだけ、タイトルを編集のボタンを持つタイトルにする */
+const titleNodeOf = (doc: ContentProps["doc"], editMode: DocEditMode | undefined) => {
+  const edit = docEditOf(doc);
+  if (edit === null || editMode !== "fields" || !edit.titleBlock) return undefined;
+  return <EditableTitle source={doc.source} edit={edit} block={edit.titleBlock} />;
+};
 
 const DocContent = ({ doc, active, refs, ...handlers }: ContentProps) => (
   <>
     <DocHeader
+      titleNode={titleNodeOf(doc, handlers.editMode)}
       title={active.page?.title ?? doc.path}
       kind={active.tab.title}
       path={doc.path}
       updatedAt={doc.updatedAt}
+      actions={
+        doc.diff || docEditOf(doc) === null ? null : (
+          <DocEditBar
+            source={doc.source}
+            edit={docEditOf(doc) as NonNullable<ReturnType<typeof docEditOf>>}
+            mode={handlers.editMode}
+            onModeChange={handlers.onEditModeChange}
+          />
+        )
+      }
     />
     {doc.diff && refs && (
       <DiffBanner
@@ -55,13 +117,7 @@ const DocContent = ({ doc, active, refs, ...handlers }: ContentProps) => (
         onRetry={handlers.onRetry}
       />
     ) : (
-      <DocBody
-        document={doc}
-        onCommentSaved={handlers.onCommentSaved}
-        locating={handlers.locating}
-        onLocated={handlers.onLocated}
-        baseMarkdown={handlers.baseMarkdown}
-      />
+      <DocBodyOrEditor doc={doc} active={active} refs={refs} {...handlers} />
     )}
   </>
 );
@@ -90,7 +146,7 @@ export const DocMain = ({ emptyTab, busy, ...content }: Props) => (
         />
       </>
     ) : (
-      <DocContent {...content} />
+      <DocContent {...content} editMode={content.search.edit} />
     )}
   </main>
 );

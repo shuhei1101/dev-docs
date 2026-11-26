@@ -14,4 +14,5 @@ export const EditKind = {
   tags: 'tags',
   rules: 'rules',
   files: 'files',
+  body: 'body',
 } as const;

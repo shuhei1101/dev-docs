@@ -4,8 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { beforeEach, expect, test, vi } from "vitest";
 
-import { PendingPanel } from "@/features/metadata/metadata/pending-panel";
-import { type PendingEdit, usePendingEditsStore } from "@/features/metadata/shared/pending-edits-store";
+import { PendingPanel } from "@/shared/components/pending-panel/pending-panel";
+import { type PendingEdit, usePendingEditsStore } from "@/shared/stores/pending-edits-store";
 import { PROBLEM_HEADERS, metadataResponse, problem } from "@tests/helpers/fixtures";
 import { server } from "@tests/helpers/msw-server";
 import { createTestQueryClient } from "@tests/helpers/render";
@@ -237,4 +237,36 @@ test("test_pending_panel_when_restart_dropped", async () => {
   expect(await screen.findByText("最新の内容と食い違うため、次の変更を取り消しました")).toBeInTheDocument();
   expect(screen.getByText("タグ: n1")).toBeInTheDocument();
   expect((usePendingEditsStore.getState().bySource.sample ?? []).map((item) => item.key)).toEqual(["tags:n2:update"]);
+});
+
+test("test_pending_panel_when_body", async () => {
+  const onLocate = vi.fn();
+  const body = (path: string, before: string, value: string): PendingEdit => ({
+    key: `body:n1:${path}`,
+    kind: "body",
+    op: "update",
+    docId: "n1",
+    docKind: "note",
+    expectedVersion: "v-n1",
+    docPath: "notes/n1.yaml",
+    values: { [path]: value },
+    before: { [path]: before },
+    label: `${path}（notes/n1.yaml）`,
+  });
+  usePendingEditsStore.setState({
+    bySource: { sample: [edit("n1"), body("summary", "概要", "修正後の概要"), body("@file", "title: n1\n", "title: n2\n")] },
+    baseCommitBySource: { sample: "aaa1111" },
+  });
+  render(
+    <QueryClientProvider client={createTestQueryClient()}>
+      <PendingPanel source="sample" branch="develop" open onOpenChange={() => {}} onLocate={onLocate} />
+    </QueryClientProvider>,
+  );
+
+  await userEvent.click(screen.getByText("summary（notes/n1.yaml）"));
+
+  expect(screen.getByText("概要 → 修正後の概要")).toBeInTheDocument();
+  expect(screen.getByText("差分確認で表示します")).toBeInTheDocument();
+  expect(screen.getByText("タグ: n1")).toBeInTheDocument();
+  expect(onLocate).toHaveBeenCalledWith(expect.objectContaining({ key: "body:n1:summary" }));
 });

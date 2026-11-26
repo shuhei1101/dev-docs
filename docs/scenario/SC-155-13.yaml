@@ -15,7 +15,7 @@ scenarios:
         description: テスト用の一時フォルダにクローンした dev-docs
         notes: ポート 8781 が空き。S0 の `/dev-docs:global-setup` にこのパスを指定する
       - name: サンプルの配信元
-        description: 文書の種類を 1 つ（スキーマと YAML 2 件）と `project-index.yaml` を持つ git リポジトリと、そのワークツリー（`.claude/worktrees/x`）
+        description: 文書の種類を 1 つ（スキーマと YAML 2 件）、Markdown の文書の種類を 1 つ（管理用の YAML と Markdown 1 件）と `project-index.yaml` を持つ git リポジトリと、そのワークツリー（`.claude/worktrees/x`）
         notes: id `sample`
       - name: 読み取りだけの配信元
         description: 文書の種類を 1 つと `project-index.yaml` を持つ Git 管理外のフォルダ
@@ -24,7 +24,7 @@ scenarios:
         description: 文書の種類を 1 つと `project-index.yaml` を持つ git リポジトリ。端末の設定にはまだ無い
         notes: id `extra`
       - name: 直コミットの許可
-        description: sample の `project-index.yaml` の `direct_commit` が、文書の種類と用語集の種類を `kinds` に持ち、project-index の端末の設定の sample の行が同じ種類を `direct_commit.write_api_kinds` に持つ
+        description: sample の `project-index.yaml` の `direct_commit` が、文書の種類・Markdown の文書の種類・用語集の種類を `kinds` に持ち、project-index の端末の設定の sample の行が同じ種類を `direct_commit.write_api_kinds` に持つ
         notes: sample のリモートはテスト用の一時フォルダのベアリポジトリ。sample の `project-index.yaml` は、用語集と rule-inject の索引を文書の種類として配信する行も持つ
     flow: |-
       ```mermaid
@@ -45,6 +45,9 @@ scenarios:
           S9["利用者がメタデータを画面で参照する:正常シナリオ"]
           S10["利用者が画面で編集中の変更をまとめて直コミットする:正常シナリオ"]
         end
+        subgraph P7["文書の編集"]
+          S11["利用者が画面で編集中の変更をまとめて直コミットする:正常シナリオ（文書の画面で本文を編集する）"]
+        end
         subgraph P4["配信元の管理"]
           S6["配信元を追加する:正常シナリオ（設定画面で追加する）"]
           S7["配信元を除外する:正常シナリオ"]
@@ -52,7 +55,7 @@ scenarios:
         subgraph P5["保守"]
           S8["dev-docsを更新する:正常シナリオ"]
         end
-        S0 --> S1 --> S2 --> S3 --> S4 --> S5 --> S9 --> S10 --> S6 --> S7 --> S8
+        S0 --> S1 --> S2 --> S3 --> S4 --> S5 --> S9 --> S10 --> S11 --> S6 --> S7 --> S8
         click S0 "id:SC-155-2#scenarios[正常シナリオ]"
         click S1 "id:SC-155-10#scenarios[正常シナリオ]"
         click S2 "id:SC-155-7#scenarios[正常シナリオ]"
@@ -61,6 +64,7 @@ scenarios:
         click S5 "id:SC-155-6#scenarios[正常シナリオ]"
         click S9 "id:SC-155-14#scenarios[正常シナリオ]"
         click S10 "id:SC-155-15#scenarios[正常シナリオ]"
+        click S11 "id:SC-155-15#scenarios[正常シナリオ（文書の画面で本文を編集する）]"
         click S6 "id:SC-155-12#scenarios[正常シナリオ（設定画面で追加する）]"
         click S7 "id:SC-155-11#scenarios[正常シナリオ]"
         click S8 "id:SC-155-3#scenarios[正常シナリオ]"
@@ -78,6 +82,7 @@ scenarios:
       - project-index のプロセスと端末の設定の `sources` は、dev-docs の起動・更新で変わらない
       - メタデータの画面に、sample の用語集・エイリアス・タグ・rule-inject の索引・配信元の設定・管理用の YAML の一覧が並び、索引の行に規約と適用するパスが出る
       - 画面で編集した sample の変更（タグの追加と用語の追加）をまとめて送信すると、sample のリモートの既定のブランチに 1 コミットだけ増え、画面を開き直すと修正後の値が一覧に出て、編集中の変更が空になる
+      - 文書の画面で sample の YAML の文書の本文（文字列の項目と表の行）と Markdown の文書の本文を編集してまとめて送信すると、sample のリモートの既定のブランチに 1 コミットだけ増え、文書の画面を開き直すと修正後の本文が出て、編集中の変更が空になる
     test: test_normal
     uses:
       - SC-155-2#scenarios[正常シナリオ]
@@ -91,6 +96,7 @@ scenarios:
       - SC-155-3#scenarios[正常シナリオ]
       - SC-155-14#scenarios[正常シナリオ]
       - SC-155-15#scenarios[正常シナリオ]
+      - SC-155-15#scenarios[正常シナリオ（文書の画面で本文を編集する）]
   - name: 異常シナリオ（配信できない配信元がある）
     setup:
       - name: Mock
@@ -138,7 +144,7 @@ lead: 利用者が配信元の文書を画面で参照し、差分とコメン�
 primary_actor: 利用者
 stakeholders:
   - name: 利用者
-    interest: project-index が配信している配信元の文書を画面で参照し、エージェントの変更を差分でレビューできる。配信元の追加と削除を画面でできる
+    interest: project-index が配信している配信元の文書を画面で参照し、エージェントの変更を差分でレビューできる。Claude Code を使用せずに、文書の本文を画面から修正して直コミットできる。配信元の追加と削除を画面でできる
   - name: project-index
     interest: dev-docs の画面のサーバーが読み取り API・端末の設定の API・書き込みの API だけを使用し、索引・検索・書き込みの検査と直コミットの許可を持たない
   - name: 各配信元
@@ -148,7 +154,7 @@ preconditions:
   - 端末に uv・git・Claude Code がある
   - project-index を入れて起動し、配信する配信元を project-index の端末の設定に並べてある
   - dev-docs のマーケットプレイスを追加し、プラグイン `dev-docs` をユーザースコープで入れてある
-success_guarantee: project-index が配信している配信元の文書が、`/_api/sources/{配信元の id}/docs` の画面の API と画面で参照できる。設定画面での配信元の追加・削除は、project-index の配信元にも反映される。配信元のメタデータを画面で一覧でき、画面で編集中の変更が 1 つのコミットで配信元のリモートへプッシュされる。
+success_guarantee: project-index が配信している配信元の文書が、`/_api/sources/{配信元の id}/docs` の画面の API と画面で参照できる。設定画面での配信元の追加・削除は、project-index の配信元にも反映される。配信元のメタデータを画面で一覧でき、文書の画面で文書の本文を編集でき、画面で編集中の変更が 1 つのコミットで配信元のリモートへプッシュされる。
 minimal_guarantee: project-index が配信していない配信元があっても、他の配信元の画面と設定画面は止まらない。dev-docs は配信元のフォルダと文書を自分で書き換えず、書き込みは project-index の書き込みの API だけを経る。直コミットできなかった修正は編集中の変更として画面に残る。
 frequency: 導入は端末ごとに 1 回。起動はセッションごと。参照するのは作業のたび
 priority: 高

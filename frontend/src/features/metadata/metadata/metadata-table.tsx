@@ -6,7 +6,7 @@ import {
   type PendingEdit,
   usePendingEdits,
   usePendingEditsStore,
-} from "@/features/metadata/shared/pending-edits-store";
+} from "@/shared/stores/pending-edits-store";
 import type { MetadataColumn, MetadataKind, MetadataRow } from "@/shared/api/generated/model";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { Button } from "@/shared/components/ui/button";
@@ -386,7 +386,7 @@ export const MetadataTable = ({ source, kind, query, baseCommit }: Props) => {
                             source={source}
                             row={row}
                             column={column}
-                            value={pending ?? row.values[column.key] ?? ""}
+                            value={(pending as CellValue | undefined) ?? row.values[column.key] ?? ""}
                             canEdit={row.editable && column.editable && !deleted}
                             editing={editing === cell}
                             onStart={() => setEditing(cell)}

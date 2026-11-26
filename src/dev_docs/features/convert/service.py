@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Collection, Mapping, Sequence
+from dataclasses import replace
 from typing import Any
 
 from dev_docs.features.convert.embed import expand_embeds
@@ -126,8 +127,12 @@ class ConvertService:
         documents: Sequence[IndexedDocument],
         *,
         linkable: Collection[str],
+        item_ranges: list[tuple[str, str]] | None = None,
     ) -> str | ConvertFailure:
-        """1 件の文書を、埋め込みのマーカーを残した Markdown にする。"""
+        """1 件の文書を、埋め込みのマーカーを残した Markdown にする。
+
+        `item_ranges` を指定すると、スキーマ駆動の変換が項目のパスと Markdown の組を入れる。
+        """
         failure = detail.failure
         if failure is not None:
             return ConvertFailure(
@@ -148,9 +153,10 @@ class ConvertService:
             return document.body
         row = view.row(document.kind)
         schema: Mapping[str, Any] = row.schema if row is not None else {}
-        return schema_to_markdown(
-            document, schema, self._context(view, document, documents, linkable)
+        context = replace(
+            self._context(view, document, documents, linkable), item_ranges=item_ranges
         )
+        return schema_to_markdown(document, schema, context)
 
     def finish(self, markdown: str, kind: str, embedded: Mapping[str, Any | None]) -> Converted:
         """埋め込みを展開し、表のキーを取り出した変換の結果にする。"""

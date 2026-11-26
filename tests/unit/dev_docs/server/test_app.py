@@ -104,6 +104,7 @@ def test_build_app_when_openapi(make_mcp_handlers: Callable[..., Any], tmp_path:
         [
             "view-get_document_default",
             "view-get_document",
+            "view-post_preview",
             "view-search_page",
             "view-list_refs",
             "view-put_columns",

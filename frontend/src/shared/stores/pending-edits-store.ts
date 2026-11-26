@@ -3,27 +3,34 @@ import { createJSONStorage, persist } from "zustand/middleware";
 
 import type { Edit } from "@/shared/api/generated/model";
 
+/** 変更の 1 つの列・項目の値（表の項目は行ごとの列の値） */
+export type EditValue = string | string[] | Array<Record<string, string>>;
+
 /** 編集中の変更 1 件。直コミットの `edits[]` と、パネルに出す値を持つ */
 export type PendingEdit = {
-  /** `{kind}:{docId}:{op}` */
+  /** `{kind}:{docId}:{op}`（本文の変更は `body:{docId}:{項目のパス}`） */
   key: string;
-  kind: "terms" | "aliases" | "tags" | "rules" | "files";
+  /** `body` は文書の画面で編集した本文の変更 */
+  kind: "terms" | "aliases" | "tags" | "rules" | "files" | "body";
   op: "update" | "add" | "delete";
   docId: string;
   /** `update`・`delete` は行の `docKind`、`add` は種類の `createKind` */
   docKind: string;
   expectedVersion: string | null;
-  /** 文書のパス（行の `docPath`。`add` は `null`） */
+  /** 文書のパス（行の `docPath`、本文の変更は `edit.filePath`。`add` は `null`） */
   docPath: string | null;
-  values: Record<string, string | string[]>;
+  values: Record<string, EditValue>;
   /** 変更前の値（パネルの `{変更前} → {変更後}`） */
-  before: Record<string, string | string[]>;
-  /** `{種類の title}: {行の名前}` */
+  before: Record<string, EditValue>;
+  /** `{種類の title}: {行の名前}`（本文の変更は `{項目の名前}（{ファイルのパス}）`） */
   label: string;
 };
 
 /** 種類 → 行の ID → 列のキーごとの値（再取得したメタデータ） */
 export type LatestValues = Record<string, Record<string, Record<string, string | string[]>>>;
+
+/** 文書の ID → 項目のパス（`@file` を含む）ごとの値（再取得した文書の `edit`） */
+export type LatestBodies = Record<string, Record<string, EditValue>>;
 
 type PendingEditsState = {
   bySource: Record<string, PendingEdit[]>;
@@ -32,10 +39,10 @@ type PendingEditsState = {
   upsert: (source: string, edit: PendingEdit, baseCommit: string) => void;
   remove: (source: string, key: string) => void;
   clear: (source: string) => void;
-  rebase: (source: string, baseCommit: string, latest: LatestValues) => PendingEdit[];
+  rebase: (source: string, baseCommit: string, latest: LatestValues, latestBody: LatestBodies) => PendingEdit[];
 };
 
-const sameValue = (a: string | string[] | undefined, b: string | string[] | undefined): boolean =>
+const sameValue = (a: EditValue | undefined, b: EditValue | undefined): boolean =>
   JSON.stringify(a ?? "") === JSON.stringify(b ?? "");
 
 /** `update` で値が全て変更前と同じか */
@@ -43,10 +50,11 @@ const isUnchanged = (edit: PendingEdit): boolean =>
   edit.op === "update" &&
   Object.entries(edit.values).every(([column, value]) => sameValue(value, edit.before[column]));
 
-/** 再取得した値のどれかが変更前の値と違う `update` か（行が無いものも含む） */
-const isStale = (edit: PendingEdit, latest: LatestValues): boolean => {
+/** 再取得した値のどれかが変更前の値と違う `update` か（行・文書・項目が無いものも含む） */
+const isStale = (edit: PendingEdit, latest: LatestValues, latestBody: LatestBodies): boolean => {
   if (edit.op !== "update") return false;
-  const row = latest[edit.kind]?.[edit.docId];
+  const row: Record<string, EditValue> | undefined =
+    edit.kind === "body" ? latestBody[edit.docId] : latest[edit.kind]?.[edit.docId];
   if (row === undefined) return true;
   return Object.keys(edit.values).some((column) => !sameValue(row[column], edit.before[column]));
 };
@@ -104,10 +112,10 @@ export const usePendingEditsStore = create<PendingEditsState>()(
           bySource: without(state.bySource, source),
           baseCommitBySource: without(state.baseCommitBySource, source),
         })),
-      rebase: (source, baseCommit, latest) => {
+      rebase: (source, baseCommit, latest, latestBody) => {
         const current = get().bySource[source] ?? [];
-        const dropped = current.filter((edit) => isStale(edit, latest));
-        const kept = current.filter((edit) => !isStale(edit, latest));
+        const dropped = current.filter((edit) => isStale(edit, latest, latestBody));
+        const kept = current.filter((edit) => !isStale(edit, latest, latestBody));
         set((state) => ({
           bySource: { ...state.bySource, [source]: kept },
           baseCommitBySource:

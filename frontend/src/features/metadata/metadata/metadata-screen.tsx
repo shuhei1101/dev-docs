@@ -6,8 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { NotFoundScreen } from "@/features/docs/not-found/not-found-screen";
 import { servingSources } from "@/features/docs/shared/serving-sources";
 import { MetadataTable, rowElementId } from "@/features/metadata/metadata/metadata-table";
-import { PendingPanel } from "@/features/metadata/metadata/pending-panel";
-import { type PendingEdit, useBaseCommit, usePendingEdits } from "@/features/metadata/shared/pending-edits-store";
+import { PendingPanel } from "@/shared/components/pending-panel/pending-panel";
+import { type PendingEdit, useBaseCommit, usePendingEdits } from "@/shared/stores/pending-edits-store";
 import { getMetadataGetMetadataQueryOptions } from "@/shared/api/generated/metadata/metadata";
 import type { MetadataResponse } from "@/shared/api/generated/model";
 import { useSettingsGetSettingsSources } from "@/shared/api/generated/settings/settings";
@@ -132,6 +132,16 @@ export const MetadataScreen = ({ source }: Props) => {
   }, [locateCount, metadata.data, tab]);
 
   const locate = (edit: PendingEdit) => {
+    // 文書の本文の変更: その文書を編集の表示で開き、編集中のパネルを開いたままにする
+    if (edit.kind === "body" && edit.docPath !== null) {
+      const mode = Object.keys(edit.values).includes("@file") ? "file" : "fields";
+      void navigate({
+        to: "/$source/$",
+        params: { source, _splat: edit.docPath },
+        search: { edit: mode, panel: "edits" },
+      });
+      return;
+    }
     locating.current = edit;
     setQuery("");
     setSearch({ tab: edit.kind });

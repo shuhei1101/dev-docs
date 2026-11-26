@@ -4,7 +4,7 @@ import {
   type PendingEdit,
   toCommitEdits,
   usePendingEditsStore,
-} from "@/features/metadata/shared/pending-edits-store";
+} from "@/shared/stores/pending-edits-store";
 
 const edit = (overrides: Partial<PendingEdit> = {}): PendingEdit => ({
   key: "tags:n1:update",
@@ -71,9 +71,12 @@ test("test_rebase", () => {
   upsert("sample", edit(), "aaa1111");
   upsert("sample", edit({ key: "tags:n2:update", docId: "n2" }), "aaa1111");
 
-  const dropped = rebase("sample", "ccc3333", {
-    tags: { n1: { tags: ["topic:a"] }, n2: { tags: ["topic:a"] } },
-  });
+  const dropped = rebase(
+    "sample",
+    "ccc3333",
+    { tags: { n1: { tags: ["topic:a"] }, n2: { tags: ["topic:a"] } } },
+    {},
+  );
 
   expect(dropped).toEqual([]);
   expect(usePendingEditsStore.getState().bySource.sample).toHaveLength(2);
@@ -89,9 +92,28 @@ test("test_rebase_when_latest_changed", () => {
     "aaa1111",
   );
 
-  const dropped = rebase("sample", "ccc3333", { tags: { n1: { tags: ["topic:x"] } } });
+  const dropped = rebase("sample", "ccc3333", { tags: { n1: { tags: ["topic:x"] } } }, {});
 
   expect(dropped.map((item) => item.key)).toEqual(["tags:n1:update"]);
   expect((usePendingEditsStore.getState().bySource.sample ?? []).map((item) => item.op)).toEqual(["add"]);
   expect(usePendingEditsStore.getState().baseCommitBySource.sample).toBe("ccc3333");
+});
+
+test("test_rebase_when_body_changed", () => {
+  const { upsert, rebase } = usePendingEditsStore.getState();
+  const body = (path: string, before: string, value: string) =>
+    edit({
+      key: `body:n1:${path}`,
+      kind: "body",
+      values: { [path]: value },
+      before: { [path]: before },
+      label: `${path}（notes/n1.yaml）`,
+    });
+  upsert("sample", body("summary", "A", "B"), "aaa1111");
+  upsert("sample", body("@file", "title: n1\n", "title: n2\n"), "aaa1111");
+
+  const dropped = rebase("sample", "ccc3333", {}, { n1: { summary: "X", "@file": "title: n1\n" } });
+
+  expect(dropped.map((item) => item.key)).toEqual(["body:n1:summary"]);
+  expect((usePendingEditsStore.getState().bySource.sample ?? []).map((item) => item.key)).toEqual(["body:n1:@file"]);
 });

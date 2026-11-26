@@ -3,7 +3,7 @@ import { HttpResponse, delay, http } from "msw";
 import { userEvent, within } from "storybook/test";
 
 import { MetadataScreen } from "@/features/metadata/metadata/metadata-screen";
-import { type PendingEdit, usePendingEditsStore } from "@/features/metadata/shared/pending-edits-store";
+import { type PendingEdit, usePendingEditsStore } from "@/shared/stores/pending-edits-store";
 import type { MetadataColumn, MetadataKind, MetadataResponse } from "@/shared/api/generated/model";
 
 const METADATA = "*/_api/sources/sample/metadata";

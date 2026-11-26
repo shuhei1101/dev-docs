@@ -257,6 +257,14 @@ class _Builder:
         self.blocks: list[str] = []
         # 組み立てのパスから、そのパスの値の見出しを配置した塊の位置
         self.heading_blocks: dict[str, int] = {}
+        # 項目のパスと、その項目を組み立てた Markdown（見出しを除く）の組
+        self.ranges: list[tuple[str, str]] = []
+
+    def record(self, item: str, start: int) -> None:
+        """`start` 以降に配置した塊を、項目のパスの Markdown として記録する。"""
+        markdown = "\n\n".join(block for block in self.blocks[start:] if block)
+        if markdown:
+            self.ranges.append((item, markdown))
 
     def head(self, title: str) -> DiagramHead:
         """図の部品の定義に入れる題名・範囲・更新日を作る。"""
@@ -285,8 +293,13 @@ class _Builder:
         path: str,
         level: int,
         skip: Sequence[str] = (),
+        item_prefix: str | None = None,
     ) -> None:
-        """オブジェクトの子を、スキーマの `properties` の順に組み立てる。"""
+        """オブジェクトの子を、スキーマの `properties` の順に組み立てる。
+
+        `item_prefix` を指定すると、子ごとに項目のパス（最上位は `""` でキーのまま、
+        `x-key` を持つ配列の要素は `#{配列のキー}[{x-key の値}]` に続けた `.{キー}`）の Markdown を記録する。
+        """
         properties: Mapping[str, Any] = schema.get("properties") or {}
         keys = [
             key
@@ -334,7 +347,13 @@ class _Builder:
                 self.examples(data, keys[index:end], sub_of, level)
                 index = end
                 continue
-            self.value(key, data[key], sub_of(key), f"{path}.{key}" if path else key, level)
+            # 項目のパスを記録する呼び出し: 子の項目のパスを作る
+            item = None
+            if item_prefix is not None:
+                item = f"{item_prefix}.{key}" if item_prefix else key
+            self.value(
+                key, data[key], sub_of(key), f"{path}.{key}" if path else key, level, item=item
+            )
             index += 1
 
     def examples(
@@ -355,8 +374,17 @@ class _Builder:
             )
         self.blocks.append("<!-- /tabs -->")
 
-    def value(self, key: str, value: Any, sub: Mapping[str, Any], path: str, level: int) -> None:
-        """値 1 つを `x-heading`・`x-shape` に沿って組み立てる。"""
+    def value(
+        self,
+        key: str,
+        value: Any,
+        sub: Mapping[str, Any],
+        path: str,
+        level: int,
+        *,
+        item: str | None = None,
+    ) -> None:
+        """値 1 つを `x-heading`・`x-shape` に沿って組み立てる。`item` があれば、見出しを除いた範囲を記録する。"""
         title = str(sub.get("title") or key)
         heading = sub.get("x-heading")
         shape = sub.get("x-shape")
@@ -367,12 +395,15 @@ class _Builder:
         if heading:
             self.heading(str(heading), level, path)
             content_level = level + 1
+        start = len(self.blocks)
         if key in TEST_FILE_KEYS:
             self.test_files(title, value)
         elif shape == "diagram" and isinstance(value, Mapping):
             self.diagram(title, value, sub, path)
         elif shape == "sections" and isinstance(value, list | Mapping):
-            self.sections(value, sub, path, content_level)
+            # セクションの並び: 範囲は要素の中の項目ごとに記録する
+            self.sections(value, sub, path, content_level, item=item)
+            return
         elif shape == "attributes" and isinstance(value, Mapping):
             self.attributes(value, sub)
         elif shape == "list" and isinstance(value, list):
@@ -381,6 +412,8 @@ class _Builder:
             self.table(value, sub, path)
         else:
             self.plain(title, value, sub, path, content_level, labeled=not heading)
+        if item is not None:
+            self.record(item, start)
 
     def test_files(self, title: str, value: Any) -> None:
         """対応テストファイルを、引き先があればリンク、無ければ行内のコードの 1 列の閉じた表にする。"""
@@ -462,8 +495,16 @@ class _Builder:
         if pairs:
             self.blocks.append(render_attributes(pairs, self.context, self.head(self.scope)))
 
-    def sections(self, value: Any, sub: Mapping[str, Any], path: str, level: int) -> None:
-        """要素・子を 1 つ深い見出しのセクションにする。"""
+    def sections(
+        self,
+        value: Any,
+        sub: Mapping[str, Any],
+        path: str,
+        level: int,
+        *,
+        item: str | None = None,
+    ) -> None:
+        """要素・子を 1 つ深い見出しのセクションにする。`item` があれば `x-key` の要素の中の項目の範囲を記録する。"""
         if isinstance(value, list):
             items = sub.get("items") if isinstance(sub.get("items"), Mapping) else {}
             x_key = sub.get("x-key")
@@ -472,12 +513,15 @@ class _Builder:
                 child_path = f"{path}[{index}]"
                 self.heading(str(label if label is not None else index + 1), level, child_path)
                 if isinstance(element, Mapping):
+                    # 記録する配列の `x-key` を持つ要素: 要素の中の項目を `#{配列}[{x-key の値}]` のパスで記録する
+                    prefix = f"#{item}[{label}]" if item is not None and label is not None else None
                     self.object(
                         element,
                         items,  # type: ignore[arg-type]
                         child_path,
                         level + 1,
                         skip=[x_key] if x_key else [],
+                        item_prefix=prefix,
                     )
                 elif not _is_empty(element):
                     self.blocks.append(self.text(element, str(index + 1)))
@@ -682,10 +726,14 @@ def _assemble(
     name = str(data[heading_key]) if heading_key else str(document.metadata["name"])
     builder = _Builder(document, context, name)
     builder.blocks.append(f"# {name}")
+    if heading_key:
+        builder.record(heading_key, 0)
     if lead_key:
+        start = len(builder.blocks)
         builder.blocks.append(builder.text(data[lead_key], name))
+        builder.record(lead_key, start)
     used = [key for key in (heading_key, lead_key) if key]
-    builder.object(data, schema, "", FIRST_HEADING_LEVEL, skip=used)
+    builder.object(data, schema, "", FIRST_HEADING_LEVEL, skip=used, item_prefix="")
     return builder
 
 
@@ -710,6 +758,10 @@ def schema_to_markdown(
 ) -> str:
     """YAML の文書をスキーマの `x-heading`・`x-shape`・`x-key`・`x-diagram`・`x-hidden`・`title` に沿って Markdown にする。"""
     builder = _build(document, schema, context)
+    # 項目の範囲を記録する文脈: 最後の組み立ての組だけを入れる
+    if context.item_ranges is not None:
+        context.item_ranges.clear()
+        context.item_ranges.extend(builder.ranges)
     return "\n\n".join(block for block in builder.blocks if block) + "\n"
 
 

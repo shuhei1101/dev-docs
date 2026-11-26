@@ -526,3 +526,64 @@ def test_get_document_when_source_unknown(make_handlers: Callable[..., Any]) -> 
     # 実行・検証
     with pytest.raises(UnknownSourceError):
         asyncio.run(get_document("unknown", None, handlers=handlers, ref=None, diff_ref=None))
+
+
+HEAD_COMMIT = "1111111111111111111111111111111111111111"
+OLD_COMMIT = "2222222222222222222222222222222222222222"
+
+
+def _serve_editable(fake_index: FakeIndex) -> None:
+    """既定のブランチの先頭と更新前の commit に `docs/a` を配置し、種類 rules を書き込みの API から直コミットできる配信元にする。"""
+    fake_index.configs["sample"] = config_json("sample")
+    document = doc_json("a", "docs/a.yaml", name="A", version="v-a")
+    fake_index.docs["sample"] = {None: [document], HEAD_COMMIT: [document], OLD_COMMIT: [document]}
+    fake_index.refs_results = {
+        "git": True,
+        "defaultRef": "develop",
+        "branches": [{"name": "develop", "commit": HEAD_COMMIT}],
+        "tags": [],
+        "commits": [],
+    }
+    fake_index.settings = {
+        "settingsPath": "/pi/settings.yaml",
+        "sources": [
+            {
+                "id": "sample",
+                "config": ["/repo/project-index.yaml"],
+                "enabled": True,
+                "scope": {"read": [], "write": None},
+                "outsideRead": True,
+                "status": "serving",
+                "errors": [],
+                "configVersion": None,
+                "directCommit": {"writeApiKinds": ["rules"]},
+            }
+        ],
+    }
+
+
+def test_get_document_when_edit(fake_index: FakeIndex, make_handlers: Callable[..., Any]) -> None:
+    """本文の編集の情報（正常系）。"""
+    # 準備
+    _serve_editable(fake_index)
+    # 実行
+    response = _get(make_handlers(), "docs/a")
+    # 検証
+    assert response.edit is not None
+    assert response.edit.base_commit == HEAD_COMMIT
+    assert response.edit.version == "v-a"
+    detail = next(item for item in fake_index.requests if item.url.path.endswith("docs/a.yaml"))
+    assert detail.url.params.get("ref") == HEAD_COMMIT
+
+
+def test_get_document_when_edit_other_ref(
+    fake_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
+    """既定のブランチでないリビジョン（正常系）。"""
+    # 準備
+    _serve_editable(fake_index)
+    # 実行
+    response = _get(make_handlers(), "docs/a", ref=OLD_COMMIT)
+    # 検証
+    assert response.edit is None
+    assert not any(item.url.path == "/settings/sources" for item in fake_index.requests)

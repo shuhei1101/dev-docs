@@ -24,6 +24,8 @@ const renderDocMain = (doc: ReturnType<typeof documentResponse>, emptyTab: unkno
       onRetry={vi.fn()}
       onCompare={vi.fn()}
       onClearDiff={vi.fn()}
+      onEditModeChange={vi.fn()}
+      onMarkdownFieldOpen={vi.fn()}
     />,
   );
 

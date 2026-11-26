@@ -1,0 +1,110 @@
+id: CMP-155-4
+title: 編集中のパネル
+lead: 配信元の編集中の変更（メタデータの行と文書の本文）を並べ、差分確認・コミット・取り消しとその結果を出す、文書の画面とメタデータの画面に共通の画面の横のパネル。
+status: planned
+implementation: frontend/src/shared/components/pending-panel/pending-panel.tsx#PendingPanel
+story: Layout/PendingPanel
+args:
+  - name: source
+    type: 文字列
+    required: true
+    description: 編集中の変更を出す配信元の ID
+  - name: branch
+    type: 文字列
+    required: false
+    default: なし（「既定のブランチ」と出す）
+    description: コミットするブランチの名前。説明とコミットの確認に出す
+  - name: open
+    type: 真偽値
+    required: true
+    description: 開いているか
+events:
+  - name: openChange
+    when: 閉じるボタン・Esc で閉じる
+    value: '`false`'
+    description: 使用する画面が開閉の状態を戻す
+  - name: locate
+    when: 変更の行を押した
+    value: 変更 1 件（`kind`・`docPath`・`values` のキー）
+    description: 使用する画面が、本文の変更（`kind` が `body`）はその文書の文書の画面を、メタデータの変更はメタデータの画面のその行を開く
+states:
+  - name: MetadataEdits
+    description: メタデータの変更 3 件（タグの修正・用語の追加・用語の削除）
+    args:
+      - name: source
+        value: sample
+      - name: branch
+        value: develop
+      - name: open
+        value: 'true'
+  - name: BodyEdits
+    description: 文書の本文の変更（項目のパスの修正・ファイル全体の編集）とメタデータの変更が並ぶ。本文の変更の行は `{項目の名前}（{文書のパス}）` を出す
+    args:
+      - name: source
+        value: sample
+      - name: branch
+        value: develop
+      - name: open
+        value: 'true'
+  - name: DryRunDiff
+    description: 差分確認を押した後。変更ごとに差分を出す
+    args:
+      - name: source
+        value: sample
+      - name: open
+        value: 'true'
+  - name: BodyEditInvalid
+    description: 差分確認で本文の変更が検査に合格しない。その変更の行に違反した項目のパスと理由を出す
+    args:
+      - name: source
+        value: sample
+      - name: open
+        value: 'true'
+  - name: Conflict
+    description: コミットで衝突し、修正を残したブランチ・ PR の URL・衝突した理由を出す
+    args:
+      - name: source
+        value: sample
+      - name: open
+        value: 'true'
+  - name: Empty
+    description: 編集中の変更が 0 件
+    args:
+      - name: source
+        value: sample
+      - name: open
+        value: 'true'
+  - name: LongLabels
+    description: 長い項目の名前と文書のパスの本文の変更。行を折り返し、パネルの幅を超えない
+    args:
+      - name: source
+        value: sample
+      - name: open
+        value: 'true'
+  - name: Narrow
+    description: 幅 48rem 未満の場所で、下から出す
+    args:
+      - name: source
+        value: sample
+      - name: open
+        value: 'true'
+    notes:
+      幅: ストーリーのビューポートを幅 390px にする
+accessibility:
+  - モーダルにしない画面の横のパネルで、開いている間も本文・表を操作できる。Esc で閉じて、開いたボタンへフォーカスを戻す
+  - 変更の行の移動・取り消しのボタンの読み上げ名に、変更の名前を含める
+  - 差分確認・コミットの結果と失敗は `role="status"`・`role="alert"` で伝える
+notes:
+  モック: 文書の画面のストーリー `Docs/DocViewScreen` の `PendingPanelOnDocView`・`PendingPanelLongLabels`・`BodyEditInvalid`
+  API: 差分確認とコミットは編集中の変更の直コミット（`POST /_api/sources/{source}/commits`）を呼ぶ。ストーリーは MSW の handler で応答を差し替える
+refs:
+  - to: IF-155-29
+    type: requires
+    when: 差分確認・コミットの要求と応答を変えるときに、変更ごとの差分・理由の出し方を確認する。
+test_file: tests/integration/frontend/pending-panel.spec.ts
+tags:
+  - name: topic:編集
+    main: true
+  - name: topic:部品
+  - name: topic:直コミット
+  - name: topic:差分

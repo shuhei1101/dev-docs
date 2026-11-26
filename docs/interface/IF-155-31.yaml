@@ -1,0 +1,203 @@
+id: IF-155-31
+title: 本文のプレビュー
+lead: ファイル全体の編集で書き換えた YAML の文書を、文書の取得と同じスキーマ駆動の変換で Markdown にして返却する本文のプレビューの入出力を定め、プレビューを修正するときに参照する。
+entry:
+  kind: endpoint
+  value: POST `/_api/sources/{source}/preview`
+identifier: post_preview
+permissions: なし（`127.0.0.1` でだけ待ち受ける）
+read_only: true
+idempotent: true
+side_effects: なし（変換の結果を記録しない。配信元のファイルを読み書きしない）
+exclusivity: 読み取りだけで排他しない
+callers:
+  - SC-155-15#scenarios[正常シナリオ（文書の画面で本文を編集する）]
+request:
+  - name: source
+    type: str
+    required: true
+    location: path
+    description: 配信元の ID
+  - name: path
+    type: str
+    required: true
+    location: body
+    description: 書き換えた文書のパス（文書の取得の `path`）
+  - name: content
+    type: str
+    required: true
+    location: body
+    description: 書き換えた YAML の文字列（文書の取得の `edit.source` を書き換えたもの）
+request_example: |-
+  ```json
+  {"path": "docs/n1", "content": "title: n1\nsummary: 修正後の概要\n"}
+  ```
+response:
+  - name: markdown
+    type: str | None
+    description: 書き換えた YAML を変換した Markdown
+    notes: 読み込めないときは `null`
+  - name: conversionError
+    type: ConversionError | None
+    description: YAML として読み込めないときの行と列と理由（文書の取得の `conversionError` と同じ構造）
+    notes: 変換できたときは `null`
+  - name: fallback
+    type: bool
+    description: '`converters[]` を指す種類を、スキーマ駆動の変換で描いたか'
+    notes: 画面は `true` のとき、配信の表示と異なることを出す
+response_example: |-
+  ```json
+  {"markdown": "# n1\n\n修正後の概要\n", "conversionError": null, "fallback": false}
+  ```
+status_codes:
+  - code: '200'
+    condition: 変換した（YAML として読み込めないときも `conversionError` を入れて 200）
+  - code: '400'
+    condition: 本文の型の検証に通らない、`path` の文書が YAML の文書でない
+  - code: '404'
+    condition: 配信元が無い・配信していない、文書が無い
+    notes: 文書の取得と同じ `missing` と値
+  - code: '502'
+    condition: project-index が 5xx を返却した
+    notes: 文書の取得と同じ `projectIndex`
+  - code: '503'
+    condition: project-index につながらない、または制限時間の中で応答が無い
+    notes: 文書の取得と同じ `projectIndex`
+error_format: RFC 9457 の `application/problem+json`（`type`・`title`・`status`・`detail`）。拡張メンバーは camelCase（`nextSteps`・`missing`・`errors[]` の `{path, reason}`）
+constraints:
+  - item: 変換
+    constraint: '`path` の文書の種類のスキーマで、`content` を読み込んだ値を、文書の取得のスキーマ駆動の変換（図・表・本文の id のリンク）と同じ規則で Markdown にする。`converters[]` を指す種類も、スキーマ駆動の変換で描いて `fallback: true` を返却する'
+    notes: '`converters[]` のスクリプトは project-index が配信元のファイルに対して実行し、書き換えた内容を指定できないため'
+  - item: project-index への問い合わせ
+    constraint: 配信元の設定（`schemas=true`）と、既定のブランチの `path` の文書（種類と文書の ID）を同時に問い合わせる。配信元のファイルは参照しない
+  - item: タイムアウト
+    constraint: 文書の取得と同じ制限時間で打ち切り、503 を返却する
+    decided_by: NFR-155-1#requirements[文書の取得の制限時間]
+  - item: 本文の大きさ
+    constraint: 制限なし（`127.0.0.1` でだけ待ち受け、画面が書き換えた 1 文書だけを送信する）
+  - item: 認可
+    constraint: 制限なし（`127.0.0.1` でだけ待ち受ける）
+    decided_by: NFR-155-1#requirements[待ち受けのアドレス]
+  - item: JSON のキー
+    constraint: 要求と応答のキーは camelCase
+  - item: operationId
+    constraint: '`{tag}-{関数名}` の `view-post_preview`'
+flows:
+  - name: 正常系
+    summary: 書き換えた YAML を、文書の取得と同じ変換で Markdown にして返却する
+    setup:
+      - name: Mock
+        description: テストの中で起動した project-index（一時フォルダの端末の設定を `PROJECT_INDEX_CONFIG` で指し、空きポートで子プロセスとして起動する）。dev-docs のアプリを HTTP のテストのクライアントで呼ぶ
+      - name: 配信元
+        description: 文書の取得の正常系（本文の編集の情報を返す）と同じ sample の n1
+      - name: 入力
+        description: n1 の `edit.source` の `summary` を `修正後の概要` に書き換えた `content`
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/preview
+        participant PI as project-index
+
+        C->>E: path: n1, content
+        E->>PI: 配信元の設定（schemas）・n1
+        E->>E: content を読み込み、n1 の種類のスキーマで変換する
+        E-->>C: 200 markdown
+      ```
+
+      <!-- /map -->
+    expected:
+      - 200 で、`markdown` に `修正後の概要` があり、`conversionError` が `null`、`fallback` が `false`
+      - '`markdown` が、同じ値の文書を文書の取得で取得した `markdown` と同じ'
+      - sample のフォルダのファイルが変わっていない
+    test: test_normal
+  - name: 正常系（YAML として読み込めない）
+    summary: 読み込めない `content` は、行と列を `conversionError` に入れて返却する
+    setup:
+      - name: Mock
+        description: なし（正常系と同じ）
+      - name: 入力
+        description: 3 行目の行頭にタブを入れた `content`
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/preview
+
+        C->>E: path: n1, content（行頭にタブ）
+        E->>E: YAML として読み込めない
+        E-->>C: 200 conversionError
+      ```
+
+      <!-- /map -->
+    expected:
+      - 200 で、`markdown` が `null`、`conversionError` に 3 行目と列と理由がある
+    test: test_normal_when_yaml_invalid
+  - name: 正常系（変換のスクリプトを指す種類）
+    summary: '`converters[]` を指す種類は、スキーマ駆動の変換で描いて `fallback` を返却する'
+    setup:
+      - name: Mock
+        description: なし（正常系と同じ）
+      - name: 変換を持つ配信元
+        description: 文書の取得の正常系（配信元の変換を使う）と同じ custom の、`converters[]` を指す種類の文書
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/preview
+        participant PI as project-index
+
+        C->>E: path: converters を指す種類の文書, content
+        E->>PI: 配信元の設定（schemas）・文書
+        E->>E: スキーマ駆動の変換で描く
+        E-->>C: 200 markdown, fallback: true
+      ```
+
+      <!-- /map -->
+    expected:
+      - 200 で、`fallback` が `true`、`markdown` にスキーマの `x-heading` の見出しがある
+      - 変換のスクリプトが動いていない
+    test: test_normal_when_custom_converter
+  - name: 異常系（無い文書・404）
+    summary: 無い配信元・文書を指すと 404 で何が無いかを返却する
+    setup:
+      - name: Mock
+        description: なし（正常系と同じ）
+      - name: 入力
+        description: '`path` が `no-such-doc`'
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as POST /_api/sources/{source}/preview
+        participant PI as project-index
+
+        C->>E: path: no-such-doc
+        E->>PI: 文書
+        PI-->>E: 404（missing: doc）
+        E-->>C: 404 problem+json
+      ```
+
+      <!-- /map -->
+    expected:
+      - 404 で、`missing` が `doc`、値が `no-such-doc`
+    test: test_error_when_not_found
+refs:
+  - to: IF-155-10
+    type: requires
+    when: スキーマ駆動の変換の規則を変えるときに、文書の取得の変換と同じ描き方かを確認する。
+test_file: tests/integration/server/test_post_preview.py
+tags:
+  - name: topic:プレビュー
+    main: true
+  - name: topic:文書
+  - name: action:変換
+  - name: topic:api

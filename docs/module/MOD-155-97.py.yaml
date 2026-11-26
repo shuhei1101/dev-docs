@@ -182,7 +182,8 @@ functions:
          - キーが `DECISIONS_KEY` のリストは、先に検討事項のリンクにかけてから組み立てる
       3. 図の元データの表は、閉じた表（`closed=True`）にし、`LABEL_KEYS` の列を先頭へ移し、`DIAGRAM_HIDDEN_KEYS` のうちその表にある列を `hidden` にする
       4. 文書の `tables`（`ER_TABLES_KEY`）の要素の `title` と、その要素の見出しを配置する組み立てのパスの組を集める（同じ `title` は最初の要素）。組が 1 つ以上あれば、1〜3 の組み立ての後に、見出しのアンカーの一覧の 2 と同じ規則で組み立てのパスごとの ID を作り、`title` からその ID（見出しを配置しなかったパスの `title` は除く）を文脈の `anchors` にして 1〜3 をもう一度組み立てる
-      5. 行を空行で繋いで返却する
+      5. 文脈の `item_ranges` が `None` でなければ、先頭の見出しのキーと、2 で組み立てる最上位の項目と `x-key` を持つ配列の要素の中の項目ごとに、項目のパスとその項目の行（項目の見出しを除く。先頭の見出しは `# {見出し}` の行）を空行で繋いだ Markdown の組を、組み立てた順に入れる。4 で組み立て直すときは、2 回目の組み立ての組だけを残す
+      6. 行を空行で繋いで返却する
     unit_tests:
       - name: test_schema_to_markdown
         case: 正常
@@ -256,6 +257,12 @@ functions:
         condition: '`decisions: [D-1, D-2]`（`x-shape` 無し）と `tags: [D-1]`、文脈の `decisions` が `{"D-1"}`'
         mock: なし
         expected: '`decisions` の `D-1` だけが `[D-1](…_decisions/D-1)` で、`D-2` と `tags` の `D-1` は文字のまま'
+      - name: test_schema_to_markdown_when_item_ranges
+        case: 正常
+        summary: 項目の範囲を記録する
+        condition: '`title`・`summary`・`items`（`x-key: id`・要素に `body`）を持つ文書と、`item_ranges` が空のリストの文脈'
+        mock: なし
+        expected: '`item_ranges` のパスが `title`・`summary`・`#items[i1].id`・`#items[i1].body` の順で、どの Markdown も返却した Markdown に含まれる'
   - name: item_heading
     title: 項目の見出し
     kind: 関数

@@ -162,6 +162,19 @@
   --mdmark-padding: 0 0 1.5rem;
 }
 
+/* 表示した場所での修正の本文のブロックは、ブロックの先頭と末尾の余白を除き、編集のボタンを最初の行にそろえる */
+.doc-edit-block .mdmark {
+  --mdmark-padding: 0;
+}
+
+.doc-edit-block .mdmark :where(h1, h2, h3, h4, h5, h6, p, ul, ol, table, section, div):first-child {
+  margin-top: 0;
+}
+
+.doc-edit-block .mdmark :where(h1, h2, h3, h4, h5, h6, p, ul, ol, table, section, div):last-child {
+  margin-bottom: 0;
+}
+
 /* sonner が差し込むトーストのスタイルから、高さの遷移を除外する */
 [data-sonner-toaster] [data-sonner-toast]:not([data-swiping="true"]) {
   transition:

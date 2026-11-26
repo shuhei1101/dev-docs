@@ -1,12 +1,13 @@
 import { Undo2 } from "lucide-react";
 import { useState } from "react";
 
-import { useCommitEdits, useRestartFromLatest } from "@/features/metadata/metadata/queries";
+import { useCommitEdits, useRestartFromLatest } from "@/shared/components/pending-panel/queries";
 import {
+  type EditValue,
   type PendingEdit,
   usePendingEdits,
   usePendingEditsStore,
-} from "@/features/metadata/shared/pending-edits-store";
+} from "@/shared/stores/pending-edits-store";
 import type { CommitResult, ConflictResult, ConflictScript } from "@/shared/api/generated/model";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
 import { Badge } from "@/shared/components/ui/badge";
@@ -46,8 +47,16 @@ type Outcome =
   | { kind: "dropped"; labels: string[] }
   | null;
 
-const toText = (value: string | string[] | undefined): string =>
-  Array.isArray(value) ? value.join(", ") : (value ?? "");
+const toText = (value: EditValue | undefined): string =>
+  Array.isArray(value) ? value.map((item) => (typeof item === "string" ? item : JSON.stringify(item))).join(", ") : (value ?? "");
+
+/** 本文の変更の、パネルに 1 行で出せない値（ファイル全体・表・複数行）の案内 */
+const DIFF_ONLY = "差分確認で表示します";
+
+/** 本文の変更で、変更前と変更後を 1 行で並べられない値か */
+const isDiffOnly = (edit: PendingEdit, path: string, value: EditValue): boolean =>
+  edit.kind === "body" &&
+  (path === "@file" || typeof value !== "string" || value.includes("\n") || toText(edit.before[path]).includes("\n"));
 
 /** 失敗の Problem Details の `errors[]` を、変更の `key` ごとの理由にする */
 const reasonsOf = (problem: Problem | null): Map<string, string[]> => {
@@ -91,22 +100,29 @@ type EditItemProps = {
 
 /** 編集中の変更 1 件と、その差分・理由 */
 const EditItem = ({ edit, diff, reasons, busy, onLocate, onDiscard }: EditItemProps) => (
-  <li className="rounded-md border p-2">
+  <li className="min-w-0 rounded-md border p-2">
     <div className="flex items-start gap-2">
       <Badge variant="outline">{OP_LABEL[edit.op]}</Badge>
       <button
         type="button"
-        className="flex-1 text-left text-sm underline-offset-2 hover:underline"
+        // 長い項目の名前と文書のパスは折り返し、パネルの幅を超えない
+        className="min-w-0 flex-1 text-left text-sm wrap-anywhere underline-offset-2 hover:underline"
         aria-label={`${edit.label} の行へ移動`}
         onClick={onLocate}
       >
         {edit.label}
         {edit.op === "update" &&
-          Object.entries(edit.values).map(([column, value]) => (
-            <span key={column} className="mt-1 block font-mono text-xs">
-              {toText(edit.before[column])} → {toText(value)}
-            </span>
-          ))}
+          Object.entries(edit.values).map(([column, value]) =>
+            isDiffOnly(edit, column, value) ? (
+              <span key={column} className="mt-1 block text-xs text-muted-foreground">
+                {DIFF_ONLY}
+              </span>
+            ) : (
+              <span key={column} className="mt-1 block font-mono text-xs">
+                {toText(edit.before[column])} → {toText(value)}
+              </span>
+            ),
+          )}
       </button>
       <Button
         variant="ghost"

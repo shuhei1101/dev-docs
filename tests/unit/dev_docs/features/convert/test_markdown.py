@@ -897,3 +897,39 @@ def test_render_attributes_when_long() -> None:
     assert "| 複数行 | 1 行目… |" in result
     assert f"<!-- row-detail: 1 -->\n\n{long_value}\n\n<!-- /row-detail -->" in result
     assert "<!-- row-detail: 2 -->\n\n1 行目\n2 行目\n\n<!-- /row-detail -->" in result
+
+
+def test_schema_to_markdown_when_item_ranges(make_document: Callable[..., Document]) -> None:
+    """項目の範囲を記録する（正常系）。"""
+    # 準備
+    ranges: list[tuple[str, str]] = []
+    context = RenderContext(links={}, issue_url=None, path="notes/n1.yaml", item_ranges=ranges)
+    schema = {
+        "properties": {
+            "title": {"type": "string", "title": "タイトル"},
+            "summary": {"type": "string", "title": "概要"},
+            "items": {
+                "type": "array",
+                "title": "項目",
+                "x-heading": "項目",
+                "x-shape": "sections",
+                "x-key": "id",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string", "title": "ID"},
+                        "body": {"type": "string", "title": "本文"},
+                    },
+                },
+            },
+        }
+    }
+    document = make_document(
+        data={"title": "n1", "summary": "概要の文", "items": [{"id": "i1", "body": "本文の文"}]}
+    )
+    # 実行
+    result = schema_to_markdown(document, schema, context)
+    # 検証
+    assert [path for path, _ in ranges] == ["title", "summary", "#items[i1].body"]
+    assert ranges[0][1] == "# n1"
+    assert all(markdown in result for _, markdown in ranges)

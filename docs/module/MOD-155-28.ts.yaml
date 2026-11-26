@@ -18,13 +18,19 @@ data_models:
       - name: tab
         type: number | undefined
         description: 選んだタブの番号（0 以上の整数。無ければ、開いている文書を持つ `active` のタブ）
+      - name: edit
+        type: '"fields" | "file" | undefined'
+        description: 本文の編集の方式（`fields` は表示した場所で修正、`file` はファイル全体。無ければ編集しない）
+      - name: panel
+        type: '"edits" | undefined'
+        description: '`edits` なら編集中のパネルを開いて始める'
 constants:
   - name: DocViewSearchSchema
     title: 文書の画面のクエリのスキーマ
     container: features/docs/doc-view/search.ts
     usecase: 文書を参照する
-    summary: '`z.object({rev: z.string().min(1).optional().catch(undefined), base: z.string().min(1).optional().catch(undefined), tab: z.coerce.number().int().min(0).optional().catch(undefined)})`。参照できない値は捨てる'
-    value: z.object({rev, base, tab})
+    summary: '`z.object({rev: z.string().min(1).optional().catch(undefined), base: z.string().min(1).optional().catch(undefined), tab: z.coerce.number().int().min(0).optional().catch(undefined), edit: z.enum(["fields", "file"]).optional().catch(undefined), panel: z.literal("edits").optional().catch(undefined)})`。参照できない値は捨てる'
+    value: z.object({rev, base, tab, edit, panel})
 tags:
   - name: topic:文書
     main: true

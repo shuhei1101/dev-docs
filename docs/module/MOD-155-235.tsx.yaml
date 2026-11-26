@@ -1,0 +1,92 @@
+id: MOD-155-235
+title: 画面 / 文書の画面 / whole-file-editor.tsx
+lead: ファイル全体のエディタ・ファイル全体のプレビュー・標準の変換の注意・解析できない書き換えの表示を受け持ち、文書の画面の whole-file-editor.tsx を修正するときに参照する。
+test_files:
+  - tests/unit/frontend/src/features/docs/doc-view/components/whole-file-editor.test.tsx
+components:
+  - name: WholeFileEditor
+    title: ファイル全体の編集
+    kind: コンポーネント
+    container: features/docs/doc-view/components/whole-file-editor.tsx
+    usecase: 文書の本文を編集する
+    role: 部品
+    summary: 元のファイルの内容をエディタで書き換え、書き換えた内容のプレビューを並べる（本文の代わり）
+    props:
+      - name: source
+        type: string
+        required: true
+        description: 配信元の ID
+      - name: path
+        type: string
+        required: true
+        description: 文書の取得の `path`
+      - name: docId
+        type: string
+        required: true
+        description: mdmark の `docId`
+      - name: markdown
+        type: string | null
+        required: true
+        description: 文書の取得の `markdown`（プレビューの最初の内容）
+      - name: edit
+        type: DocumentEdit
+        required: true
+        description: 文書の取得の `edit`
+    state:
+      - name: lastMarkdown
+        type: string | null
+        initial: 文書の取得の `markdown`
+        description: 最後に変換できたプレビューの Markdown（変換できない間はこれを出す）
+        notes: '`useState`'
+    description: 'エディタは shadcn/ui の `Textarea`（ラベルは `edit.filePath`、等幅・16px 以上）で、初期値は `@file` の編集中の値（無ければ `edit.source`）、入力のたびに本文の変更の追加（`path` は `@file`、`before` は `edit.source`）を呼ぶ。エディタとプレビューは CSS のコンテナクエリで、区画の幅が 48rem 以上なら左右、未満なら上下に並べる。YAML の文書は、入力が `PREVIEW_DELAY_MS` 止まった後の値で本文のプレビューの問い合わせを呼び、`markdown` を描いて `lastMarkdown` に入れ、`fallback` が `true` なら標準の変換の注意を、`conversionError` があれば解析できない書き換えの表示（shadcn/ui の `Alert`、`role="alert"`、見出し `YAML として解析できません`、`{行} 行 {列} 列: {理由}。このままでは差分確認とコミットでエラーが発生します。`）を出してエディタに `aria-invalid` を付ける。Markdown の文書はエディタの値をそのまま描く。編集中の変更がある間は、見出しに変更ありのバッジと `元に戻す` を出す'
+    unit_tests:
+      - name: test_whole_file_editor
+        case: 正常
+        summary: YAML のファイル全体を書き換える
+        condition: YAML の文書で `summary` の行を書き換え、待ちの時間を進める
+        mock: MSW の本文のプレビューのハンドラ・mdmark（`vi.mock`、`mount` を記録する偽物）
+        expected: ストアに `@file` の変更があり、本文のプレビューが 1 回呼ばれ、プレビューの `mount` に応答の `markdown` が渡る
+      - name: test_whole_file_editor_when_invalid
+        case: 正常
+        summary: 解析できない書き換え
+        condition: 本文のプレビューが `conversionError`（3 行 1 列）を返却する
+        mock: MSW のハンドラ・mdmark（`vi.mock`、`mount` を記録する偽物）
+        expected: '`role="alert"` に `3 行 1 列:` があり、エディタが `aria-invalid`、プレビューは最後に変換できた Markdown のまま'
+      - name: test_whole_file_editor_when_fallback
+        case: 正常
+        summary: 標準の変換の注意
+        condition: '本文のプレビューが `fallback: true` を返却する'
+        mock: MSW のハンドラ・mdmark（`vi.mock`、`mount` を記録する偽物）
+        expected: '`この種類のプレビューは、配信元の変換を使用できないため標準の変換で表示しています。` が出る'
+      - name: test_whole_file_editor_when_markdown
+        case: 正常
+        summary: Markdown の文書
+        condition: '`edit.language` が `markdown` で本文を書き換える'
+        mock: MSW（要求を記録する）・mdmark（`vi.mock`、`mount` を記録する偽物）
+        expected: 本文のプレビューを呼ばず、プレビューの `mount` にエディタの値が渡る
+refs:
+  - to: SCR-155-1
+    item: elements[ファイル全体のエディタ]
+    type: requires
+    when: ファイル全体のエディタの振る舞いを変えるときに突き合わせる。
+  - to: SCR-155-1
+    item: elements[ファイル全体のプレビュー]
+    type: requires
+    when: ファイル全体のプレビューの描き方を変えるときに突き合わせる。
+  - to: SCR-155-1
+    item: elements[解析できない書き換えの表示]
+    type: requires
+    when: 解析できない書き換えの表示を変えるときに突き合わせる。
+  - to: SCR-155-1
+    item: elements[標準の変換の注意]
+    type: requires
+    when: 標準の変換の注意の出し方を変えるときに突き合わせる。
+  - to: IF-155-31
+    type: requires
+    when: ファイル全体のプレビューの問い合わせを変えるときに、本文のプレビューの入出力と突き合わせる。
+tags:
+  - name: topic:文書
+    main: true
+  - name: topic:画面
+  - name: action:修正
+  - name: topic:プレビュー
