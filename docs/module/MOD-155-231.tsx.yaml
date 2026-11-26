@@ -28,7 +28,7 @@ components:
         type: '(mode: "fields" | "file" | undefined) => void'
         required: true
         description: '`edit` を書き換える（履歴は置き換える）'
-    description: ボタンは shadcn/ui の `Button`（鉛筆は lucide-react の `Pencil`）。編集のボタンは、`edit.language` が `yaml` なら `fields`、`markdown` なら `file` で `onModeChange` を呼ぶ。編集の方式の切り替えは `edit.language` が `yaml` のときだけ 2 つのボタン（`aria-pressed`）で出し、編集中の変更の方式でもう一方の方式の変更がある間は、押していない方のボタンを `disabled` にしてボタンの下に `{もう一方の方式の名前}の変更をコミットするか元に戻すと切り替えられます。` を出す。編集を終了は `onModeChange(undefined)` を呼ぶ
+    description: ボタンは shadcn/ui の `Button`（鉛筆は lucide-react の `Pencil`）。編集のボタンは、`edit.language` が `yaml` なら `fields`、`markdown` なら `file` で `onModeChange` を呼ぶ。編集の方式の切り替えは `edit.language` が `yaml` のときだけ 2 つのボタン（`aria-pressed`）で出し、その文書に今の方式の編集中の変更（`fields` は項目のパスの変更、`file` は `@file` の変更）がある間は、押していない方のボタンを `disabled` にしてボタンの下に `{今の方式の名前}の変更をコミットするか元に戻すと切り替えられます。` を出す。編集を終了は `onModeChange(undefined)` を呼ぶ
     unit_tests:
       - name: test_doc_edit_bar
         case: 正常
@@ -44,10 +44,10 @@ components:
         expected: '`onModeChange` が `file` で呼ばれ、`mode` が `file` のときに編集の方式の切り替えが無い'
       - name: test_doc_edit_bar_when_other_mode_pending
         case: 正常
-        summary: もう一方の方式の変更がある
-        condition: '`mode` が `fields` で、ストアに同じ文書の `@file` の変更がある'
+        summary: 今の方式の変更がある
+        condition: '`mode` が `fields` で、ストアに同じ文書の項目のパス（`summary`）の変更がある'
         mock: なし
-        expected: '`ファイル全体` のボタンが無効で、説明の文が出る'
+        expected: '`ファイル全体` のボタンが無効で、`表示した場所で修正の変更をコミットするか元に戻すと切り替えられます。` が出る'
 refs:
   - to: SCR-155-1
     item: elements[編集のボタン]

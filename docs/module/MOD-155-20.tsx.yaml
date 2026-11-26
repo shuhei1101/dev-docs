@@ -50,9 +50,9 @@ components:
         notes: '`useState`。文書か `edit` の方式が変わったら null'
       - name: pendingPanelOpen
         type: boolean
-        initial: 'false'
+        initial: 'URL の `panel` が `edits`'
         description: 編集中のパネル
-        notes: '`useState`'
+        notes: '`useState`（メタデータの画面から移ったときに開いたままにするため、初期値を URL から取る）'
     unit_tests:
       - name: test_doc_view_screen
         case: 正常
