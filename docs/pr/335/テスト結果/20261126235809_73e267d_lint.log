@@ -1,0 +1,161 @@
+# lint（単体テスト作成）
+
+型検査（mypy・tsc）の違反は、実装が無いことによるもの（未作成のモジュール・型・引数）だけで、実装で解消する。
+
+$ (rc=0; uv run ruff check . || rc=1; uv run ruff format --check . || rc=1; uv run mypy . || rc=1; claude plugin validate . || rc=1; npm run lint || rc=1; npm run typecheck || rc=1; uvx --from actionlint-py==1.7.12.25 --with shellcheck-py==0.11.0.1 actionlint || rc=1; for u in ...; do gh api ...; done; exit $rc)
+All checks passed!
+165 files already formatted
+tests/unit/dev_docs/features/convert/test_markdown.py:906: error: Unexpected
+keyword argument "item_ranges" for "RenderContext"  [call-arg]
+        context = RenderContext(links={}, issue_url=None, path="notes/n1.y...
+                  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+tests/unit/dev_docs/features/view/test_edit.py:10: error: Skipping analyzing
+"dev_docs.features.view.edit": module is installed, but missing library stubs or
+py.typed marker  [import-untyped]
+    from dev_docs.features.view.edit import (
+    ^
+tests/unit/dev_docs/features/view/test_edit.py:10: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
+tests/unit/dev_docs/features/view/test_document.py:572: error:
+"DocumentResponse" has no attribute "edit"  [attr-defined]
+        assert response.edit is not None
+               ^~~~~~~~~~~~~
+tests/unit/dev_docs/features/view/test_document.py:573: error:
+"DocumentResponse" has no attribute "edit"  [attr-defined]
+        assert response.edit.base_commit == HEAD_COMMIT
+               ^~~~~~~~~~~~~
+tests/unit/dev_docs/features/view/test_document.py:574: error:
+"DocumentResponse" has no attribute "edit"  [attr-defined]
+        assert response.edit.version == "v-a"
+               ^~~~~~~~~~~~~
+tests/unit/dev_docs/features/view/test_document.py:588: error:
+"DocumentResponse" has no attribute "edit"  [attr-defined]
+        assert response.edit is None
+               ^~~~~~~~~~~~~
+tests/unit/dev_docs/features/metadata/test_commits.py:217: error: Unexpected
+keyword argument "convert" for "commit_edits"  [call-arg]
+        result = asyncio.run(commit_edits(make_client(), "sample", request...
+                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+tests/unit/dev_docs/features/metadata/test_commits.py:217: note: "commit_edits" defined in "dev_docs.features.metadata.commits"
+tests/unit/dev_docs/features/metadata/test_commits.py:248: error: Unexpected
+keyword argument "convert" for "commit_edits"  [call-arg]
+            asyncio.run(commit_edits(make_client(), "sample", request, con...
+                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+tests/unit/dev_docs/features/metadata/test_commits.py:248: note: "commit_edits" defined in "dev_docs.features.metadata.commits"
+tests/unit/dev_docs/features/metadata/test_commits.py:275: error: Unexpected
+keyword argument "convert" for "commit_edits"  [call-arg]
+            asyncio.run(commit_edits(make_client(), "sample", request, con...
+                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+tests/unit/dev_docs/features/metadata/test_commits.py:275: note: "commit_edits" defined in "dev_docs.features.metadata.commits"
+tests/unit/dev_docs/features/metadata/test_commits.py:300: error: Unexpected
+keyword argument "convert" for "commit_edits"  [call-arg]
+            asyncio.run(commit_edits(client, "sample", request, convert=Co...
+                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+tests/unit/dev_docs/features/metadata/test_commits.py:300: note: "commit_edits" defined in "dev_docs.features.metadata.commits"
+tests/unit/dev_docs/features/metadata/test_commits.py:314: error: Unexpected
+keyword argument "convert" for "commit_edits"  [call-arg]
+        asyncio.run(commit_edits(make_client(), "sample", request, convert...
+                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+tests/unit/dev_docs/features/metadata/test_commits.py:314: note: "commit_edits" defined in "dev_docs.features.metadata.commits"
+tests/unit/dev_docs/features/metadata/test_commits.py:351: error: Unexpected
+keyword argument "convert" for "commit_edits"  [call-arg]
+        asyncio.run(commit_edits(make_client(), "sample", request, convert...
+                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+tests/unit/dev_docs/features/metadata/test_commits.py:351: note: "commit_edits" defined in "dev_docs.features.metadata.commits"
+tests/unit/dev_docs/features/metadata/test_commits.py:381: error: Unexpected
+keyword argument "convert" for "commit_edits"  [call-arg]
+            asyncio.run(commit_edits(make_client(), "sample", _request(), ...
+                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+tests/unit/dev_docs/features/metadata/test_commits.py:381: note: "commit_edits" defined in "dev_docs.features.metadata.commits"
+tests/unit/dev_docs/features/metadata/test_commits.py:417: error: Unexpected
+keyword argument "convert" for "commit_edits"  [call-arg]
+            commit_edits(make_client(), "sample", _request(), convert=Conv...
+            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+tests/unit/dev_docs/features/metadata/test_commits.py:417: note: "commit_edits" defined in "dev_docs.features.metadata.commits"
+tests/unit/dev_docs/features/metadata/test_commits.py:606: error: Argument
+"kind" to "Edit" has incompatible type "Literal['body']"; expected
+"Literal['terms', 'aliases', 'tags', 'rules', 'files']"  [arg-type]
+            kind="body",
+                 ^~~~~~
+tests/unit/dev_docs/features/metadata/test_commits.py:723: error: Unexpected
+keyword argument "convert" for "commit_edits"  [call-arg]
+            asyncio.run(commit_edits(make_client(), "sample", request, con...
+                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~...
+tests/unit/dev_docs/features/metadata/test_commits.py:723: note: "commit_edits" defined in "dev_docs.features.metadata.commits"
+Found 16 errors in 4 files (checked 162 source files)
+Validating marketplace manifest: /home/shuhei2441/repo/dev-docs/.claude/worktrees/feat-doc-view-edit-document-body/.claude-plugin/marketplace.json
+
+⚠ Found 3 warnings:
+
+  ❯ description: No marketplace description provided. Adding a description helps users understand what this marketplace offers
+  ❯ plugins[0] plugin.json → version: No version specified. Consider adding a version following semver (e.g., "1.0.0")
+  ❯ plugins[0] plugin.json → author: No author information provided. Consider adding author details for plugin attribution
+
+ℹ Advice (does not change the verdict):
+
+  ❯ /home/shuhei2441/repo/dev-docs/.claude/worktrees/feat-doc-view-edit-document-body/README.md: This README has no line that installs "dev-docs" from a marketplace. Add the install line, which works in one step on Claude Code 2.1.275 or later. In it, replace <owner>/<repo> with the repository that holds the marketplace.
+      /plugin install dev-docs --marketplace <owner>/<repo>
+
+✔ Validation passed with warnings
+
+> lint
+> eslint frontend tests/unit/frontend tests/integration/frontend eslint.config.js
+
+
+> typecheck
+> node node_modules/typescript-native/bin/tsc --noEmit -p frontend/tsconfig.json
+
+tests/unit/frontend/src/features/docs/doc-view/components/doc-edit-bar.test.tsx(7,15): error TS2724: '"@/shared/api/generated/model"' has no exported member named 'DocumentEdit'. Did you mean 'DocumentDiff'?
+tests/unit/frontend/src/features/docs/doc-view/components/doc-edit-bar.test.tsx(8,38): error TS2307: Cannot find module '@/shared/stores/pending-edits-store' or its corresponding type declarations.
+tests/unit/frontend/src/features/docs/doc-view/components/doc-edit-bar.test.tsx(21,7): error TS2322: Type '{ source: string; edit: DocumentEdit; mode: undefined; onModeChange: Mock<Procedure>; }' is not assignable to type 'IntrinsicAttributes & Props'.
+  Property 'source' does not exist on type 'IntrinsicAttributes & Props'.
+tests/unit/frontend/src/features/docs/doc-view/components/doc-edit-bar.test.tsx(42,7): error TS2322: Type '{ source: string; edit: DocumentEdit; mode: undefined; onModeChange: Mock<Procedure>; }' is not assignable to type 'IntrinsicAttributes & Props'.
+  Property 'source' does not exist on type 'IntrinsicAttributes & Props'.
+tests/unit/frontend/src/features/docs/doc-view/components/doc-edit-bar.test.tsx(52,7): error TS2322: Type '{ source: string; edit: DocumentEdit; mode: "file"; onModeChange: Mock<Procedure>; }' is not assignable to type 'IntrinsicAttributes & Props'.
+  Property 'source' does not exist on type 'IntrinsicAttributes & Props'.
+tests/unit/frontend/src/features/docs/doc-view/components/doc-edit-bar.test.tsx(69,23): error TS2554: Expected 1 arguments, but got 3.
+tests/unit/frontend/src/features/docs/doc-view/components/doc-edit-bar.test.tsx(78,7): error TS2322: Type '{ source: string; edit: DocumentEdit; mode: "fields"; onModeChange: () => void; }' is not assignable to type 'IntrinsicAttributes & Props'.
+  Property 'source' does not exist on type 'IntrinsicAttributes & Props'.
+tests/unit/frontend/src/features/docs/doc-view/components/doc-field-editor.test.tsx(9,15): error TS2724: '"@/shared/api/generated/model"' has no exported member named 'DocumentEdit'. Did you mean 'DocumentDiff'?
+tests/unit/frontend/src/features/docs/doc-view/components/doc-field-editor.test.tsx(9,29): error TS2305: Module '"@/shared/api/generated/model"' has no exported member 'EditBlock'.
+tests/unit/frontend/src/features/docs/doc-view/components/doc-field-editor.test.tsx(10,38): error TS2307: Cannot find module '@/shared/stores/pending-edits-store' or its corresponding type declarations.
+tests/unit/frontend/src/features/docs/doc-view/components/doc-field-editor.test.tsx(35,7): error TS2322: Type '{ source: string; docId: string; edit: DocumentEdit; onMarkdownOpen: Mock<Procedure>; }' is not assignable to type 'IntrinsicAttributes & Props'.
+  Property 'source' does not exist on type 'IntrinsicAttributes & Props'.
+tests/unit/frontend/src/features/docs/doc-view/components/doc-field-editor.test.tsx(43,59): error TS7006: Parameter 'item' implicitly has an 'any' type.
+tests/unit/frontend/src/features/docs/doc-view/components/doc-field-editor.test.tsx(185,7): error TS2322: Type '{ source: string; edit: DocumentEdit; block: EditBlock; }' is not assignable to type 'IntrinsicAttributes & TitleProps'.
+  Property 'source' does not exist on type 'IntrinsicAttributes & TitleProps'.
+tests/unit/frontend/src/features/docs/doc-view/components/markdown-field-panel.test.tsx(6,15): error TS2724: '"@/shared/api/generated/model"' has no exported member named 'DocumentEdit'. Did you mean 'DocumentDiff'?
+tests/unit/frontend/src/features/docs/doc-view/components/markdown-field-panel.test.tsx(6,29): error TS2305: Module '"@/shared/api/generated/model"' has no exported member 'EditBlock'.
+tests/unit/frontend/src/features/docs/doc-view/components/markdown-field-panel.test.tsx(7,38): error TS2307: Cannot find module '@/shared/stores/pending-edits-store' or its corresponding type declarations.
+tests/unit/frontend/src/features/docs/doc-view/components/markdown-field-panel.test.tsx(33,7): error TS2322: Type '{ source: string; docId: string; edit: DocumentEdit; block: EditBlock; onClose: Mock<Procedure>; }' is not assignable to type 'IntrinsicAttributes & Props'.
+  Property 'source' does not exist on type 'IntrinsicAttributes & Props'.
+tests/unit/frontend/src/features/docs/doc-view/components/markdown-field-panel.test.tsx(50,8): error TS7006: Parameter 'item' implicitly has an 'any' type.
+tests/unit/frontend/src/features/docs/doc-view/components/whole-file-editor.test.tsx(8,15): error TS2724: '"@/shared/api/generated/model"' has no exported member named 'DocumentEdit'. Did you mean 'DocumentDiff'?
+tests/unit/frontend/src/features/docs/doc-view/components/whole-file-editor.test.tsx(9,38): error TS2307: Cannot find module '@/shared/stores/pending-edits-store' or its corresponding type declarations.
+tests/unit/frontend/src/features/docs/doc-view/components/whole-file-editor.test.tsx(37,9): error TS2322: Type '{ source: string; path: string; docId: string; markdown: string; edit: DocumentEdit; }' is not assignable to type 'IntrinsicAttributes & Props'.
+  Property 'source' does not exist on type 'IntrinsicAttributes & Props'.
+tests/unit/frontend/src/features/docs/doc-view/components/whole-file-editor.test.tsx(69,61): error TS7006: Parameter 'item' implicitly has an 'any' type.
+tests/unit/frontend/src/features/docs/doc-view/doc-view-screen.test.tsx(7,38): error TS2307: Cannot find module '@/shared/stores/pending-edits-store' or its corresponding type declarations.
+tests/unit/frontend/src/features/docs/doc-view/edit.test.ts(6,3): error TS2305: Module '"@/features/docs/doc-view/edit"' has no exported member 'bodyEditKey'.
+tests/unit/frontend/src/features/docs/doc-view/edit.test.ts(9,3): error TS2724: '"@/features/docs/doc-view/edit"' has no exported member named 'usePendingBodyMode'. Did you mean 'usePendingBodyValue'?
+tests/unit/frontend/src/features/docs/doc-view/edit.test.ts(11,15): error TS2724: '"@/shared/api/generated/model"' has no exported member named 'DocumentEdit'. Did you mean 'DocumentDiff'?
+tests/unit/frontend/src/features/docs/doc-view/edit.test.ts(12,38): error TS2307: Cannot find module '@/shared/stores/pending-edits-store' or its corresponding type declarations.
+tests/unit/frontend/src/features/docs/doc-view/edit.test.ts(28,23): error TS2554: Expected 1 arguments, but got 3.
+tests/unit/frontend/src/features/docs/doc-view/edit.test.ts(36,23): error TS2554: Expected 1 arguments, but got 3.
+tests/unit/frontend/src/features/docs/doc-view/edit.test.ts(66,23): error TS2554: Expected 1 arguments, but got 3.
+tests/unit/frontend/src/features/docs/doc-view/edit.test.ts(72,23): error TS2554: Expected 1 arguments, but got 3.
+tests/unit/frontend/src/features/docs/doc-view/edit.test.ts(96,56): error TS2554: Expected 2 arguments, but got 3.
+tests/unit/frontend/src/features/metadata/metadata/metadata-screen.test.tsx(6,38): error TS2307: Cannot find module '@/shared/stores/pending-edits-store' or its corresponding type declarations.
+tests/unit/frontend/src/features/metadata/metadata/metadata-table.test.tsx(6,38): error TS2307: Cannot find module '@/shared/stores/pending-edits-store' or its corresponding type declarations.
+tests/unit/frontend/src/shared/components/pending-panel/pending-panel.test.tsx(7,30): error TS2307: Cannot find module '@/shared/components/pending-panel/pending-panel' or its corresponding type declarations.
+tests/unit/frontend/src/shared/components/pending-panel/pending-panel.test.tsx(8,56): error TS2307: Cannot find module '@/shared/stores/pending-edits-store' or its corresponding type declarations.
+tests/unit/frontend/src/shared/components/pending-panel/pending-panel.test.tsx(239,71): error TS7006: Parameter 'item' implicitly has an 'any' type.
+tests/unit/frontend/src/shared/components/pending-panel/queries.test.tsx(7,54): error TS2307: Cannot find module '@/shared/components/pending-panel/queries' or its corresponding type declarations.
+tests/unit/frontend/src/shared/components/pending-panel/queries.test.tsx(8,56): error TS2307: Cannot find module '@/shared/stores/pending-edits-store' or its corresponding type declarations.
+tests/unit/frontend/src/shared/components/pending-panel/queries.test.tsx(215,23): error TS7006: Parameter 'item' implicitly has an 'any' type.
+tests/unit/frontend/src/shared/components/pending-panel/queries.test.tsx(216,71): error TS7006: Parameter 'item' implicitly has an 'any' type.
+tests/unit/frontend/src/shared/stores/pending-edits-store.test.ts(7,8): error TS2307: Cannot find module '@/shared/stores/pending-edits-store' or its corresponding type declarations.
+tests/unit/frontend/src/shared/stores/pending-edits-store.test.ts(97,23): error TS7006: Parameter 'item' implicitly has an 'any' type.
+tests/unit/frontend/src/shared/stores/pending-edits-store.test.ts(98,71): error TS7006: Parameter 'item' implicitly has an 'any' type.
+tests/unit/frontend/src/shared/stores/pending-edits-store.test.ts(117,23): error TS7006: Parameter 'item' implicitly has an 'any' type.
+tests/unit/frontend/src/shared/stores/pending-edits-store.test.ts(118,71): error TS7006: Parameter 'item' implicitly has an 'any' type.
+exit=1
