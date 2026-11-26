@@ -69,7 +69,8 @@ export const DocViewScreen = () => {
     help: false,
     drawer: false,
     comments: false,
-    pending: false,
+    // メタデータの画面から本文の変更へ移ったときは、編集中のパネルを開いたままにする
+    pending: search.panel === "edits",
   });
   // 画面の横のパネルで編集する Markdown の文字列の項目
   const [markdownField, setMarkdownField] = useState<EditBlock | null>(null);

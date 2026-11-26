@@ -100,12 +100,13 @@ type EditItemProps = {
 
 /** 編集中の変更 1 件と、その差分・理由 */
 const EditItem = ({ edit, diff, reasons, busy, onLocate, onDiscard }: EditItemProps) => (
-  <li className="rounded-md border p-2">
+  <li className="min-w-0 rounded-md border p-2">
     <div className="flex items-start gap-2">
       <Badge variant="outline">{OP_LABEL[edit.op]}</Badge>
       <button
         type="button"
-        className="flex-1 text-left text-sm underline-offset-2 hover:underline"
+        // 長い項目の名前と文書のパスは折り返し、パネルの幅を超えない
+        className="min-w-0 flex-1 text-left text-sm wrap-anywhere underline-offset-2 hover:underline"
         aria-label={`${edit.label} の行へ移動`}
         onClick={onLocate}
       >

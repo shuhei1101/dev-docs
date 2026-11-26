@@ -25,9 +25,9 @@ export const DocEditBar = ({ source, edit, mode, onModeChange }: Props) => {
       </Button>
     );
   }
-  // もう一方の方式の変更がある間は、同じ文書の `@file` と項目のパスの変更を並べられないため切り替えさせない
+  // 今の方式の変更がある間は、同じ文書の `@file` と項目のパスの変更を並べられないため、もう一方の方式へ切り替えさせない
   const blocked: DocEditMode | null =
-    mode === "fields" && pending.file ? "file" : mode === "file" && pending.fields ? "fields" : null;
+    mode === "fields" && pending.fields ? "file" : mode === "file" && pending.file ? "fields" : null;
   return (
     <div className="flex flex-col items-end gap-1">
       <div className="flex flex-wrap items-center gap-2">
@@ -62,7 +62,7 @@ export const DocEditBar = ({ source, edit, mode, onModeChange }: Props) => {
       </div>
       {blocked !== null && edit.language === "yaml" && (
         <p className="text-xs text-muted-foreground">
-          {MODE_LABEL[blocked]}の変更をコミットするか元に戻すと切り替えられます。
+          {MODE_LABEL[mode]}の変更をコミットするか元に戻すと切り替えられます。
         </p>
       )}
     </div>

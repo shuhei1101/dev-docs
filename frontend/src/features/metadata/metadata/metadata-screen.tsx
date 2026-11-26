@@ -132,6 +132,16 @@ export const MetadataScreen = ({ source }: Props) => {
   }, [locateCount, metadata.data, tab]);
 
   const locate = (edit: PendingEdit) => {
+    // 文書の本文の変更: その文書を編集の表示で開き、編集中のパネルを開いたままにする
+    if (edit.kind === "body" && edit.docPath !== null) {
+      const mode = Object.keys(edit.values).includes("@file") ? "file" : "fields";
+      void navigate({
+        to: "/$source/$",
+        params: { source, _splat: edit.docPath },
+        search: { edit: mode, panel: "edits" },
+      });
+      return;
+    }
     locating.current = edit;
     setQuery("");
     setSearch({ tab: edit.kind });
