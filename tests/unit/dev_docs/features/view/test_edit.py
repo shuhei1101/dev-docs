@@ -555,7 +555,7 @@ def test_preview_document_when_converter(
     """変換のスクリプトを指す種類（正常系）。"""
     # 準備
     _serve_note(fake_index, [doc_json("n1", "notes/n1.yaml", kind="note", data=N1_VALUE)])
-    fake_index.details[("sample", "notes/n1")] = {"markdown": "# 変換した\n"}
+    fake_index.details[("sample", "notes/n1.yaml")] = {"markdown": "# 変換した\n"}
     # 実行
     response = _preview(make_handlers(), "notes/n1", dump_source(N1_VALUE))
     # 検証

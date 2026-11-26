@@ -930,6 +930,6 @@ def test_schema_to_markdown_when_item_ranges(make_document: Callable[..., Docume
     # 実行
     result = schema_to_markdown(document, schema, context)
     # 検証
-    assert [path for path, _ in ranges] == ["title", "summary", "#items[i1].id", "#items[i1].body"]
+    assert [path for path, _ in ranges] == ["title", "summary", "#items[i1].body"]
     assert ranges[0][1] == "# n1"
     assert all(markdown in result for _, markdown in ranges)

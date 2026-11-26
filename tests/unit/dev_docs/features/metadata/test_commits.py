@@ -739,10 +739,12 @@ def test_item_expected_versions_when_body(
     request = _request(
         edits=[
             _body_edit("body:n1:#items[i1].body", "#items[i1].body", "修正後"),
-            _body_edit("body:n1:@file", "@file", "id: n1\n"),
+            _body_edit("body:n2:@file", "@file", "id: n2\n", doc_path="notes/n2.yaml").model_copy(
+                update={"doc_id": "n2"}
+            ),
         ]
     )
     # 実行
     versions = asyncio.run(item_expected_versions(make_client(), "sample", request, {}))
     # 検証
-    assert versions == {"body:n1:#items[i1].body": {"items": "t-items"}, "body:n1:@file": "c3d4e5"}
+    assert versions == {"body:n1:#items[i1].body": {"items": "t-items"}, "body:n2:@file": "c3d4e5"}
