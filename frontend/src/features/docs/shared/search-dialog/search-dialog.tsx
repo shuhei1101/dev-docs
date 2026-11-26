@@ -1,4 +1,5 @@
 import { useQueries } from "@tanstack/react-query";
+import { Command as CommandPrimitive } from "cmdk";
 import { useEffect, useRef, useState } from "react";
 
 import { splitHighlight } from "@/features/docs/shared/search-dialog/highlight";
@@ -9,7 +10,6 @@ import {
   Command,
   CommandDialog,
   CommandInput,
-  CommandItem,
   CommandList,
 } from "@/shared/components/ui/command";
 import { Badge } from "@/shared/components/ui/badge";
@@ -315,14 +315,14 @@ export const SearchDialog = ({
           {rows.length > 0 && (
             <div role="group" className="divide-y divide-border">
               {rows.map((row) => (
-                <CommandItem
+                <CommandPrimitive.Item
                   key={`${row.source}:${row.path}`}
                   value={`${row.source}:${row.path}`}
                   onSelect={() => {
                     onResultSelect(row.path, row.source);
                     onOpenChange(false);
                   }}
-                  className="grid min-w-0 grid-cols-1 items-start gap-y-0.5 rounded-none px-3 py-2"
+                  className="flex min-w-0 cursor-default flex-col gap-0.5 px-3 py-2 text-sm outline-hidden select-none aria-selected:bg-muted"
                 >
                   <span className="flex min-w-0 items-center gap-2">
                     <span className="min-w-0 truncate font-medium">
@@ -366,7 +366,7 @@ export const SearchDialog = ({
                       )}
                     </span>
                   ))}
-                </CommandItem>
+                </CommandPrimitive.Item>
               ))}
             </div>
           )}
