@@ -67,7 +67,34 @@ export const ViewGetDocumentDefaultResponse = zod.object({
   "change": zod.union([zod.enum(['added', 'modified']),zod.null()]),
   "changedItems": zod.array(zod.string()).optional()
 }).describe('文書の取得の `diff`（比べたリビジョンと、返却した文書の変化・変わった項目）。'),zod.null()]),
-  "updatedAt": zod.iso.datetime({"offset":true})
+  "updatedAt": zod.iso.datetime({"offset":true}),
+  "edit": zod.union([zod.object({
+  "docId": zod.string(),
+  "kind": zod.string(),
+  "filePath": zod.string(),
+  "version": zod.string(),
+  "baseCommit": zod.string(),
+  "language": zod.enum(['yaml', 'markdown']),
+  "source": zod.string(),
+  "blocks": zod.array(zod.object({
+  "path": zod.string(),
+  "label": zod.string(),
+  "type": zod.enum(['string', 'enum', 'markdown', 'table']),
+  "markdown": zod.string(),
+  "value": zod.union([zod.string(),zod.array(zod.record(zod.string(), zod.string()))]),
+  "options": zod.union([zod.array(zod.string()),zod.null()]).optional(),
+  "columns": zod.union([zod.array(zod.string()),zod.null()]).optional()
+}).describe('表示した場所で修正できる項目 1 つ。')),
+  "titleBlock": zod.union([zod.object({
+  "path": zod.string(),
+  "label": zod.string(),
+  "type": zod.enum(['string', 'enum', 'markdown', 'table']),
+  "markdown": zod.string(),
+  "value": zod.union([zod.string(),zod.array(zod.record(zod.string(), zod.string()))]),
+  "options": zod.union([zod.array(zod.string()),zod.null()]).optional(),
+  "columns": zod.union([zod.array(zod.string()),zod.null()]).optional()
+}).describe('表示した場所で修正できる項目 1 つ。'),zod.null()])
+}).describe('文書の取得の `edit`（文書の画面で本文を編集するときの元の内容と項目）。'),zod.null()]).optional()
 }).describe('GET `/_api/sources/{source}/docs[/{path}]` の応答。')
 
 /**
@@ -131,8 +158,62 @@ export const ViewGetDocumentResponse = zod.object({
   "change": zod.union([zod.enum(['added', 'modified']),zod.null()]),
   "changedItems": zod.array(zod.string()).optional()
 }).describe('文書の取得の `diff`（比べたリビジョンと、返却した文書の変化・変わった項目）。'),zod.null()]),
-  "updatedAt": zod.iso.datetime({"offset":true})
+  "updatedAt": zod.iso.datetime({"offset":true}),
+  "edit": zod.union([zod.object({
+  "docId": zod.string(),
+  "kind": zod.string(),
+  "filePath": zod.string(),
+  "version": zod.string(),
+  "baseCommit": zod.string(),
+  "language": zod.enum(['yaml', 'markdown']),
+  "source": zod.string(),
+  "blocks": zod.array(zod.object({
+  "path": zod.string(),
+  "label": zod.string(),
+  "type": zod.enum(['string', 'enum', 'markdown', 'table']),
+  "markdown": zod.string(),
+  "value": zod.union([zod.string(),zod.array(zod.record(zod.string(), zod.string()))]),
+  "options": zod.union([zod.array(zod.string()),zod.null()]).optional(),
+  "columns": zod.union([zod.array(zod.string()),zod.null()]).optional()
+}).describe('表示した場所で修正できる項目 1 つ。')),
+  "titleBlock": zod.union([zod.object({
+  "path": zod.string(),
+  "label": zod.string(),
+  "type": zod.enum(['string', 'enum', 'markdown', 'table']),
+  "markdown": zod.string(),
+  "value": zod.union([zod.string(),zod.array(zod.record(zod.string(), zod.string()))]),
+  "options": zod.union([zod.array(zod.string()),zod.null()]).optional(),
+  "columns": zod.union([zod.array(zod.string()),zod.null()]).optional()
+}).describe('表示した場所で修正できる項目 1 つ。'),zod.null()])
+}).describe('文書の取得の `edit`（文書の画面で本文を編集するときの元の内容と項目）。'),zod.null()]).optional()
 }).describe('GET `/_api/sources/{source}/docs[/{path}]` の応答。')
+
+/**
+ * 書き換えた YAML を変換し、見つからなかったときは何が無いかを追加した 404 にする。
+ * @summary Post Preview
+ */
+export const ViewPostPreviewParams = zod.object({
+  "source": zod.string()
+})
+
+export const ViewPostPreviewBody = zod.object({
+  "path": zod.string(),
+  "content": zod.string()
+}).describe('POST `/_api/sources/{source}/preview` の本文。')
+
+export const ViewPostPreviewResponse = zod.object({
+  "markdown": zod.union([zod.string(),zod.null()]),
+  "conversionError": zod.union([zod.object({
+  "reason": zod.enum(['timeout', 'exit', 'not_runnable', 'invalid_yaml']),
+  "kind": zod.string(),
+  "script": zod.union([zod.string(),zod.null()]).optional(),
+  "detail": zod.string(),
+  "file": zod.union([zod.string(),zod.null()]).optional(),
+  "line": zod.union([zod.int(),zod.null()]).optional(),
+  "column": zod.union([zod.int(),zod.null()]).optional()
+}).describe('文書の取得の `conversion_error`（変換の失敗と同じフィールド）。'),zod.null()]),
+  "fallback": zod.boolean()
+}).describe('POST `/_api/sources/{source}/preview` の 200 の応答。')
 
 /**
  * @summary Search Page
