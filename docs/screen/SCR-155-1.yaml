@@ -617,14 +617,14 @@ elements:
     kind: label
     position: ファイル全体のプレビューの上
     description: 配信元の変換のスクリプトを指す種類のプレビューが、配信の表示と異なること
-    label: '`この種類のプレビューは、配信元の変換を使用できないため標準の変換で描いています。`'
+    label: '`この種類のプレビューは、配信元の変換を使用できないため標準の変換で表示しています。`'
     visible_when: 本文のプレビューの `fallback` が `true` のとき
     source: 本文のプレビュー.fallback
   - name: 解析できない書き換えの表示
     kind: alert
     position: 本文 > ファイル全体のエディタの上
     description: 書き換えた YAML を解析できないことと、その場所と理由
-    label: '見出し `YAML として解析できません`。続けて `{行} 行 {列} 列: {理由}。このままでは差分確認とコミットで断られます。`'
+    label: '見出し `YAML として解析できません`。続けて `{行} 行 {列} 列: {理由}。このままでは差分確認とコミットでエラーが発生します。`'
     visible_when: YAML の文書で、本文のプレビューが `conversionError` を返却したとき
     source: 本文のプレビュー.conversionError
     notes:
