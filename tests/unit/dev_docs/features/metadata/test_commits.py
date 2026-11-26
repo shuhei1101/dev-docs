@@ -13,6 +13,7 @@ from dev_docs.features.metadata.commits import (
     CommitRequest,
     Edit,
     EditsRejectedError,
+    check_edits,
     commit_edits,
     item_expected_versions,
     to_conflict,
@@ -748,3 +749,83 @@ def test_item_expected_versions_when_body(
     versions = asyncio.run(item_expected_versions(make_client(), "sample", request, {}))
     # 検証
     assert versions == {"body:n1:#items[i1].body": {"items": "t-items"}, "body:n2:@file": "c3d4e5"}
+
+
+def test_check_edits() -> None:
+    """修正できる列と本文の変更（正常系）。"""
+    # 準備
+    edits = [
+        *_edits()[:2],
+        _body_edit("body:n1:summary", "summary", "修正後"),
+        _body_edit(
+            "body:n2:@file", "@file", "id: n2\nname: 修正後\n", doc_path="notes/n2.yaml"
+        ).model_copy(update={"doc_id": "n2"}),
+    ]
+    # 実行・検証（例外を送出しない）
+    check_edits(edits)
+
+
+@pytest.mark.parametrize("column", ["description", "path"])
+def test_check_edits_when_column_not_editable(column: str) -> None:
+    """種類に無い列と修正できない列（異常系）。"""
+    # 準備
+    edit = _edits()[0].model_copy(update={"values": {column: "notes/n1.yaml"}})
+    # 実行
+    with pytest.raises(EditsRejectedError) as caught:
+        check_edits([edit])
+    # 検証
+    assert caught.value.status_code == 400
+    assert [(item.key, item.path) for item in caught.value.errors] == [("tags:n1:update", column)]
+
+
+def test_check_edits_when_whole_file_mixed() -> None:
+    """同じ文書のファイル全体と項目の変更（異常系）。"""
+    # 準備
+    edits = [
+        _body_edit("body:n1:@file", "@file", "id: n1\n"),
+        _body_edit("body:n1:summary", "summary", "修正後"),
+    ]
+    # 実行
+    with pytest.raises(EditsRejectedError) as caught:
+        check_edits(edits)
+    # 検証
+    assert caught.value.status_code == 400
+    assert sorted(item.key for item in caught.value.errors) == ["body:n1:@file", "body:n1:summary"]
+
+
+def test_check_edits_when_whole_file_unparsable() -> None:
+    """読み込めないファイル全体（異常系）。"""
+    # 準備
+    edit = _body_edit("body:n1:@file", "@file", "id: n1\nname: m1\n\tsummary: 概要\n")
+    # 実行
+    with pytest.raises(EditsRejectedError) as caught:
+        check_edits([edit])
+    # 検証
+    assert caught.value.status_code == 400
+    [error] = caught.value.errors
+    assert error.path == "@file"
+    assert "3" in error.reason
+
+
+def test_commit_edits_when_replaced(
+    fake_index: FakeIndex,
+    make_client: Callable[..., ProjectIndexClient],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ファイル全体の置き換えの結果（正常系）。"""
+    # 準備
+    edit = _body_edit("body:n1:@file", "@file", "id: n1\nname: 修正後\n")
+    result = {"kind": "write", "index": 0, "id": "n1", "status": "replaced", "version": "v2"}
+    _prepare(fake_index, 200, {"applied": True, "results": [result], "commit": None})
+
+    async def _allowed(*_: Any, **__: Any) -> None:
+        return None
+
+    # 修正できる項目のパスの確認は test_commit_edits_when_body_path_unknown が確かめる
+    monkeypatch.setattr("dev_docs.features.metadata.commits._check_body_paths", _allowed)
+    # 実行
+    committed = asyncio.run(
+        commit_edits(make_client(), "sample", _request(edits=[edit]), convert=ConvertService())
+    )
+    # 検証
+    assert [(item.key, item.status) for item in committed.results] == [("body:n1:@file", "updated")]
