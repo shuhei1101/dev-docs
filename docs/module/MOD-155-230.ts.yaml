@@ -1,0 +1,185 @@
+id: MOD-155-230
+title: 画面 / 文書の画面 / edit.ts
+lead: 文書の本文の変更を編集中の変更へ溜める関数と、本文のプレビューの問い合わせを受け持ち、文書の画面の edit.ts を修正するときに参照する。
+test_files:
+  - tests/unit/frontend/src/features/docs/doc-view/edit.test.ts
+constants:
+  - name: WHOLE_FILE
+    title: ファイル全体の項目のパス
+    container: features/docs/doc-view/edit.ts
+    usecase: 文書の本文を編集する
+    summary: ファイル全体の編集の変更の `values` のキー
+    value: '`@file`'
+  - name: PREVIEW_DELAY_MS
+    title: プレビューを呼ぶまでの待ち
+    container: features/docs/doc-view/edit.ts
+    usecase: 文書の本文を編集する
+    summary: ファイル全体のエディタの入力が止まってから本文のプレビューを呼ぶまでの時間
+    value: '500'
+functions:
+  - name: bodyEditKey
+    title: 本文の変更の key
+    kind: 関数
+    container: features/docs/doc-view/edit.ts
+    usecase: 文書の本文を編集する
+    role: 変換
+    summary: 文書の ID と項目のパスから、編集中の変更の `key`（`body:{docId}:{項目のパス}`）を作る
+    scope: public
+    args:
+      - name: edit
+        type: DocumentEdit
+        required: true
+        passing: positional
+        description: 文書の取得の `edit`
+      - name: path
+        type: string
+        required: true
+        passing: positional
+        description: 項目のパスか `WHOLE_FILE`
+    returns:
+      type: string
+      description: 変更の `key`
+    process: 1. `body:{edit.docId}:{path}` を返却する（リビジョンによらず 1 つ）
+  - name: upsertBodyEdit
+    title: 本文の変更の追加
+    kind: 関数
+    container: features/docs/doc-view/edit.ts
+    usecase: 文書の本文を編集する
+    role: アダプター
+    summary: 本文の項目かファイル全体の値を、編集中の変更のストアへ入れる
+    scope: public
+    args:
+      - name: source
+        type: string
+        required: true
+        passing: positional
+        description: 配信元の ID
+      - name: edit
+        type: DocumentEdit
+        required: true
+        passing: positional
+        description: 文書の取得の `edit`
+      - name: target
+        type: '{path: string; label: string; before: string | Array<Record<string, string>>; value: string | Array<Record<string, string>>}'
+        required: true
+        passing: positional
+        description: 項目のパス・項目の名前・編集を始めたときの値・入力した値
+    returns:
+      type: void
+      description: 何も返却しない
+    process: |-
+      1. `key` を本文の変更の key、`kind` を `body`、`op` を `update`、`docId`・`docKind`・`expectedVersion`・`docPath` を `edit.docId`・`edit.kind`・`edit.version`・`edit.filePath`、`values` と `before` を `{[path]: 値}`、`label` を `{項目の名前}（{edit.filePath}）` にした変更を作る
+      2. 編集中の変更のストアの `upsert` を、`baseCommit` に `edit.baseCommit` を指定して呼ぶ（値が `before` と同じなら除かれる）
+    unit_tests:
+      - name: test_upsert_body_edit
+        case: 正常
+        summary: 本文の変更を入れて、元に戻すと除く
+        condition: '`summary` を `B` に入力し、続けて元の `A` に戻す'
+        mock: なし
+        expected: '1 回目の後は `kind` が `body`・`values` が `{summary: B}`・`before` が `{summary: A}` の 1 件で、`baseCommitBySource` が `edit.baseCommit`。2 回目の後は 0 件'
+  - name: usePendingBodyValue
+    title: 編集中の本文の値
+    kind: フック
+    container: features/docs/doc-view/edit.ts
+    usecase: 文書の本文を編集する
+    role: アダプター
+    summary: 項目のパスの編集中の変更があればその値を返却する
+    scope: public
+    args:
+      - name: source
+        type: string
+        required: true
+        passing: positional
+        description: 配信元の ID
+      - name: edit
+        type: DocumentEdit
+        required: true
+        passing: positional
+        description: 文書の取得の `edit`
+      - name: path
+        type: string
+        required: true
+        passing: positional
+        description: 項目のパスか `WHOLE_FILE`
+    returns:
+      type: string | Array<Record<string, string>> | undefined
+      description: 編集中の値（無ければ `undefined`）
+    process: 1. 編集中の変更のストアの配信元の変更から、本文の変更の key が同じ変更の `values[path]` を返却する
+  - name: usePendingBodyMode
+    title: 編集中の変更の方式
+    kind: フック
+    container: features/docs/doc-view/edit.ts
+    usecase: 文書の本文を編集する
+    role: アダプター
+    summary: 文書の編集中の変更が、項目のパスとファイル全体のどちらにあるかを返却する（編集の方式の切り替えの `enabled_when`）
+    scope: public
+    args:
+      - name: source
+        type: string
+        required: true
+        passing: positional
+        description: 配信元の ID
+      - name: edit
+        type: DocumentEdit
+        required: true
+        passing: positional
+        description: 文書の取得の `edit`
+    returns:
+      type: '{fields: boolean; file: boolean}'
+      description: 項目のパスの変更があるか・`@file` の変更があるか
+    process: 1. 配信元の変更のうち `kind` が `body` で `docId` が `edit.docId` の変更を、`values` のキーが `WHOLE_FILE` かで分けて数える
+    unit_tests:
+      - name: test_use_pending_body_mode
+        case: 正常
+        summary: 方式ごとの変更
+        condition: 同じ文書の `summary` の変更と、別の文書の `@file` の変更
+        mock: なし
+        expected: '`{fields: true, file: false}`'
+  - name: previewQueryOptions
+    title: 本文のプレビューの問い合わせ
+    kind: 関数
+    container: features/docs/doc-view/edit.ts
+    usecase: 文書の本文を編集する
+    role: 問い合わせ
+    summary: orval が生成した `view-post_preview` を呼ぶ `queryOptions` を作る
+    scope: public
+    args:
+      - name: source
+        type: string
+        required: true
+        passing: positional
+        description: 配信元の ID
+      - name: path
+        type: string
+        required: true
+        passing: positional
+        description: 文書の取得の `path`
+      - name: content
+        type: string
+        required: true
+        passing: positional
+        description: 書き換えた YAML
+    returns:
+      type: UseQueryOptions<PreviewResponse, AppError>
+      description: '`queryKey` は `["view", "preview", source, path, content]`、`placeholderData` は `keepPreviousData`、`meta.handleError` は false'
+    process: 1. 本文の `path`・`content` で本文のプレビューを呼ぶ
+    unit_tests:
+      - name: test_preview_query_options
+        case: 正常
+        summary: 本文のプレビューを呼ぶ
+        condition: '`queryFn` を呼ぶ'
+        mock: MSW の本文のプレビューのハンドラ（要求を記録する）
+        expected: '`POST /_api/sources/{source}/preview` の本文が `path`・`content`'
+refs:
+  - to: IF-155-10
+    type: requires
+    when: 本文の編集の情報の受け取り方を変えるときに、文書の取得の `edit` と突き合わせる。
+  - to: IF-155-31
+    type: requires
+    when: プレビューの問い合わせを変えるときに、本文のプレビューの入出力と突き合わせる。
+tags:
+  - name: topic:文書
+    main: true
+  - name: topic:画面
+  - name: action:修正
+  - name: topic:直コミット

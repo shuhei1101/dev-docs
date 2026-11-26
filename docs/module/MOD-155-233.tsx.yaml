@@ -1,0 +1,74 @@
+id: MOD-155-233
+title: 画面 / 文書の画面 / markdown-field-panel.tsx
+lead: 表示した場所で修正する Markdown の文字列の項目のパネル・エディタ・プレビューを受け持ち、文書の画面の markdown-field-panel.tsx を修正するときに参照する。
+test_files:
+  - tests/unit/frontend/src/features/docs/doc-view/components/markdown-field-panel.test.tsx
+components:
+  - name: MarkdownFieldPanel
+    title: Markdown の項目のパネル
+    kind: コンポーネント
+    container: features/docs/doc-view/components/markdown-field-panel.tsx
+    usecase: 文書の本文を編集する
+    role: 部品
+    summary: Markdown の文字列の項目を、画面の横のパネルのエディタとプレビューで修正する
+    props:
+      - name: source
+        type: string
+        required: true
+        description: 配信元の ID
+      - name: docId
+        type: string
+        required: true
+        description: mdmark の `docId`
+      - name: edit
+        type: DocumentEdit
+        required: true
+        description: 文書の取得の `edit`
+      - name: block
+        type: EditBlock | null
+        required: true
+        description: 開いている項目（`null` は閉じている）
+      - name: onClose
+        type: () => void
+        required: true
+        description: 閉じる（項目の編集ボタンへフォーカスを戻す）
+    description: 'shadcn/ui の `Sheet` を `modal={false}` で開き、外を押しても閉じない（`onInteractOutside` を止める）。広い幅は右、狭い幅（`(max-width: 47.99rem)`）は `side="bottom"`。見出しは `{label} の編集`、説明は項目のパス（等幅）。エディタは shadcn/ui の `Textarea`（ラベル `本文`、等幅・16px 以上）で、初期値は編集中の本文の値（無ければ `block.value`）、入力のたびに本文の変更の追加を呼ぶ。プレビューは `useDeferredValue` の値を Markdown のプレビューで描く（`aria-label` は `プレビュー`）。編集中の変更がある間は、見出しに変更ありのバッジと右に `元に戻す` を出し、押すとエディタを `block.value` に戻して編集中の変更のストアの `remove` を呼ぶ'
+    unit_tests:
+      - name: test_markdown_field_panel
+        case: 正常
+        summary: Markdown の項目を修正する
+        condition: '`#items[i1].body` のパネルで `**太字**` を入力する'
+        mock: mdmark（`vi.mock`、`mount` を記録する偽物）
+        expected: ストアに `#items[i1].body` の変更があり、プレビューの `mount` に `**太字**` が渡り、変更ありのバッジと `元に戻す` が出る
+      - name: test_markdown_field_panel_when_reverted
+        case: 正常
+        summary: 元に戻す
+        condition: 入力した後に `元に戻す` を押す
+        mock: mdmark（`vi.mock`、`mount` を記録する偽物）
+        expected: エディタが元の値で、ストアに変更が無い
+      - name: test_markdown_field_panel_when_closed
+        case: 正常
+        summary: Esc で閉じる
+        condition: エディタにフォーカスがある状態で Esc を押す
+        mock: mdmark（`vi.mock`、`mount` を記録する偽物）
+        expected: '`onClose` が呼ばれ、入力した値がストアに残る'
+refs:
+  - to: SCR-155-1
+    item: elements[Markdown の項目のパネル]
+    type: requires
+    when: Markdown の項目のパネルの開き方を変えるときに突き合わせる。
+  - to: SCR-155-1
+    item: elements[Markdown の項目のエディタ]
+    type: requires
+    when: エディタの振る舞いを変えるときに突き合わせる。
+  - to: SCR-155-1
+    item: elements[元に戻す]
+    type: requires
+    when: 元に戻すの振る舞いを変えるときに突き合わせる。
+tags:
+  - name: topic:文書
+    main: true
+  - name: topic:画面
+  - name: action:修正
+  - name: topic:markdown
+  - name: topic:パネル

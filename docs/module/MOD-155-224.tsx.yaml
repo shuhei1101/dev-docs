@@ -1,11 +1,11 @@
 id: MOD-155-224
-title: 画面 / メタデータの画面 / pending-panel.tsx
-lead: 編集中のパネルとコミットの確認のダイアログを受け持ち、メタデータの画面の pending-panel.tsx を修正するときに参照する。
+title: 画面 / 共通 / pending-panel.tsx
+lead: 文書の画面とメタデータの画面に共通の編集中のパネルとコミットの確認のダイアログを受け持ち、共通の pending-panel.tsx を修正するときに参照する。
 components:
   - name: PendingPanel
     title: 編集中のパネル
     kind: コンポーネント
-    container: features/metadata/metadata/pending-panel.tsx
+    container: shared/components/pending-panel/pending-panel.tsx
     usecase: 画面で編集中の変更をまとめて直コミットする
     role: 部品
     summary: 配信元の編集中の変更、差分確認・コミットの結果と失敗を並べる
@@ -41,7 +41,7 @@ components:
         initial: 'false'
         description: コミットの確認のダイアログ
         notes: '`useState`'
-    description: shadcn/ui の `Sheet` を `modal={false}` で開き、狭い幅は `side="bottom"`、広い幅は右にする。差分確認・コミットは編集中の変更の直コミットを呼ぶ。失敗の Problem Details の `errors[].key` で変更ごとに理由を出し、コミットのボタンを `再試行` にする。`title` が `BaseCommitUnusableError` のときはボタンを `最新の内容で続ける` にし、押すと最新の内容で続けるを呼び、取り消した変更があれば `outcome` を取り消した変更の一覧に、無ければ `null` にする。コミットが `conflict` を持つ 200 を返却したときは、送信した変更を `edits` に記録して衝突の結果（`role="status"`）を出し、差分確認が `conflict` を返却したときは差分確認の衝突の注意と `reasons[].key` の変更の下の理由を出す。説明の文は変更が 1 件以上のときだけ出す。コミットの確認は shadcn/ui の `Dialog` で、コミットの説明（必須・200 文字）を入力する
+    description: shadcn/ui の `Sheet` を `modal={false}` で開き、狭い幅は `side="bottom"`、広い幅は右にする。差分確認・コミットは編集中の変更の直コミットを呼ぶ。失敗の Problem Details の `errors[].key` で変更ごとに理由を出し、コミットのボタンを `再試行` にする。`title` が `BaseCommitUnusableError` のときはボタンを `最新の内容で続ける` にし、押すと最新の内容で続けるを呼び、取り消した変更があれば `outcome` を取り消した変更の一覧に、無ければ `null` にする。コミットが `conflict` を持つ 200 を返却したときは、送信した変更を `edits` に記録して衝突の結果（`role="status"`）を出し、差分確認が `conflict` を返却したときは差分確認の衝突の注意と `reasons[].key` の変更の下の理由を出す。説明の文は変更が 1 件以上のときだけ出す。本文の変更の行は `label` と、`string`・`enum` の値は `{変更前} → {変更後}`、`markdown`・`table`・`@file` は `差分確認で表示します` を出し、行を押すと `onLocate` を呼ぶ。コミットの確認は shadcn/ui の `Dialog` で、コミットの説明（必須・200 文字）を入力する
     unit_tests:
       - name: test_pending_panel_when_dry_run
         case: 正常
@@ -101,14 +101,23 @@ components:
         condition: 409（`BaseCommitUnusableError`）の後に `最新の内容で続ける` を押し、再取得した行のタグが変更前の値と違う
         mock: MSW の直コミット（409）とメタデータの取得（タグを変えた行）のハンドラ
         expected: '`最新の内容と食い違うため、次の変更を取り消しました` とその変更の行の名前が出て、タグの変更が編集中の変更に無い'
+      - name: test_pending_panel_when_body
+        case: 正常
+        summary: 本文の変更をメタデータの変更と並べる
+        condition: タグの変更と `summary`・`@file` の本文の変更の 3 件で、`summary` の行を押す
+        mock: なし
+        expected: 3 行が並び、`summary` の行に `{変更前} → {変更後}`、`@file` の行に `差分確認で表示します` が出て、`onLocate` が `summary` の変更で呼ばれる
 refs:
   - to: SCR-155-4
     type: requires
     when: 編集中のパネルとコミットの確認の要素を変えるときに突き合わせる。
+  - to: CMP-155-4
+    type: requires
+    when: 編集中のパネルの引数・状態を変えるときに、部品設計『編集中のパネル』と突き合わせる。
 tags:
   - name: topic:メタデータ
   - name: topic:画面
   - name: topic:直コミット
   - name: topic:パネル
 test_files:
-  - tests/unit/frontend/src/features/metadata/metadata/pending-panel.test.tsx
+  - tests/unit/frontend/src/shared/components/pending-panel/pending-panel.test.tsx

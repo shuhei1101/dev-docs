@@ -1,6 +1,6 @@
 id: MOD-155-162
 title: 開発ドキュメントサーバー / 画面のAPI / route.py
-lead: 画面の API のルーター（`/_api/sources/{source}/docs`・`search`・`refs`・`columns`）を受け持ち、画面のAPIの route.py を修正するときに参照する。
+lead: 画面の API のルーター（`/_api/sources/{source}/docs`・`preview`・`search`・`refs`・`columns`）を受け持ち、画面のAPIの route.py を修正するときに参照する。
 test_files:
   - tests/unit/dev_docs/features/view/test_route.py
 diagrams:
@@ -10,6 +10,7 @@ diagrams:
         direction TD
         画面のエントリーポイント ..> 文書の取得
         画面のエントリーポイント ..> 見つからなかったもの
+        画面のエントリーポイント ..> 本文のプレビュー
         画面のエントリーポイント ..> 画面の検索
         画面のエントリーポイント ..> 表の列の設定
         画面のエントリーポイント ..> project-indexの呼び出し
@@ -33,6 +34,10 @@ diagrams:
         }
         click 文書の取得 href "./MOD-155-159.py.yaml#文書の取得"
         click 見つからなかったもの href "./MOD-155-159.py.yaml#見つからなかったもの"
+        class 本文のプレビュー {
+          <<function>>
+        }
+        click 本文のプレビュー href "id:MOD-155-229#functions[preview_document]"
         click 画面の検索 href "./MOD-155-163.py.yaml#画面の検索"
         click 表の列の設定 href "./MOD-155-158.py.yaml#表の列の設定"
         click project-indexの呼び出し href "./MOD-155-215.py.yaml#project-indexの呼び出し"
@@ -67,14 +72,15 @@ functions:
         description: 起動の『配線済みの関数』
     returns:
       type: fastapi.APIRouter
-      description: 5 つのルートを持つルーター
+      description: 6 つのルートを持つルーター
     process: |-
       1. GET `/_api/sources/{source}/docs` と `/_api/sources/{source}/docs/{path:path}` は、`ref`・`diff` を受け、文書の取得を `DocumentResponse` で返却する。文書の取得の例外は、例外の変換の登録と同じ problem+json に見つからなかったものを加えて 404 で返却する（`SourceNotServedError` の `errors[]` もそのまま）。`ProjectIndexUnreachableError` は例外の変換の登録に任せて 503 にする
-      2. GET `/_api/sources/{source}/search` は、`q`（1〜`SEARCH_QUERY_MAX` 文字）・`ref`・`limit`（1〜`SEARCH_LIMIT_MAX`）・`include_excluded`（既定 `False`）を受け、画面の検索を返却する
-      3. GET `/_api/sources/{source}/refs` は、`commits`（0〜`REFS_COMMITS_MAX`）を受け、project-indexの呼び出し.リビジョンの一覧の取得 の結果を `RefsResponse` にして返却する（無い配信元は 404）
-      4. PUT `/_api/sources/{source}/columns` は、同じオリジンの確認を依存に持ち、project-indexの呼び出し.配信元の表示の設定の取得 で配信元があることを確認してから、本文を `ColumnsRequest` で受けて表の列の設定.列の設定を記載する を呼び、同じ値を返却する
-      5. ルーターは `APIRouter(tags=["view"])` にする。各ルートの `name`（`operation_id` は指定せず、アプリの組み立てが operationId を `view-{name}` にする）は、`/docs` が `get_document_default`、`/docs/{path:path}` が `get_document`、search が `search_page`、refs が `list_refs`、columns が `put_columns`
-      6. project-index への問い合わせは `await` で呼び、表の列の設定の読み書きだけを `asyncio.to_thread` の内側で呼ぶ。配信元の読み込みを待つ処理は持たない（配信元は project-index が参照する）
+      2. POST `/_api/sources/{source}/preview` は、本文を `PreviewRequest` で受けて本文のプレビューを返却する。`DocumentNotFoundError` は文書の取得と同じく見つからなかったものを加えた 404、`PreviewNotYamlError` は 400 にする
+      3. GET `/_api/sources/{source}/search` は、`q`（1〜`SEARCH_QUERY_MAX` 文字）・`ref`・`limit`（1〜`SEARCH_LIMIT_MAX`）・`include_excluded`（既定 `False`）を受け、画面の検索を返却する
+      4. GET `/_api/sources/{source}/refs` は、`commits`（0〜`REFS_COMMITS_MAX`）を受け、project-indexの呼び出し.リビジョンの一覧の取得 の結果を `RefsResponse` にして返却する（無い配信元は 404）
+      5. PUT `/_api/sources/{source}/columns` は、同じオリジンの確認を依存に持ち、project-indexの呼び出し.配信元の表示の設定の取得 で配信元があることを確認してから、本文を `ColumnsRequest` で受けて表の列の設定.列の設定を記載する を呼び、同じ値を返却する
+      6. ルーターは `APIRouter(tags=["view"])` にする。各ルートの `name`（`operation_id` は指定せず、アプリの組み立てが operationId を `view-{name}` にする）は、`/docs` が `get_document_default`、`/docs/{path:path}` が `get_document`、preview が `post_preview`、search が `search_page`、refs が `list_refs`、columns が `put_columns`
+      7. project-index への問い合わせは `await` で呼び、表の列の設定の読み書きだけを `asyncio.to_thread` の内側で呼ぶ。配信元の読み込みを待つ処理は持たない（配信元は project-index が参照する）
     unit_tests:
       - name: test_build_view_router_when_document
         case: 正常
@@ -125,6 +131,19 @@ functions:
         mock: project-indexの呼び出し（`httpx.ConnectError` を送信する `MockTransport`）
         expected: どれも 503 の problem+json で、`projectIndex.address` と `projectIndex.reason` がある
         exception: '-'
+      - name: test_build_view_router_when_preview
+        case: 正常
+        summary: 本文のプレビュー
+        condition: POST `/_api/sources/sample/preview` に `path`・`content`
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返却する偽物）
+        expected: 200 で `markdown`・`conversionError`・`fallback`（キーが camelCase）
+      - name: test_build_view_router_when_preview_not_yaml
+        case: 異常
+        summary: YAML の文書でない
+        condition: POST `/_api/sources/sample/preview` に `guide.md` の `path`
+        mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返却する偽物）
+        expected: 400 の problem+json
+        exception: YAML の文書でない
 refs:
   - to: IF-155-10
     type: requires
@@ -138,6 +157,9 @@ refs:
   - to: IF-155-21
     type: requires
     when: 表の列の設定のルートを変えるときに、表の列の設定の保存の入出力と突き合わせる。
+  - to: IF-155-31
+    type: requires
+    when: 本文のプレビューのルートを変えるときに、本文のプレビューの入出力と突き合わせる。
 tags:
   - name: topic:api
     main: true

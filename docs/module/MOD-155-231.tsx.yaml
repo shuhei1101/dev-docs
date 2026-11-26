@@ -1,0 +1,68 @@
+id: MOD-155-231
+title: 画面 / 文書の画面 / doc-edit-bar.tsx
+lead: 文書のタイトルの右の編集のボタン・編集の方式の切り替え・編集を終了を受け持ち、文書の画面の doc-edit-bar.tsx を修正するときに参照する。
+test_files:
+  - tests/unit/frontend/src/features/docs/doc-view/components/doc-edit-bar.test.tsx
+components:
+  - name: DocEditBar
+    title: 編集のボタンの並び
+    kind: コンポーネント
+    container: features/docs/doc-view/components/doc-edit-bar.tsx
+    usecase: 文書の本文を編集する
+    role: 部品
+    summary: 編集していないときは編集のボタン、編集しているときは編集の方式の切り替えと編集を終了を出す
+    props:
+      - name: source
+        type: string
+        required: true
+        description: 配信元の ID
+      - name: edit
+        type: DocumentEdit
+        required: true
+        description: 文書の取得の `edit`
+      - name: mode
+        type: '"fields" | "file" | undefined'
+        required: true
+        description: URL の `edit`（`undefined` は編集していない）
+      - name: onModeChange
+        type: '(mode: "fields" | "file" | undefined) => void'
+        required: true
+        description: '`edit` を書き換える（履歴は置き換える）'
+    description: ボタンは shadcn/ui の `Button`（鉛筆は lucide-react の `Pencil`）。編集のボタンは、`edit.language` が `yaml` なら `fields`、`markdown` なら `file` で `onModeChange` を呼ぶ。編集の方式の切り替えは `edit.language` が `yaml` のときだけ 2 つのボタン（`aria-pressed`）で出し、編集中の変更の方式でもう一方の方式の変更がある間は、押していない方のボタンを `disabled` にしてボタンの下に `{もう一方の方式の名前}の変更をコミットするか元に戻すと切り替えられます。` を出す。編集を終了は `onModeChange(undefined)` を呼ぶ
+    unit_tests:
+      - name: test_doc_edit_bar
+        case: 正常
+        summary: 編集を始める
+        condition: YAML の文書で `mode` が `undefined`、編集のボタンを押す
+        mock: なし
+        expected: '`onModeChange` が `fields` で呼ばれる'
+      - name: test_doc_edit_bar_when_markdown
+        case: 正常
+        summary: Markdown の文書
+        condition: '`edit.language` が `markdown` で編集のボタンを押す'
+        mock: なし
+        expected: '`onModeChange` が `file` で呼ばれ、`mode` が `file` のときに編集の方式の切り替えが無い'
+      - name: test_doc_edit_bar_when_other_mode_pending
+        case: 正常
+        summary: もう一方の方式の変更がある
+        condition: '`mode` が `fields` で、ストアに同じ文書の `@file` の変更がある'
+        mock: なし
+        expected: '`ファイル全体` のボタンが無効で、説明の文が出る'
+refs:
+  - to: SCR-155-1
+    item: elements[編集のボタン]
+    type: requires
+    when: 編集のボタンの出し方を変えるときに突き合わせる。
+  - to: SCR-155-1
+    item: elements[編集の方式の切り替え]
+    type: requires
+    when: 編集の方式の切り替えを変えるときに突き合わせる。
+  - to: SCR-155-1
+    item: elements[編集を終了]
+    type: requires
+    when: 編集を終了の振る舞いを変えるときに突き合わせる。
+tags:
+  - name: topic:文書
+    main: true
+  - name: topic:画面
+  - name: action:修正

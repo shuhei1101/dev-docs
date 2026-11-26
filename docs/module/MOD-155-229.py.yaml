@@ -1,0 +1,484 @@
+id: MOD-155-229
+title: 開発ドキュメントサーバー / 画面のAPI / edit.py
+lead: 文書の取得の本文の編集の情報と、本文のプレビューを受け持ち、画面のAPIの edit.py を修正するときに参照する。
+test_files:
+- tests/unit/dev_docs/features/view/test_edit.py
+diagrams:
+- name: 全体
+  diagram: |-
+    classDiagram
+      direction TD
+      文書の取得 ..> 本文の編集の情報の組み立て
+      本文の編集の情報の組み立て ..> 編集の元の内容の書き出し
+      本文の編集の情報の組み立て ..> 表示した場所で修正できる項目の取り出し
+      編集中の変更の直コミット ..> 修正できる項目のパスの取得
+      修正できる項目のパスの取得 ..> 表示した場所で修正できる項目の取り出し
+      修正できる項目のパスの取得 ..> project-indexの呼び出し
+      本文のプレビュー ..> project-indexの呼び出し
+      本文のプレビュー ..> 変換
+      class 文書の取得 {
+        <<function>>
+      }
+      class 編集中の変更の直コミット {
+        <<function>>
+      }
+      class 本文の編集の情報の組み立て {
+        <<function>>
+      }
+      class 編集の元の内容の書き出し {
+        <<function>>
+      }
+      class 表示した場所で修正できる項目の取り出し {
+        <<function>>
+      }
+      class 修正できる項目のパスの取得 {
+        <<function>>
+      }
+      class 本文のプレビュー {
+        <<function>>
+      }
+      class project-indexの呼び出し {
+        <<class>>
+      }
+      class 変換 {
+        <<class>>
+      }
+      click 文書の取得 href "id:MOD-155-159#functions[get_document]"
+      click 編集中の変更の直コミット href "id:MOD-155-218#functions[commit_edits]"
+      click project-indexの呼び出し href "id:MOD-155-215#classes[ProjectIndexClient]"
+      click 変換 href "id:MOD-155-99#classes[ConvertService]"
+constants:
+- name: WHOLE_FILE_PATH
+  title: ファイル全体の項目のパス
+  container: features/view/edit.py
+  usecase: 文書の本文を編集する
+  summary: 直コミットの `edits[].values` のファイル全体の編集のキー
+  value: '`@file`'
+data_models:
+- name: EditBlock
+  title: 表示した場所で修正できる項目
+  container: features/view/edit.py
+  usecase: 文書の本文を編集する
+  role: DTO
+  summary: IF-155-10 の `edit.blocks[]` の 1 件（`ApiModel`）
+  properties:
+  - name: path
+    type: str
+    description: 項目のパス（`summary`・`#items[i1].body`）
+  - name: label
+    type: str
+    description: 項目の名前（スキーマの `title`。配列の要素の中の項目は `{要素の x-key の値} の {title}`）
+  - name: type
+    type: Literal['string', 'enum', 'markdown', 'table']
+    description: 編集の部品の種類
+  - name: markdown
+    type: str
+    description: '`markdown` のうち、この項目を描いた範囲'
+  - name: value
+    type: str | list[dict[str, str]]
+    description: 今の値（`table` は行ごとの列の値）
+  - name: options
+    type: list[str] | None
+    default: None
+    description: '`enum` の選択肢'
+  - name: columns
+    type: list[str] | None
+    default: None
+    description: '`table` の列のキー'
+- name: DocumentEdit
+  title: 本文の編集の情報
+  container: features/view/edit.py
+  usecase: 文書の本文を編集する
+  role: DTO
+  summary: IF-155-10 の `edit`（`ApiModel`）
+  properties:
+  - name: doc_id
+    type: str
+    description: 文書の ID
+  - name: kind
+    type: str
+    description: 文書の種類
+  - name: file_path
+    type: str
+    description: 文書のファイルか本文のファイルのパス（拡張子つき）
+  - name: version
+    type: str
+    description: 文書の一覧の `version`
+  - name: base_commit
+    type: str
+    description: 返却した内容のコミット（40 桁）
+  - name: language
+    type: Literal['yaml', 'markdown']
+    description: ファイル全体の編集の言語
+  - name: source
+    type: str
+    description: ファイル全体の編集の元の内容
+  - name: blocks
+    type: list[EditBlock]
+    description: 表示した場所で修正できる項目（`markdown` の中の順）
+  - name: title_block
+    type: EditBlock | None
+    description: 文書のタイトルに描く項目
+- name: PreviewRequest
+  title: 本文のプレビューの要求
+  container: features/view/edit.py
+  usecase: 文書の本文を編集する
+  role: DTO
+  summary: IF-155-31 の本文（`ApiModel`）
+  properties:
+  - name: path
+    type: str
+    description: 書き換えた文書のパス
+  - name: content
+    type: str
+    description: 書き換えた YAML の文字列
+- name: PreviewResponse
+  title: 本文のプレビューの応答
+  container: features/view/edit.py
+  usecase: 文書の本文を編集する
+  role: DTO
+  summary: IF-155-31 の 200 の応答（`ApiModel`）
+  properties:
+  - name: markdown
+    type: str | None
+    description: 変換した Markdown（読み込めないときは `None`）
+  - name: conversion_error
+    type: ConversionError | None
+    description: YAML として読み込めないときの行と列と理由
+  - name: fallback
+    type: bool
+    description: '`converters[]` を指す種類をスキーマ駆動の変換で描いたか'
+classes:
+- name: PreviewNotYamlError
+  title: YAML の文書でないプレビューの要求
+  container: features/view/edit.py
+  usecase: 文書の本文を編集する
+  role: 例外
+  summary: '`path` の文書が YAML の文書でないとき。例外の変換の登録が 400 の problem+json にする'
+  inherits: AppError
+functions:
+- name: build_document_edit
+  title: 本文の編集の情報の組み立て
+  kind: 関数
+  container: features/view/edit.py
+  usecase: 文書の本文を編集する
+  role: サービス
+  summary: IF-155-10 の制約「本文を編集できる文書」に当たる文書の `edit` を組み立て、当たらなければ `None` を返却する
+  scope: public
+  thread_safe: true
+  args:
+  - name: view
+    title: 配信元の表示の設定
+    type: SourceView
+    required: true
+    passing: positional
+    description: 文書の行
+  - name: config
+    title: 配信元の設定
+    type: Mapping[str, Any]
+    required: true
+    passing: positional
+    description: 配信元の設定の取得の `value`（`directCommit.metadataOnlyKinds`・行の `sqlite`・`schema`）
+  - name: detail
+    title: 文書の詳細
+    type: DocumentDetail
+    required: true
+    passing: positional
+    description: 返却する文書の詳細
+  - name: write_api_kinds
+    title: 書き込みの API から直コミットできる種類
+    type: Collection[str]
+    required: true
+    passing: keyword
+    description: 端末の設定の配信元の行の `directCommit.writeApiKinds`（無ければ空）
+  - name: base_commit
+    title: 編集を始めるコミット
+    type: str
+    required: true
+    passing: keyword
+    description: リビジョンの一覧の `defaultRef` の行の `commit`
+  - name: version
+    title: 文書のバージョン
+    type: str
+    required: true
+    passing: keyword
+    description: 文書の一覧の同じ文書の `version`
+  - name: item_ranges
+    title: 項目の範囲
+    type: Sequence[tuple[str, str]]
+    required: true
+    passing: keyword
+    description: 変換が記録した項目のパスと Markdown の組
+  returns:
+    type: DocumentEdit | None
+    description: 本文の編集の情報
+  process: |-
+    1. 文書の種類が `write_api_kinds` に無い、`config` の文書の行が `sqlite` を持つ、`detail.failure` がある、のどれかなら `None` を返却する
+    2. 本文のファイルを持つ文書（`body_path` がある）は、`body_path` が `.md` で終わり、種類が `config` の `directCommit.metadataOnlyKinds` に無いときだけ、`language` を `markdown`、`source` を文書の `body`、`blocks` を空、`title_block` を `None` にする。それ以外の本文のファイルを持つ文書は `None` を返却する
+    3. YAML の文書は、`language` を `yaml`、`source` を編集の元の内容の書き出し（文書の値）にする。`converters[]` を指す行（`detail.markdown` がある）は `blocks` を空、`title_block` を `None` にし、それ以外は表示した場所で修正できる項目の取り出し（文書の値・行の `schema`・`item_ranges`）の結果にする
+    4. `doc_id`・`kind` は文書の `id`・`kind`、`file_path` は `body_path`（無ければ `path`）にし、`version`・`base_commit` と合わせて返却する
+  unit_tests:
+  - name: test_build_document_edit
+    case: 正常
+    summary: YAML の文書
+    condition: '`write_api_kinds` に `note` があり、`status`（`enum`）・`summary`・`items`（`x-key: id` で要素に `body`（`contentMediaType: text/markdown`））・`rows`（`word`・`replacement`）を持つ n1 と、その `item_ranges`'
+    mock: なし
+    expected: '`language` が `yaml`、`blocks[].path` が `status`・`summary`・`#items[i1].body`・`rows`、`type` が `enum`・`string`・`markdown`・`table`、`title_block.path` が `title`'
+  - name: test_build_document_edit_when_markdown
+    case: 正常
+    summary: Markdown の本文
+    condition: '`records: files`・`body_file: path` の行の、`body_path` が `guide.md` の文書'
+    mock: なし
+    expected: '`language` が `markdown`、`source` が文書の `body`、`blocks` が空、`file_path` が `guide.md`'
+  - name: test_build_document_edit_when_not_editable
+    case: 正常
+    summary: 編集できない文書
+    condition: '`write_api_kinds` に無い種類・行が `sqlite` を持つ種類・`metadataOnlyKinds` の種類・`body_path` が `.py` の文書'
+    mock: なし
+    expected: どれも `None`
+  - name: test_build_document_edit_when_converter
+    case: 正常
+    summary: 変換のスクリプトを指す種類
+    condition: '`detail.markdown` がある YAML の文書'
+    mock: なし
+    expected: '`language` が `yaml`、`blocks` が空、`title_block` が `None`'
+- name: dump_source
+  title: 編集の元の内容の書き出し
+  kind: 関数
+  container: features/view/edit.py
+  usecase: 文書の本文を編集する
+  role: 変換
+  summary: 文書の値を、キーの順のままブロック形式の YAML の文字列にする
+  scope: public
+  thread_safe: true
+  args:
+  - name: value
+    title: 文書の値
+    type: Mapping[str, Any]
+    required: true
+    passing: positional
+    description: 文書の値
+  returns:
+    type: str
+    description: YAML の文字列
+  process: 1. `yaml.safe_dump`（`sort_keys=False`・`allow_unicode=True`・`default_flow_style=False`・`width` は無制限）で書き出す。改行を含む文字列は、`SafeDumper` を継承したダンパーに登録した表し方で `|` のブロックにする
+  unit_tests:
+  - name: test_dump_source
+    case: 正常
+    summary: キーの順と複数行
+    condition: '`{title: A, items: [{id: i1, body: "1 行目\n2 行目\n"}], summary: B}`'
+    mock: なし
+    expected: キーが `title`・`items`・`summary` の順で、`body` が `|` のブロック、`yaml.safe_load` で元の値に戻る
+- name: collect_blocks
+  title: 表示した場所で修正できる項目の取り出し
+  kind: 関数
+  container: features/view/edit.py
+  usecase: 文書の本文を編集する
+  role: 変換
+  summary: IF-155-10 の制約「表示した場所で修正できる項目」で、項目と文書のタイトルの項目を取り出す
+  scope: public
+  thread_safe: true
+  args:
+  - name: value
+    title: 文書の値
+    type: Mapping[str, Any]
+    required: true
+    passing: positional
+    description: 文書の値
+  - name: schema
+    title: スキーマ
+    type: Mapping[str, Any]
+    required: true
+    passing: positional
+    description: 種類のスキーマ
+  - name: item_ranges
+    title: 項目の範囲
+    type: Sequence[tuple[str, str]] | None
+    required: true
+    passing: positional
+    description: 変換が記録した項目のパスと Markdown の組。`None` は `markdown` を空にする
+  returns:
+    type: tuple[list[EditBlock], EditBlock | None]
+    description: '`blocks` と `title_block`'
+  process: |-
+    1. スキーマの `properties` の順に最上位の項目を見て、値の型とスキーマで種類を決める。`enum` を持つ文字列は `enum`、`contentMediaType` が `text/markdown` の文字列は `markdown`、それ以外の文字列は `string`、要素が文字列の項目だけを持つオブジェクトの配列は `table`（`columns` は要素のスキーマの `properties` の並び、`value` は行ごとの列の値で、無い列は空文字列）にする
+    2. `table` にしないオブジェクトの配列で `x-key` を持つものは、要素ごとに要素の中の項目へ 1 の規則を当て、パスを `#{配列のキー}[{x-key の値}].{キー}`、`label` を `{x-key の値} の {title}` にする
+    3. `x-hidden: true`・`x-shape: diagram`・入れ子のオブジェクト・数と真偽値・数か真偽値の列を持つ配列・`x-key` を持たない配列の要素の中の項目は除く
+    4. 共通のキー `name` に対応する最上位のキー（`HEADING_KEYS` のうち最初に値を持つキー）は `title_block` にし、`blocks` から除く
+    5. `markdown` は `item_ranges` の同じパスの Markdown にする。`item_ranges` に無い項目（描いていない項目）は `blocks` から除き、`item_ranges` の順に並べる。`item_ranges` が `None` のときは `markdown` を空にしてスキーマの順に並べる
+  unit_tests:
+  - name: test_collect_blocks
+    case: 正常
+    summary: 型ごとの部品の種類
+    condition: '`enum`・`text/markdown`・文字列・文字列の列だけの配列・数の項目を持つスキーマと値'
+    mock: なし
+    expected: '`enum`・`markdown`・`string`・`table` の 4 件で、数の項目が無い'
+  - name: test_collect_blocks_when_keyed_array
+    case: 正常
+    summary: x-key を持つ配列の要素の中の項目
+    condition: '`items`（`x-key: id`、要素に `id`・`body` と数の `order`）が 2 要素'
+    mock: なし
+    expected: '`#items[i1].body`・`#items[i2].body`（`label` が `i1 の 本文`）と `#items[i1].id` などの文字列の項目で、`order` が無い'
+  - name: test_collect_blocks_when_hidden
+    case: 正常
+    summary: 除く項目
+    condition: '`x-hidden: true` の文字列・`x-shape: diagram` の配列・入れ子のオブジェクト・`x-key` の無いオブジェクトの配列'
+    mock: なし
+    expected: どれも `blocks` に無い
+  - name: test_collect_blocks_when_ranges_missing
+    case: 正常
+    summary: 描いていない項目
+    condition: '`item_ranges` に `summary` が無い'
+    mock: なし
+    expected: '`summary` が `blocks` に無く、残りが `item_ranges` の順'
+- name: body_item_paths
+  title: 修正できる項目のパスの取得
+  kind: 関数
+  container: features/view/edit.py
+  usecase: 画面で編集中の変更をまとめて直コミットする
+  role: サービス
+  summary: 編集を始めたときのコミットの文書で、`body` の変更に指定できる項目のパスを返却する
+  scope: public
+  is_async: true
+  thread_safe: true
+  args:
+  - name: client
+    title: project-indexの呼び出し
+    type: ProjectIndexClient
+    required: true
+    passing: positional
+    description: 問い合わせる
+  - name: source_id
+    type: str
+    required: true
+    passing: positional
+    description: 配信元の ID
+  - name: doc_path
+    type: str
+    required: true
+    passing: positional
+    description: 文書のファイルか本文のファイルのパス
+  - name: doc_id
+    type: str
+    required: true
+    passing: positional
+    description: 文書の ID
+  - name: base_commit
+    type: str
+    required: true
+    passing: keyword
+    description: 編集を始めたときのコミット
+  returns:
+    type: frozenset[str]
+    description: '`blocks[].path`・`title_block.path` と `WHOLE_FILE_PATH`'
+  process: |-
+    1. project-indexの呼び出し.配信元の設定の取得 と 文書の詳細の取得（`doc_path`・`ref` は `base_commit`・`document_id` は `doc_id`）を同時に呼ぶ
+    2. 本文のファイルを持つ文書と `converters[]` を指す行の文書は `{WHOLE_FILE_PATH}` だけを返却する
+    3. それ以外は、表示した場所で修正できる項目の取り出し（`item_ranges` は `None`）の項目のパスに `WHOLE_FILE_PATH` を加えて返却する
+  unit_tests:
+  - name: test_body_item_paths
+    case: 正常
+    summary: YAML の文書の項目のパス
+    condition: '`summary` と `items`（`x-key: id`）を持つ文書'
+    mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返却する偽物）
+    expected: '`summary`・`#items[i1].body`・`title`・`@file` を含み、要求の `ref` が `base_commit`'
+  - name: test_body_item_paths_when_markdown
+    case: 正常
+    summary: Markdown の文書
+    condition: '`body_path` が `guide.md` の文書'
+    mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返却する偽物）
+    expected: '`{"@file"}` だけ'
+- name: preview_document
+  title: 本文のプレビュー
+  kind: 関数
+  container: features/view/edit.py
+  usecase: 文書の本文を編集する
+  role: サービス
+  summary: 書き換えた YAML を、文書の取得と同じスキーマ駆動の変換で Markdown にする
+  scope: public
+  is_async: true
+  thread_safe: true
+  args:
+  - name: handlers
+    title: 配線済みの関数
+    type: Handlers
+    required: true
+    passing: injected
+    description: project-indexの呼び出し・変換
+  - name: source_id
+    title: 配信元の ID
+    type: str
+    required: true
+    passing: positional
+    description: 配信元の ID
+  - name: request
+    title: 要求
+    type: PreviewRequest
+    required: true
+    passing: positional
+    description: 検証済みの本文
+  returns:
+    type: PreviewResponse
+    description: IF-155-31 の 200 の応答
+  process: |-
+    0. 手順 1〜4 を `asyncio.timeout(DOCUMENT_FETCH_TIMEOUT_SEC)` の中で行い、超えたら文書の取得と同じ `ProjectIndexUnreachableError`（`kind` が `timeout`）を送出する
+    1. project-indexの呼び出し.配信元の設定の取得・配信元の表示の設定の取得・文書の詳細の取得（`request.path`、既定のブランチ）と、文書の一覧の取り出し（既定のブランチ）を同時に呼ぶ。文書が無ければ `DocumentNotFoundError`（`missing` に `path`）を送出する
+    2. 文書が本文のファイルを持つか、文書の行が Markdownの本文なら `PreviewNotYamlError` を送出する
+    3. `yaml.safe_load(request.content)` が `yaml.MarkedYAMLError` を送出したら、`markdown` を `None`、`conversion_error` を `reason` が `invalid_yaml`・`file` が文書のファイルのパス・`line`・`column` が `problem_mark` の 1 始まりの位置・`message` が `problem` の `ConversionError` にして返却する。値がオブジェクトでないときも同じ `reason` で、位置を 1 行 1 列にする
+    4. 文書の値を読み込んだ値に置き換えた文書の詳細（`markdown`・`failure` は `None`）で、変換.描画する（`documents` は文書の一覧）を呼び、文書の取得の手順 7 と同じく埋め込みの値を集めて変換.仕上げる の `markdown` を返却する。`fallback` は、元の文書の詳細が `markdown` を持つ（`converters[]` を指す行）とき `True`
+    5. 配信元のファイルを参照・書き込みせず、結果を記録しない
+  exceptions:
+  - name: DocumentNotFoundError
+    condition: 無い配信元・文書
+    message: '`文書がありません: {path}`'
+  - name: PreviewNotYamlError
+    condition: '`path` の文書が YAML の文書でない'
+    message: '`YAML の文書ではありません: {path}`'
+  - name: ProjectIndexUnreachableError
+    condition: project-index につながらない・制限時間を超えた
+    message: 文書の取得と同じ
+  unit_tests:
+  - name: test_preview_document
+    case: 正常
+    summary: 書き換えた値で変換する
+    condition: n1 の `summary` を `修正後の概要` にした `content`
+    mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返却する偽物）
+    expected: '`markdown` に `修正後の概要` があり、`conversion_error` が `None`、`fallback` が `False`'
+  - name: test_preview_document_when_yaml_invalid
+    case: 正常
+    summary: YAML として読み込めない
+    condition: 3 行目の行頭にタブを入れた `content`
+    mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返却する偽物）
+    expected: '`markdown` が `None`、`conversion_error.line` が 3、`reason` が `invalid_yaml`'
+  - name: test_preview_document_when_converter
+    case: 正常
+    summary: 変換のスクリプトを指す種類
+    condition: '`converters[]` を指す種類の文書'
+    mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返却する偽物）
+    expected: '`fallback` が `True`、`markdown` にスキーマの `x-heading` の見出し'
+  - name: test_preview_document_when_markdown
+    case: 異常
+    summary: Markdown の文書
+    condition: '`body_path` が `guide.md` の文書の `path`'
+    mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返却する偽物）
+    expected: '`PreviewNotYamlError`'
+    exception: YAML の文書でない
+  - name: test_preview_document_when_missing
+    case: 異常
+    summary: 無い文書
+    condition: '`path` が `no-such-doc`'
+    mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返却する偽物）
+    expected: '`DocumentNotFoundError`'
+    exception: 無い文書
+refs:
+- to: IF-155-10
+  type: requires
+  when: 本文の編集の情報を変えるときに、文書の取得の `edit` と突き合わせる。
+- to: IF-155-31
+  type: requires
+  when: 本文のプレビューを変えるときに、本文のプレビューの入出力と突き合わせる。
+tags:
+- name: topic:文書
+  main: true
+- name: action:修正
+- name: topic:プレビュー

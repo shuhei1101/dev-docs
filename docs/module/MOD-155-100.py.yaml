@@ -178,6 +178,12 @@ data_models:
         access: 公開
         default: 空
         description: project-index の検討事項の一覧の `linkable`（ちょうど 1 つのフォルダに文書がある ID）。`decisions` の値のうち、この ID だけを検討事項の文書へのリンクにする
+      - name: item_ranges
+        title: 項目の範囲
+        type: list[tuple[str, str]] | None
+        access: 公開
+        default: None
+        description: スキーマ駆動の変換が、組み立てた項目のパスとその項目の Markdown の組を入れるリスト。`None` は記録しない
   - name: ItemHeading
     title: 項目の見出し
     container: features/convert/types.py

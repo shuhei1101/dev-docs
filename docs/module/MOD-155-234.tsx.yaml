@@ -1,0 +1,45 @@
+id: MOD-155-234
+title: 画面 / 文書の画面 / markdown-preview.tsx
+lead: 編集の表示で書き換えた Markdown を mdmark で描くプレビューを受け持ち、文書の画面の markdown-preview.tsx を修正するときに参照する。
+test_files:
+  - tests/unit/frontend/src/features/docs/doc-view/components/markdown-preview.test.tsx
+components:
+  - name: MarkdownPreview
+    title: Markdown のプレビュー
+    kind: コンポーネント
+    container: features/docs/doc-view/components/markdown-preview.tsx
+    usecase: 文書の本文を編集する
+    role: 部品
+    summary: Markdown を `useMdmark` で描く。コメントは付けず、右側の目次と先頭へ戻るボタンを出さない
+    props:
+      - name: markdown
+        type: string
+        required: true
+        description: 描く Markdown
+      - name: docId
+        type: string
+        required: true
+        description: mdmark の `docId`
+    description: mdmark の `commentStore` には、何も保存しない空のストアを指定する（プレビューにはコメントを付けない）。`markdown` が変わるたびに描き直す
+    unit_tests:
+      - name: test_markdown_preview
+        case: 正常
+        summary: 描き直す
+        condition: '`markdown` を `# A` から `# B` に変える'
+        mock: mdmark（`vi.mock`、`mount` を記録する偽物）
+        expected: '`mount` に `# B` が渡り、`commentStore` の `list` が空'
+refs:
+  - to: SCR-155-1
+    item: elements[Markdown の項目のプレビュー]
+    type: requires
+    when: Markdown の項目のプレビューの描き方を変えるときに突き合わせる。
+  - to: SCR-155-1
+    item: elements[ファイル全体のプレビュー]
+    type: requires
+    when: ファイル全体のプレビューの描き方を変えるときに突き合わせる。
+tags:
+  - name: topic:文書
+  - name: topic:画面
+  - name: topic:プレビュー
+    main: true
+  - name: tool:mdmark
