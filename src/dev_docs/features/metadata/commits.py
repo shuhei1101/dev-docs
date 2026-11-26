@@ -12,7 +12,7 @@ from typing import Any, ClassVar, Literal
 from pydantic import Field, model_validator
 
 from dev_docs.features.convert.service import ConvertService
-from dev_docs.features.metadata.metadata import key_mapping
+from dev_docs.features.metadata.metadata import KIND_SPECS, key_mapping
 from dev_docs.features.view.edit import WHOLE_FILE_PATH, body_item_paths
 from dev_docs.integrations.project_index.client import ProjectIndexClient
 from dev_docs.shared.api_model import ApiModel
@@ -33,6 +33,7 @@ __all__ = [
     "Edit",
     "EditError",
     "EditsRejectedError",
+    "check_edits",
     "commit_edits",
     "item_expected_versions",
     "to_conflict",
@@ -57,6 +58,8 @@ DRY_RUN_MESSAGE = "差分確認"
 BASE_COMMIT_UNUSABLE = "BaseCommitUnusableError"
 # 衝突したときのスクリプトの標準出力の最後の行を PR の URL とみなす接頭辞
 PR_URL_PREFIX = "https://"
+# 書き込みの API がファイル全体の置き換えの結果に返却する status
+REPLACED_STATUS = "replaced"
 NEXT_STEP_RELOAD = "メタデータを再読み込みし、変更が反映されたかを確認してください。"
 
 EditKind = Literal["terms", "aliases", "tags", "rules", "files", "body"]
@@ -100,21 +103,10 @@ class CommitRequest(ApiModel):
 
     @model_validator(mode="after")
     def _check(self) -> CommitRequest:
-        """`key` の重複・`op` と `kind`・必須・`message`・ファイル全体とほかの本文の変更の並びを検証する。"""
+        """`key` の重複・`op` と `kind`・必須・`message` を検証する。"""
         keys = [edit.key for edit in self.edits]
         if len(keys) != len(set(keys)):
             raise ValueError("edits[].key が重複しています")
-        # ファイル全体の変更と項目のパスの変更は、同じ文書では書き込みが重なるため並べられない
-        whole = {
-            e.doc_id for e in self.edits if e.kind == BODY_KIND and WHOLE_FILE_PATH in e.values
-        }
-        for edit in self.edits:
-            if (
-                edit.kind == BODY_KIND
-                and edit.doc_id in whole
-                and WHOLE_FILE_PATH not in edit.values
-            ):
-                raise ValueError(f"{edit.key}: 同じ文書の @file とほかの本文の変更は並べられません")
         for edit in self.edits:
             # 行の追加・削除は用語集と索引だけ
             if edit.op != "update" and edit.kind not in ROW_KINDS:
@@ -240,6 +232,53 @@ def _checked_values(edit: Edit, metadata: Mapping[str, str] | None) -> dict[str,
                 errors=[EditError(key=edit.key, path=column, reason="この列は修正できません")],
             )
     return dict(edit.values)
+
+
+# 種類ごとの修正できる列（`editable` が真の列）
+_EDITABLE_COLUMNS: dict[str, frozenset[str]] = {
+    spec.id: frozenset(column.key for column in spec.columns if column.editable)
+    for spec in KIND_SPECS
+}
+
+
+def check_edits(edits: list[Edit]) -> None:
+    """project-index へ問い合わせる前に、種類の列・ファイル全体の変更の並び・`@file` の YAML を確認する。"""
+    errors: list[EditError] = []
+    for edit in edits:
+        if edit.kind == BODY_KIND:
+            continue
+        editable = _EDITABLE_COLUMNS.get(edit.kind, frozenset())
+        errors.extend(
+            EditError(key=edit.key, path=column, reason="この列は修正できません")
+            for column in edit.values
+            if column not in editable
+        )
+    bodies = [edit for edit in edits if edit.kind == BODY_KIND]
+    # ファイル全体の変更と項目のパスの変更は、同じ文書では書き込みが重なるため並べられない
+    whole = {edit.doc_id for edit in bodies if WHOLE_FILE_PATH in edit.values}
+    mixed = {
+        edit.doc_id
+        for edit in bodies
+        if edit.doc_id in whole and WHOLE_FILE_PATH not in edit.values
+    }
+    errors.extend(
+        EditError(key=edit.key, path=path, reason="同じ文書のファイル全体の変更と並べられません")
+        for edit in bodies
+        if edit.doc_id in mixed
+        for path in edit.values
+    )
+    for edit in bodies:
+        whole_value = edit.values.get(WHOLE_FILE_PATH)
+        if whole_value is None or str(edit.doc_path or "").lower().endswith(MARKDOWN_SUFFIX):
+            continue
+        try:
+            load_yaml(str(whole_value), file=edit.doc_path)
+        except YamlLoadError as error:
+            errors.append(EditError(key=edit.key, path=WHOLE_FILE_PATH, reason=str(error)))
+    if errors:
+        raise EditsRejectedError(
+            message="修正できない変更があります", status_code=HTTP_BAD_REQUEST, errors=errors
+        )
 
 
 def to_operations(
@@ -579,7 +618,8 @@ async def commit_edits(
     convert: ConvertService,
 ) -> CommitResult:
     """変更を検証・変換して書き込みの API へ 1 回送信し、結果か変更ごとの理由を返却する。"""
-    # 1. 本文の変更は修正できる項目のパスか（メタデータの列は書き込みと削除への変換で確認する）
+    # 1. 送信の前の変更の確認と、本文の変更は修正できる項目のパスか（メタデータの列は書き込みと削除への変換でも確認する）
+    check_edits(request.edits)
     await _check_body_paths(client, source_id, request, convert)
     # 2. 列と文書のキーの対応（元のキーへ戻せる列かの確認に使用する）
     config = await client.source_config(source_id)
@@ -636,7 +676,8 @@ async def commit_edits(
     results = [
         EditResult(
             key=_key_of(indexes, item.get("kind"), item.get("index")) or str(item.get("id", "")),
-            status=item["status"],
+            # ファイル全体の置き換えの結果は修正として返却する
+            status="updated" if item["status"] == REPLACED_STATUS else item["status"],
             version=item.get("version"),
             diff=str(item.get("diff") or ""),
         )
