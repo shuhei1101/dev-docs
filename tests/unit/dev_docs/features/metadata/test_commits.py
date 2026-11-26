@@ -8,6 +8,7 @@ from typing import Any, Literal
 
 import pytest
 
+from dev_docs.features.convert.service import ConvertService
 from dev_docs.features.metadata.commits import (
     CommitRequest,
     Edit,
@@ -20,7 +21,7 @@ from dev_docs.features.metadata.commits import (
 from dev_docs.integrations.project_index.client import ProjectIndexClient
 from dev_docs.shared.errors import ProjectIndexTimeoutError
 
-from ...conftest import FakeIndex, config_json
+from ...conftest import FakeIndex, config_json, doc_json
 
 COMMITS_PATH = ("POST", "/sources/sample/commits")
 N1_PATH = ("GET", "/sources/sample/docs/notes/n1.yaml")
@@ -213,7 +214,7 @@ def test_commit_edits(
     request = _request()
     caplog.set_level(logging.INFO, logger="dev_docs.features.metadata.commits")
     # 実行
-    result = asyncio.run(commit_edits(make_client(), "sample", request))
+    result = asyncio.run(commit_edits(make_client(), "sample", request, convert=ConvertService()))
     # 検証
     assert result.applied is True
     assert [(item.key, item.status) for item in result.results] == [
@@ -244,7 +245,7 @@ def test_commit_edits_when_validation_failed(
     request = _request()
     # 実行
     with pytest.raises(EditsRejectedError) as caught:
-        asyncio.run(commit_edits(make_client(), "sample", request))
+        asyncio.run(commit_edits(make_client(), "sample", request, convert=ConvertService()))
     # 検証
     assert caught.value.status_code == 422
     assert caught.value.errors[0].key == "terms:kind:add"
@@ -271,7 +272,7 @@ def test_commit_edits_when_not_permitted(
     request = _request()
     # 実行
     with pytest.raises(EditsRejectedError) as caught:
-        asyncio.run(commit_edits(make_client(), "sample", request))
+        asyncio.run(commit_edits(make_client(), "sample", request, convert=ConvertService()))
     # 検証
     assert caught.value.status_code == 403
     assert [error.key for error in caught.value.errors] == ["tags:n1:update"]
@@ -296,7 +297,7 @@ def test_commit_edits_when_timed_out(
     request = _request()
     # 実行
     with pytest.raises(EditsRejectedError) as caught:
-        asyncio.run(commit_edits(client, "sample", request))
+        asyncio.run(commit_edits(client, "sample", request, convert=ConvertService()))
     # 検証
     assert caught.value.status_code == 504
     assert "コミットされたか" in caught.value.message
@@ -310,7 +311,7 @@ def test_commit_edits_when_dry_run(
     _prepare(fake_index, 200, {"applied": False, "results": [], "commit": None})
     request = _request(message=None, dry_run=True)
     # 実行
-    asyncio.run(commit_edits(make_client(), "sample", request))
+    asyncio.run(commit_edits(make_client(), "sample", request, convert=ConvertService()))
     # 検証
     sent = next(item for item in fake_index.requests if item.method == "POST")
     body = json.loads(sent.content)
@@ -347,7 +348,7 @@ def test_commit_edits_when_mapped_tags(
     )
     request = CommitRequest(edits=[edit], dry_run=True, base_commit=BASE_COMMIT)
     # 実行
-    asyncio.run(commit_edits(make_client(), "sample", request))
+    asyncio.run(commit_edits(make_client(), "sample", request, convert=ConvertService()))
     # 検証
     gets = [
         (item.url.path, item.url.params.get("ref"), item.url.params.get("id"))
@@ -377,7 +378,7 @@ def test_commit_edits_when_base_commit_unusable(
     )
     # 実行
     with pytest.raises(EditsRejectedError) as caught:
-        asyncio.run(commit_edits(make_client(), "sample", _request()))
+        asyncio.run(commit_edits(make_client(), "sample", _request(), convert=ConvertService()))
     # 検証
     assert caught.value.status_code == 409
     assert caught.value.name == "BaseCommitUnusableError"
@@ -412,7 +413,9 @@ def test_commit_edits_when_conflict(
         },
     )
     # 実行
-    result = asyncio.run(commit_edits(make_client(), "sample", _request()))
+    result = asyncio.run(
+        commit_edits(make_client(), "sample", _request(), convert=ConvertService())
+    )
     # 検証
     assert result.conflict is not None
     assert result.conflict.branch == "project-index/conflict/20261123-103000-0a1b2c3"
@@ -594,3 +597,152 @@ def test_item_expected_versions_when_base_commit_missing(
     assert caught.value.status_code == 409
     assert caught.value.name == "BaseCommitUnusableError"
     assert caught.value.errors == []
+
+
+def _body_edit(key: str, path: str, value: Any, *, doc_path: str = "notes/n1.yaml") -> Edit:
+    """文書 n1 の本文の変更を作る。"""
+    return Edit(
+        key=key,
+        kind="body",
+        op="update",
+        doc_id="n1",
+        doc_kind="note",
+        expected_version="c3d4e5",
+        doc_path=doc_path,
+        values={path: value},
+    )
+
+
+def test_to_operations_when_body() -> None:
+    """本文の変更を変換する（正常系）。"""
+    # 準備
+    edits = [
+        _body_edit("body:n1:#items[i1].body", "#items[i1].body", "修正後の本文"),
+        _body_edit("body:n1:@file", "@file", "id: n1\nname: 修正後\n"),
+        _body_edit("body:guide:@file", "@file", "# 修正後\n", doc_path="guide.md"),
+    ]
+    versions: dict[str, dict[str, str] | str] = {
+        "body:n1:#items[i1].body": {"items": "t1"},
+        "body:n1:@file": "c3d4e5",
+        "body:guide:@file": "c3d4e5",
+    }
+    # 実行
+    writes, _, _ = to_operations(edits, {}, versions)
+    # 検証
+    assert writes == [
+        {
+            "op": "update",
+            "id": "n1",
+            "expected_version": {"items": "t1"},
+            "set": {"#items[i1].body": "修正後の本文"},
+        },
+        {
+            "op": "replace",
+            "id": "n1",
+            "expected_version": "c3d4e5",
+            "data": {"id": "n1", "name": "修正後"},
+        },
+        {
+            "op": "update",
+            "id": "n1",
+            "expected_version": "c3d4e5",
+            "set": {"@body": "# 修正後\n"},
+        },
+    ]
+
+
+def test_to_operations_when_whole_file_unparsable() -> None:
+    """読み込めないファイル全体（異常系）。"""
+    # 準備
+    edit = _body_edit("body:n1:@file", "@file", "id: n1\nname: a\n\tsummary: b\n")
+    # 実行
+    with pytest.raises(EditsRejectedError) as caught:
+        to_operations([edit], {}, {"body:n1:@file": "c3d4e5"})
+    # 検証
+    assert caught.value.status_code == 400
+    assert caught.value.errors[0].path == "@file"
+    assert "3" in caught.value.errors[0].reason
+
+
+@pytest.mark.parametrize(
+    ("target", "docs"),
+    [
+        pytest.param(
+            ("body:n1:#items[x].id", "#items[x].id", "x2", "notes/n1.yaml"),
+            [
+                {
+                    "id": "n1",
+                    "path": "notes/n1.yaml",
+                    "kind": "note",
+                    "value": {"id": "n1", "name": "m1"},
+                }
+            ],
+            id="unknown-path",
+        ),
+        pytest.param(
+            ("body:tool:@file", "@file", "x = 2\n", "tool.py"),
+            [
+                {
+                    "id": "n1",
+                    "path": "docs/files.yml",
+                    "kind": "files",
+                    "bodyPath": "tool.py",
+                    "value": {"path": "tool.py"},
+                }
+            ],
+            id="not-editable",
+        ),
+    ],
+)
+def test_commit_edits_when_body_path_unknown(
+    fake_index: FakeIndex,
+    make_client: Callable[..., ProjectIndexClient],
+    target: tuple[str, str, str, str],
+    docs: list[dict[str, Any]],
+) -> None:
+    """修正できない項目のパス（異常系）。"""
+    # 準備
+    key, path, value, doc_path = target
+    edit = _body_edit(key, path, value, doc_path=doc_path)
+    _prepare(fake_index, 200, {"applied": True, "results": [], "commit": None})
+    fake_index.configs["sample"] = config_json(
+        documents=[
+            *CONFIG_ROWS,
+            {"id": "files", "paths": ["docs/files.yml"], "records": "files"},
+        ]
+    )
+    fake_index.docs["sample"] = {
+        BASE_COMMIT: [
+            {**doc_json(item["id"], item["path"], kind=item["kind"]), **item} for item in docs
+        ]
+    }
+    fake_index.responses.pop(N1_PATH)
+    request = _request(edits=[edit])
+    # 実行
+    with pytest.raises(EditsRejectedError) as caught:
+        asyncio.run(commit_edits(make_client(), "sample", request, convert=ConvertService()))
+    # 検証
+    assert caught.value.status_code == 400
+    assert not any(item.url.path.endswith("/commits") for item in fake_index.requests)
+
+
+def test_item_expected_versions_when_body(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """本文の変更の最上位のキー（正常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json(documents=CONFIG_ROWS)
+    fake_index.responses[N1_PATH] = (
+        200,
+        {"path": "notes/n1.yaml", "itemVersions": {"items": "t-items", "name": "m1"}},
+    )
+    request = _request(
+        edits=[
+            _body_edit("body:n1:#items[i1].body", "#items[i1].body", "修正後"),
+            _body_edit("body:n1:@file", "@file", "id: n1\n"),
+        ]
+    )
+    # 実行
+    versions = asyncio.run(item_expected_versions(make_client(), "sample", request, {}))
+    # 検証
+    assert versions == {"body:n1:#items[i1].body": {"items": "t-items"}, "body:n1:@file": "c3d4e5"}

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { beforeEach, expect, test } from "vitest";
 
-import { usePendingEditsStore } from "@/features/metadata/shared/pending-edits-store";
+import { usePendingEditsStore } from "@/shared/stores/pending-edits-store";
 import {
   PROBLEM_HEADERS,
   metadataResponse,

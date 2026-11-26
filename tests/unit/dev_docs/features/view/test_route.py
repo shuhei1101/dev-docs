@@ -178,3 +178,49 @@ def test_build_view_router_when_project_index_unreachable(
     assert [sorted(response.json()["projectIndex"]) for response in responses] == [
         ["address", "kind", "reason"]
     ] * 3
+
+
+def test_build_view_router_when_preview(
+    sample_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
+    """本文のプレビュー（正常系）。"""
+    # 準備
+    client = _client(make_handlers())
+    # 実行
+    response = client.post(
+        "/_api/sources/sample/preview", json={"path": "docs/a", "content": "id: a\nname: 修正後\n"}
+    )
+    # 検証
+    body = response.json()
+    assert response.status_code == 200
+    assert "修正後" in body["markdown"]
+    assert body["conversionError"] is None
+    assert body["fallback"] is False
+
+
+def test_build_view_router_when_preview_not_yaml(
+    sample_index: FakeIndex, make_handlers: Callable[..., Any]
+) -> None:
+    """YAML の文書でない（異常系）。"""
+    # 準備
+    sample_index.configs["sample"] = config_json(
+        "sample",
+        documents=[
+            {"id": "files", "paths": ["docs/files.yml"], "records": "files", "schema": {}},
+        ],
+    )
+    sample_index.docs["sample"] = {
+        None: [
+            doc_json(
+                "guide", "docs/files.yml", kind="files", body_path="guide.md", body="# ガイド\n"
+            )
+        ]
+    }
+    client = _client(make_handlers())
+    # 実行
+    response = client.post(
+        "/_api/sources/sample/preview", json={"path": "guide.md", "content": "# 書き換え\n"}
+    )
+    # 検証
+    assert response.status_code == 400
+    assert response.headers["content-type"].startswith("application/problem+json")

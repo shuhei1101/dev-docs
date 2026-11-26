@@ -4,7 +4,8 @@ import { HttpResponse, http } from "msw";
 import { beforeEach, expect, test, vi } from "vitest";
 
 import { usePreferencesStore } from "@/shared/stores/preferences";
-import { documentResponse, group, page, refsResponse, settingsSource, settingsView } from "@tests/helpers/fixtures";
+import { usePendingEditsStore } from "@/shared/stores/pending-edits-store";
+import { docEdit, documentResponse, group, page, refsResponse, settingsSource, settingsView } from "@tests/helpers/fixtures";
 import { server } from "@tests/helpers/msw-server";
 import { renderApp } from "@tests/helpers/render-app";
 
@@ -82,4 +83,55 @@ test("test_doc_view_screen_when_sidebar_closed", async () => {
 
   expect(screen.getByRole("navigation", { name: "文書の一覧" })).toBeInTheDocument();
   expect(document.getElementById("doc-sidebar")).toHaveStyle({ width: "240px" });
+});
+
+test("test_doc_view_screen_when_edit_fields", async () => {
+  useHandlers(documentResponse({ path: "notes/n1", edit: docEdit() }));
+
+  renderApp("/s/notes/n1?edit=fields");
+
+  expect(await screen.findByRole("button", { name: "表示した場所で修正" })).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("button", { name: "概要 を編集" })).toBeInTheDocument();
+});
+
+test("test_doc_view_screen_when_not_editable", async () => {
+  useHandlers(documentResponse({ edit: null }));
+
+  renderApp("/s/a.md?edit=file");
+
+  expect(await screen.findByRole("heading", { level: 1, name: "A" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "編集" })).not.toBeInTheDocument();
+  await waitFor(() => expect(mount).toHaveBeenCalled());
+});
+
+test("test_doc_view_screen_when_pending_panel", async () => {
+  useHandlers(documentResponse({ path: "notes/n1", edit: docEdit() }));
+  usePendingEditsStore.setState({
+    bySource: {
+      s: [
+        {
+          key: "body:n1:@file",
+          kind: "body",
+          op: "update",
+          docId: "n1",
+          docKind: "note",
+          expectedVersion: "v-n1",
+          docPath: "notes/n1.yaml",
+          values: { "@file": "title: n2\n" },
+          before: { "@file": "title: n1\n" },
+          label: "ファイル全体（notes/n1.yaml）",
+        },
+      ],
+    },
+    baseCommitBySource: { s: "ccc3333" },
+  });
+  const { router } = renderApp("/s/notes/n1");
+  await screen.findByRole("heading", { level: 1 });
+
+  await userEvent.click(screen.getByRole("button", { name: /編集中/ }));
+
+  expect(router.state.location.pathname).toBe("/s/notes/n1");
+  await userEvent.click(await screen.findByText("ファイル全体（notes/n1.yaml）"));
+  await waitFor(() => expect(router.state.location.search).toMatchObject({ edit: "file" }));
+  expect(router.state.location.pathname).toBe("/s/notes/n1.yaml");
 });

@@ -127,3 +127,63 @@ export const metadataResponse = () => ({
     metadataKind("files", "管理用の YAML"),
   ],
 });
+
+export const editBlock = (
+  path: string,
+  overrides: Record<string, unknown> = {},
+) => ({
+  path,
+  label: path,
+  type: "string",
+  markdown: `**${path}**: 値`,
+  value: "値",
+  options: null,
+  columns: null,
+  ...overrides,
+});
+
+export const docEdit = (overrides: Record<string, unknown> = {}) => ({
+  docId: "n1",
+  kind: "note",
+  filePath: "notes/n1.yaml",
+  version: "v-n1",
+  baseCommit: "ccc3333",
+  language: "yaml",
+  source: "title: n1\nsummary: 概要\n",
+  blocks: [
+    editBlock("summary", {
+      label: "概要",
+      markdown: "**概要**: 概要",
+      value: "概要",
+    }),
+    editBlock("status", {
+      label: "状態",
+      type: "enum",
+      markdown: "**状態**: draft",
+      value: "draft",
+      options: ["draft", "current"],
+    }),
+    editBlock("#items[i1].body", {
+      label: "i1 の 本文",
+      type: "markdown",
+      markdown: "**本文**",
+      value: "**本文**",
+    }),
+    editBlock("rows", {
+      label: "置き換え",
+      type: "table",
+      markdown: "| word | replacement |\n| --- | --- |\n| a | b |\n| c | d |",
+      value: [
+        { word: "a", replacement: "b" },
+        { word: "c", replacement: "d" },
+      ],
+      columns: ["word", "replacement"],
+    }),
+  ],
+  titleBlock: editBlock("title", {
+    label: "タイトル",
+    markdown: "# n1",
+    value: "n1",
+  }),
+  ...overrides,
+});

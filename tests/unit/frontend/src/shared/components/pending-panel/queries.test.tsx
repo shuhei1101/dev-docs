@@ -4,10 +4,10 @@ import { HttpResponse, http } from "msw";
 import { beforeEach, expect, test, vi } from "vitest";
 import type { ReactNode } from "react";
 
-import { useCommitEdits, useRestartFromLatest } from "@/features/metadata/metadata/queries";
-import { type PendingEdit, usePendingEditsStore } from "@/features/metadata/shared/pending-edits-store";
+import { useCommitEdits, useRestartFromLatest } from "@/shared/components/pending-panel/queries";
+import { type PendingEdit, usePendingEditsStore } from "@/shared/stores/pending-edits-store";
 import { AppError } from "@/shared/core/app-error";
-import { PROBLEM_HEADERS, metadataResponse, problem } from "@tests/helpers/fixtures";
+import { PROBLEM_HEADERS, docEdit, documentResponse, metadataResponse, problem } from "@tests/helpers/fixtures";
 import { server } from "@tests/helpers/msw-server";
 import { createTestQueryClient } from "@tests/helpers/render";
 
@@ -146,5 +146,73 @@ test("test_use_restart_from_latest", async () => {
 
   expect(new URL(urls[0] ?? "", "http://localhost").searchParams.has("ref")).toBe(false);
   expect(usePendingEditsStore.getState().bySource.sample).toHaveLength(2);
+  expect(usePendingEditsStore.getState().baseCommitBySource.sample).toBe("ccc3333");
+});
+
+const bodyEdit = (docId: string, path: string, before: string): PendingEdit => ({
+  key: `body:${docId}:${path}`,
+  kind: "body",
+  op: "update",
+  docId,
+  docKind: "note",
+  expectedVersion: `v-${docId}`,
+  docPath: `docs/${docId}.yaml`,
+  values: { [path]: "修正後" },
+  before: { [path]: before },
+  label: `${path}（docs/${docId}.yaml）`,
+});
+
+const renderRestart = () => {
+  const queryClient = createTestQueryClient();
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+  return renderHook(() => useRestartFromLatest("sample"), { wrapper });
+};
+
+const latestDoc = (docId: string) =>
+  HttpResponse.json(documentResponse({ source: "sample", path: `docs/${docId}`, edit: docEdit({ docId, baseCommit: "ccc3333" }) }));
+
+test("test_use_restart_from_latest_when_body", async () => {
+  usePendingEditsStore.setState({
+    bySource: { sample: [bodyEdit("n1", "summary", "概要")] },
+    baseCommitBySource: { sample: "aaa1111" },
+  });
+  const metadata = vi.fn(() => HttpResponse.json(metadataResponse()));
+  const urls: string[] = [];
+  server.use(
+    http.get("/_api/sources/sample/metadata", metadata),
+    http.get("/_api/sources/sample/docs/*", ({ request }) => {
+      urls.push(request.url);
+      return latestDoc("n1");
+    }),
+  );
+  const { result } = renderRestart();
+
+  await result.current.mutateAsync();
+
+  expect(metadata).not.toHaveBeenCalled();
+  expect(new URL(urls[0] ?? "", "http://localhost").searchParams.has("ref")).toBe(false);
+  expect(usePendingEditsStore.getState().bySource.sample).toHaveLength(1);
+  expect(usePendingEditsStore.getState().baseCommitBySource.sample).toBe("ccc3333");
+});
+
+test("test_use_restart_from_latest_when_body_doc_missing", async () => {
+  usePendingEditsStore.setState({
+    bySource: { sample: [bodyEdit("n1", "summary", "概要"), bodyEdit("n2", "summary", "概要")] },
+    baseCommitBySource: { sample: "aaa1111" },
+  });
+  server.use(
+    http.get("/_api/sources/sample/docs/docs/n1.yaml", () => latestDoc("n1")),
+    http.get("/_api/sources/sample/docs/docs/n2.yaml", () =>
+      HttpResponse.json(problem(404, { missing: "doc", value: "docs/n2.yaml" }), { status: 404, headers: PROBLEM_HEADERS }),
+    ),
+  );
+  const { result } = renderRestart();
+
+  const { dropped } = await result.current.mutateAsync();
+
+  expect(dropped.map((item) => item.key)).toEqual(["body:n2:summary"]);
+  expect((usePendingEditsStore.getState().bySource.sample ?? []).map((item) => item.key)).toEqual(["body:n1:summary"]);
   expect(usePendingEditsStore.getState().baseCommitBySource.sample).toBe("ccc3333");
 });
