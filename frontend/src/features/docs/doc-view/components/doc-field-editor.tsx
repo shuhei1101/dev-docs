@@ -49,7 +49,7 @@ const blockMarkdown = (block: EditBlock, current: EditValue, changed: boolean): 
   if (block.type === "table") return rowsMarkdown(block.columns ?? [], isRows(current) ? current : []);
   const before = textOf(block.value);
   // 元の値がちょうど 1 回現れる: その箇所だけを編集中の値に置き換える
-  if (occurrences(block.markdown, before) === 1) return block.markdown.replace(before, textOf(current));
+  if (occurrences(block.markdown, before) === 1) return block.markdown.replace(before, () => textOf(current));
   // 現れない（リンクの書き換え・表のセルの変換）か 2 回以上現れる: 編集中の値をそのまま描く
   return textOf(current);
 };
