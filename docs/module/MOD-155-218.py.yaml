@@ -162,7 +162,7 @@ functions:
       description: '`writes`・`deletes` と、それぞれの添字と変更の `key` の対応'
     process: |-
       1. 変更ごとに、`doc_kind` の `metadata`（`mappings[doc_kind]`）で列のキーを列と文書のキーの対応の解決にかけ、戻せない列は `EditsRejectedError`（400）を送出する。列のキーと値はそのまま入れ、文書の実際のキーへは project-index の書き込みの API が戻す
-      2. `body` の変更は、項目のパスのキーをそのまま `{op: update, id, expected_version, set}` の `set` に入れる。`@file` は、YAML の文書（`doc_path` が `.md` で終わらない）なら `yaml.safe_load` した値を `{op: replace, id, expected_version, data}`、Markdown の文書なら `{op: update, id, expected_version, set: {"@body": 値}}` にする。読み込めない `@file` は `EditsRejectedError`（400、`path` が `@file`、`reason` に行と列）を送出する
+      2. `body` の変更は、項目のパスのキーをそのまま `{op: update, id, expected_version, set}` の `set` に入れる。`@file` は、YAML の文書（`doc_path` が `.md` で終わらない）なら 共通の YAML の読み込み（`load_yaml`、`file` は `doc_path`）で読み込んだ値を `{op: replace, id, expected_version, data}`、Markdown の文書なら `{op: update, id, expected_version, set: {"@body": 値}}` にする。`YamlLoadError` は `EditsRejectedError`（400、`path` が `@file`、`reason` が `YamlLoadError` の文字列（ファイル・行・列と理由））を送出する
       3. `update` は `{op: update, id, expected_version, set}`（`expected_version` は `expected_versions[変更の key]` の辞書）、`add` は `{op: create, id, kind, data}`、`delete` は `deletes` の `{id, expectedVersion}` にし、変更の並び順で入れる
     unit_tests:
       - name: test_to_operations

@@ -262,14 +262,14 @@ functions:
   returns:
     type: str
     description: YAML の文字列
-  process: 1. `yaml.safe_dump`（`sort_keys=False`・`allow_unicode=True`・`default_flow_style=False`・`width` は無制限）で書き出す。改行を含む文字列は、`SafeDumper` を継承したダンパーに登録した表し方で `|` のブロックにする
+  process: 1. 共通の往復編集の書き出し（`dump_roundtrip`。幅は `YAML_WIDTH`、改行を含む文字列は `|` のブロック）で、文書の値をキーの順のまま書き出す
   unit_tests:
   - name: test_dump_source
     case: 正常
     summary: キーの順と複数行
     condition: '`{title: A, items: [{id: i1, body: "1 行目\n2 行目\n"}], summary: B}`'
     mock: なし
-    expected: キーが `title`・`items`・`summary` の順で、`body` が `|` のブロック、`yaml.safe_load` で元の値に戻る
+    expected: キーが `title`・`items`・`summary` の順で、`body` が `|` のブロック、共通の YAML の読み込み（`load_yaml`）で元の値に戻る
 - name: collect_blocks
   title: 表示した場所で修正できる項目の取り出し
   kind: 関数
@@ -444,7 +444,7 @@ functions:
     0. 手順 1〜4 を `asyncio.timeout(DOCUMENT_FETCH_TIMEOUT_SEC)` の中で行い、超えたら文書の取得と同じ `ProjectIndexUnreachableError`（`kind` が `timeout`）を送出する
     1. project-indexの呼び出し.配信元の設定の取得・配信元の表示の設定の取得・文書の詳細の取得（`request.path`、既定のブランチ）と、文書の一覧の取り出し（既定のブランチ）を同時に呼ぶ。文書が無ければ `DocumentNotFoundError`（`missing` に `path`）を送出する
     2. 文書が本文のファイルを持つか、文書の行が Markdownの本文なら `PreviewNotYamlError` を送出する
-    3. `yaml.safe_load(request.content)` が `yaml.MarkedYAMLError` を送出したら、`markdown` を `None`、`conversion_error` を `reason` が `invalid_yaml`・`file` が文書のファイルのパス・`line`・`column` が `problem_mark` の 1 始まりの位置・`message` が `problem` の `ConversionError` にして返却する。値がオブジェクトでないときも同じ `reason` で、位置を 1 行 1 列にする
+    3. 共通の YAML の読み込み（`load_yaml`、`file` は文書のファイルのパス）が `YamlLoadError` を送出したら、`markdown` を `None`、`conversion_error` を `reason` が `invalid_yaml`・`file`・`line`・`column` が `YamlLoadError` の値・`detail` が `YamlLoadError` の `reason` の `ConversionError` にして返却する。値がオブジェクトでないときも同じ `reason` で、位置を 1 行 1 列にする
     4. 文書の値を読み込んだ値に置き換えた文書の詳細（`markdown`・`failure` は `None`）で、変換.描画する（`documents` は文書の一覧）を呼び、文書の取得の手順 7 と同じく埋め込みの値を集めて変換.仕上げる の `markdown` を返却する。`fallback` は、元の文書の詳細が `markdown` を持つ（`converters[]` を指す行）とき `True`
     5. 配信元のファイルを参照・書き込みせず、結果を記録しない
   exceptions:
