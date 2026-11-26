@@ -67,8 +67,8 @@ functions:
       type: 'UseMutationResult<{dropped: PendingEdit[]}, AppError, void>'
       description: 実行すると取り消した変更を返却する
     process: |-
-      1. 配信元にメタデータの変更があれば `ref` を省いてメタデータの取得を、本文の変更があれば変更の `docPath` ごとに `ref` を省いて文書の取得を同時に呼ぶ
-      2. メタデータの応答の `kinds[].rows[]` から種類・行の ID ごとの `values` を、文書の応答の `edit` から文書の ID ごとの項目のパスと値（`blocks[].value`・`titleBlock.value`・`@file` は `source`。`edit` が `null` なら空）を作り、メタデータの応答の `baseCommit`（無ければ文書の `edit.baseCommit`）で編集を始めたときのコミットの記録の更新を呼ぶ
+      1. 配信元にメタデータの変更があれば `ref` を省いてメタデータの取得を、本文の変更があれば変更の `docPath` ごとに `ref` を省いて文書の取得を同時に呼ぶ。文書の取得が 404（`missing` が `doc`）を返却した `docPath` は、失敗にせずその文書を無いものとして続ける
+      2. メタデータの応答の `kinds[].rows[]` から種類・行の ID ごとの `values` を、文書の応答の `edit` から文書の ID ごとの項目のパスと値（`blocks[].value`・`titleBlock.value`・`@file` は `source`。`edit` が `null` の文書と 404 で無い文書は空）を作り、メタデータの応答の `baseCommit`（無ければ文書の `edit.baseCommit`）で編集を始めたときのコミットの記録の更新を呼ぶ
       3. メタデータと文書の問い合わせの値を応答で置き換え、取り消した変更を返却する
     unit_tests:
       - name: test_use_restart_from_latest
@@ -83,6 +83,12 @@ functions:
         condition: '`aaa1111` で追加した `docs/n1.yaml` の `summary` の本文の変更だけで実行する'
         mock: 'MSW の文書の取得のハンドラ（`edit.baseCommit: ccc3333`・`summary` が変更前の値、要求を記録する）'
         expected: メタデータの取得を呼ばず、文書の取得の要求に `ref` が無く、変更が残り `baseCommitBySource` が `ccc3333`
+      - name: test_use_restart_from_latest_when_body_doc_missing
+        case: 正常
+        summary: 削除された文書の本文の変更を取り消す
+        condition: '`docs/n1.yaml` と `docs/n2.yaml` の本文の変更を追加し、`docs/n2.yaml` の文書の取得が 404（`missing: doc`）を返却する'
+        mock: 'MSW の文書の取得のハンドラ（n1 は `edit.baseCommit: ccc3333`、n2 は 404）'
+        expected: mutation が成功し、`dropped` が n2 の変更 1 件で、n1 の変更が残り `baseCommitBySource` が `ccc3333`
 notes:
   補足: 取得は orval が生成した問い合わせ（`getMetadataGetMetadataQueryOptions`）をそのまま使用する。
 tags:

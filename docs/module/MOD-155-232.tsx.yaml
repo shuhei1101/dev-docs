@@ -34,7 +34,7 @@ components:
         initial: 'null'
         description: 部品を出している項目のパス（`string`・`enum`・`table` の項目）
         notes: '`useState`'
-    description: 項目のブロックは、編集中の本文の値（無ければ `block.value`）で `block.markdown` の元の値の箇所を置き換えた Markdown（`table` は `columns` の見出しと編集中の行で表を描き直す）を mdmark の `render` で描き、右側の目次と先頭へ戻るボタンを出さない。項目の編集ボタンは shadcn/ui の `Button`（`size="icon"`、`Pencil`・部品を出している間は `Check`、`aria-label` は `{label} を編集`・`{label} の編集を終了`）。`string` は `Input`、`enum` は `Select`（`block.options`）、`table` は行と列ごとの `Input` を並べた表を出し、入力のたびに本文の変更の追加を呼ぶ（`before` は `block.value`）。その場の入力欄は `autoFocus` で、Enter（`isComposing` の間は受けない）・Esc・フォーカスが離れると `editing` を `null` にする。変更ありのバッジ（shadcn/ui の `Badge`、`変更あり`）は、編集中の本文の値がある項目の項目の編集ボタンの左に出す
+    description: 項目のブロックは、編集中の変更が無ければ `block.markdown` を、あれば次の Markdown を mdmark の `render` で描き（`table` は `columns` の見出しと編集中の行で表を描き直す。`string`・`enum`・`markdown` は `block.value` が `block.markdown` にちょうど 1 回現れるときだけその箇所を編集中の値に置き換え、それ以外は編集中の値をそのまま Markdown にする）、右側の目次と先頭へ戻るボタンを出さない。項目の編集ボタンは shadcn/ui の `Button`（`size="icon"`、`Pencil`・部品を出している間は `Check`、`aria-label` は `{label} を編集`・`{label} の編集を終了`）。`string` は `Input`、`enum` は `Select`（`block.options`）、`table` は行と列ごとの `Input` を並べた表を出し、入力のたびに本文の変更の追加を呼ぶ（`before` は `block.value`）。その場の入力欄は `autoFocus` で、Enter（`isComposing` の間は受けない）・Esc・フォーカスが離れると `editing` を `null` にする。変更ありのバッジ（shadcn/ui の `Badge`、`変更あり`）は、編集中の本文の値がある項目の項目の編集ボタンの左に出す
     unit_tests:
       - name: test_doc_field_editor
         case: 正常
@@ -66,6 +66,18 @@ components:
         condition: '`#items[i1].body` の項目の編集ボタンを押す'
         mock: mdmark（`vi.mock`、`mount` を記録する偽物）
         expected: '`onMarkdownOpen` がその項目で呼ばれ、その場の入力欄が出ない'
+      - name: test_doc_field_editor_when_value_not_in_markdown
+        case: 正常
+        summary: 元の値が描いた Markdown にそのまま現れない項目
+        condition: '`[B](id:b)` を含む `markdown` の項目（`block.markdown` では相対パスのリンク）を `修正後の本文` に編集する'
+        mock: mdmark（`vi.mock`、`mount` を記録する偽物）
+        expected: 項目のブロックの `mount` に `修正後の本文` が渡り、変更ありのバッジが出る
+      - name: test_doc_field_editor_when_value_repeated
+        case: 正常
+        summary: 元の値が 2 回現れる項目
+        condition: '`block.value` が `block.markdown` に 2 回現れる `string` の項目を修正する'
+        mock: mdmark（`vi.mock`、`mount` を記録する偽物）
+        expected: '`mount` に渡る Markdown が編集中の値だけ'
   - name: EditableTitle
     title: 文書のタイトルの修正
     kind: コンポーネント

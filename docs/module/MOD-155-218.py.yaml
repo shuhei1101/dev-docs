@@ -230,11 +230,17 @@ functions:
         required: true
         passing: positional
         description: 検証済みの本文
+      - name: convert
+        title: 変換
+        type: ConvertService
+        required: true
+        passing: keyword
+        description: 修正できる項目のパスの取得に指定する
     returns:
       type: CommitResult
       description: IF-155-29 の 200 の応答
     process: |-
-      1. `body` の変更は、文書ごとに修正できる項目のパスの取得（`doc_path`・`doc_id`・`base_commit`）にキーがあるかを確認し、無ければ `EditsRejectedError`（400）を送出する。メタデータの変更の列は、書き込みと削除への変換で元のキーへ戻せるかを確認する
+      1. `body` の変更は、文書ごとに修正できる項目のパスの取得（`doc_path`・`doc_id`・`base_commit`・`convert`）にキーがあるかを確認し、無ければ `EditsRejectedError`（400）を送出する。メタデータの変更の列は、書き込みと削除への変換で元のキーへ戻せるかを確認する
       2. project-indexの呼び出し.配信元の設定の取得で `metadata` を取得する
       3. 編集を始めたときの項目ごとのバージョンで、`update` の変更ごとの `expected_version` の辞書を求める
       4. 書き込みと削除への変換をし、project-indexの呼び出し.直コミットの書き込みを呼ぶ（`message` は要求の説明、`dry_run` のときは固定の説明 `差分確認`。project-index の書き込みの API は `message` を必須にしている。`baseCommit` は要求の `base_commit`）
@@ -297,9 +303,9 @@ functions:
       - name: test_commit_edits_when_body_path_unknown
         case: 異常
         summary: 修正できない項目のパス
-        condition: 修正できる項目のパスの取得に無い `#items[x].id` の `body` の変更
+        condition: 修正できる項目のパスの取得に無い `#items[x].id` の `body` の変更と、`body_path` が `.py` の編集できない文書の `@file` の変更（それぞれ 1 件で送信する）
         mock: project-indexの呼び出し（偽物）
-        expected: '`EditsRejectedError`（400）で、書き込みの API を呼ばない'
+        expected: 'どちらも `EditsRejectedError`（400）で、書き込みの API を呼ばない'
         exception: 修正できない項目のパス
     exceptions:
       - name: EditsRejectedError

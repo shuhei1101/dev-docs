@@ -12,7 +12,8 @@ diagrams:
       本文の編集の情報の組み立て ..> 編集の元の内容の書き出し
       本文の編集の情報の組み立て ..> 表示した場所で修正できる項目の取り出し
       編集中の変更の直コミット ..> 修正できる項目のパスの取得
-      修正できる項目のパスの取得 ..> 表示した場所で修正できる項目の取り出し
+      修正できる項目のパスの取得 ..> 本文の編集の情報の組み立て
+      修正できる項目のパスの取得 ..> 変換
       修正できる項目のパスの取得 ..> project-indexの呼び出し
       本文のプレビュー ..> project-indexの呼び出し
       本文のプレビュー ..> 変換
@@ -337,7 +338,7 @@ functions:
   container: features/view/edit.py
   usecase: 画面で編集中の変更をまとめて直コミットする
   role: サービス
-  summary: 編集を始めたときのコミットの文書で、`body` の変更に指定できる項目のパスを返却する
+  summary: 編集を始めたときのコミットの文書で、文書の取得の `edit` と同じ判定で `body` の変更に指定できる項目のパスを返却する
   scope: public
   is_async: true
   thread_safe: true
@@ -368,13 +369,20 @@ functions:
     required: true
     passing: keyword
     description: 編集を始めたときのコミット
+  - name: convert
+    title: 変換
+    type: ConvertService
+    required: true
+    passing: keyword
+    description: 文書の取得と同じ描画で `item_ranges` を記録する
   returns:
     type: frozenset[str]
-    description: '`blocks[].path`・`title_block.path` と `WHOLE_FILE_PATH`'
+    description: '`blocks[].path`・`title_block.path` と `WHOLE_FILE_PATH`。本文を編集できない文書は空'
   process: |-
-    1. project-indexの呼び出し.配信元の設定の取得 と 文書の詳細の取得（`doc_path`・`ref` は `base_commit`・`document_id` は `doc_id`）を同時に呼ぶ
-    2. 本文のファイルを持つ文書と `converters[]` を指す行の文書は `{WHOLE_FILE_PATH}` だけを返却する
-    3. それ以外は、表示した場所で修正できる項目の取り出し（`item_ranges` は `None`）の項目のパスに `WHOLE_FILE_PATH` を加えて返却する
+    1. project-indexの呼び出し.配信元の設定の取得・配信元の表示の設定の取得・端末の設定の配信元の行の取得・文書の詳細の取得（`doc_path`・`ref` は `base_commit`・`document_id` は `doc_id`）と、文書の一覧の取り出し（`base_commit`）を同時に呼ぶ
+    2. 変換.描画する（`item_ranges` は空のリスト、`documents` は文書の一覧）を `asyncio.to_thread` で呼ぶ。`ConvertFailure` なら空の集合を返却する
+    3. 本文の編集の情報の組み立て（配信元の表示の設定・配信元の設定・文書の詳細・`source_id` の行の `directCommit.writeApiKinds`・`base_commit`・文書の一覧の同じ文書の `version`・手順 2 の `item_ranges`）を呼ぶ
+    4. 結果が `None` なら空の集合、`None` でなければ `blocks[].path`・`title_block.path`（あれば）と `WHOLE_FILE_PATH` を返却する
   unit_tests:
   - name: test_body_item_paths
     case: 正常
@@ -388,6 +396,18 @@ functions:
     condition: '`body_path` が `guide.md` の文書'
     mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返却する偽物）
     expected: '`{"@file"}` だけ'
+  - name: test_body_item_paths_when_not_editable
+    case: 正常
+    summary: 本文を編集できない文書
+    condition: '`body_path` が `.py` の文書・`metadataOnlyKinds` の種類の文書・`writeApiKinds` に無い種類の文書'
+    mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返却する偽物）
+    expected: どれも空の集合
+  - name: test_body_item_paths_when_not_rendered
+    case: 正常
+    summary: 描いていない項目
+    condition: 'スキーマが `x-hidden: true` の文字列の項目を持つ文書'
+    mock: project-indexの呼び出し（`httpx.MockTransport` で project-index の develop の `42632c5` の入出力を返却する偽物）
+    expected: その項目のパスが無く、同じ文書の文書の取得の `edit.blocks[].path` と同じ集合に `title`・`@file` を加えたもの
 - name: preview_document
   title: 本文のプレビュー
   kind: 関数

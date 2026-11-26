@@ -22,7 +22,7 @@ functions:
       description: '`APIRouter(tags=["metadata"])`'
     process: |-
       1. GET `/_api/sources/{source}/metadata`（`name` は `get_metadata`）は、クエリの `ref`（省略可）を指定したメタデータの組み立てを `MetadataResponse` で返却する。配信元・`ref` が無いときは 404、project-index につながらないときは例外の変換の登録に任せて 503 にする
-      2. POST `/_api/sources/{source}/commits`（`name` は `post_commits`）は、同じオリジンの確認を依存に持ち、本文を `CommitRequest` で受けて編集中の変更の直コミットを返却する。`EditsRejectedError` は例外の変換の登録が problem+json にする
+      2. POST `/_api/sources/{source}/commits`（`name` は `post_commits`）は、同じオリジンの確認を依存に持ち、本文を `CommitRequest` で受けて編集中の変更の直コミット（`convert` は配線済みの関数の変換）を返却する。`EditsRejectedError` は例外の変換の登録が problem+json にする
     unit_tests:
       - name: test_build_metadata_router_when_metadata
         case: 正常
