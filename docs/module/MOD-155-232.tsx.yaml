@@ -78,6 +78,12 @@ components:
         condition: '`block.value` が `block.markdown` に 2 回現れる `string` の項目を修正する'
         mock: mdmark（`vi.mock`、`mount` を記録する偽物）
         expected: '`mount` に渡る Markdown が編集中の値だけ'
+      - name: test_doc_field_editor_when_value_has_dollar
+        case: 正常
+        summary: 置き換えのパターンの文字を含む値
+        condition: "`string` の項目を `$&`・`$$`・`$'` を含む値に修正する"
+        mock: mdmark（`vi.mock`、`mount` を記録する偽物）
+        expected: 項目のブロックに渡る Markdown が入力した値をそのまま含む
   - name: EditableTitle
     title: 文書のタイトルの修正
     kind: コンポーネント
