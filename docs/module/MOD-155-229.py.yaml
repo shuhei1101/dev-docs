@@ -302,8 +302,8 @@ functions:
     type: tuple[list[EditBlock], EditBlock | None]
     description: '`blocks` と `title_block`'
   process: |-
-    1. スキーマの `properties` の順に最上位の項目を見て、値の型とスキーマで種類を決める。`enum` を持つ文字列は `enum`、`contentMediaType` が `text/markdown` の文字列は `markdown`、それ以外の文字列は `string`、要素が文字列の項目だけを持つオブジェクトの配列は `table`（`columns` は要素のスキーマの `properties` の並び、`value` は行ごとの列の値で、無い列は空文字列）にする
-    2. `table` にしないオブジェクトの配列で `x-key` を持つものは、要素ごとに要素の中の項目へ 1 の規則を当て、パスを `#{配列のキー}[{x-key の値}].{キー}`、`label` を `{x-key の値} の {title}` にする
+    1. スキーマの `properties` の順に最上位の項目を見て、値の型とスキーマで種類を決める。`x-key` を持ち `x-shape: sections` で描くオブジェクトの配列は `table` にせず、2 の要素の中の項目にする。`enum` を持つ文字列は `enum`、`contentMediaType` が `text/markdown` の文字列は `markdown`、それ以外の文字列は `string`、要素が文字列の項目だけを持つオブジェクトの配列は `table`（`columns` は要素のスキーマの `properties` の並び、`value` は行ごとの列の値で、無い列は空文字列）にする
+    2. `table` にしないオブジェクトの配列で `x-key` を持つもの（`x-shape: sections` の配列を含む）は、要素ごとに要素の中の項目へ 1 の規則を当て、パスを `#{配列のキー}[{x-key の値}].{キー}`、`label` を `{x-key の値} の {title}` にする
     3. `x-hidden: true`・`x-shape: diagram`・入れ子のオブジェクト・数と真偽値・数か真偽値の列を持つ配列・`x-key` を持たない配列の要素の中の項目は除く
     4. 共通のキー `name` に対応する最上位のキー（`HEADING_KEYS` のうち最初に値を持つキー）は `title_block` にし、`blocks` から除く
     5. `markdown` は `item_ranges` の同じパスの Markdown にする。`item_ranges` に無い項目（描いていない項目）は `blocks` から除き、`item_ranges` の順に並べる。`item_ranges` が `None` のときは `markdown` を空にしてスキーマの順に並べる
@@ -332,6 +332,12 @@ functions:
     condition: '`item_ranges` に `summary` が無い'
     mock: なし
     expected: '`summary` が `blocks` に無く、残りが `item_ranges` の順'
+  - name: test_collect_blocks_when_sections
+    case: 正常
+    summary: セクションで描く x-key の配列
+    condition: '`items`（`x-key: id`・`x-shape: sections`、要素に文字列の `id`・`body` だけ）が 2 要素'
+    mock: なし
+    expected: '`table` の項目が無く、`#items[i1].body`・`#items[i2].body` などの要素の中の項目になる'
 - name: body_item_paths
   title: 修正できる項目のパスの取得
   kind: 関数
