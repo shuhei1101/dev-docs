@@ -39,7 +39,7 @@ data_models:
     container: features/metadata/commits.py
     usecase: 画面で編集中の変更をまとめて直コミットする
     role: DTO
-    summary: IF-155-29 の本文（`ApiModel`。`model_validator` で `key` の重複・`op` と `kind`・必須・`message`・同じ `doc_id` の `@file` とほかの `body` の変更が並ぶことを検証する）
+    summary: IF-155-29 の本文（`ApiModel`。`model_validator` で `key` の重複・`op` と `kind`・必須・`message` を検証する）
     properties:
       - name: edits
         type: list[Edit]
@@ -240,11 +240,11 @@ functions:
       type: CommitResult
       description: IF-155-29 の 200 の応答
     process: |-
-      1. `body` の変更は、文書ごとに修正できる項目のパスの取得（`doc_path`・`doc_id`・`base_commit`・`convert`）にキーがあるかを確認し、無ければ `EditsRejectedError`（400）を送出する。メタデータの変更の列は、書き込みと削除への変換で元のキーへ戻せるかを確認する
+      1. 送信の前の変更の確認を呼ぶ。続けて `body` の変更は、文書ごとに修正できる項目のパスの取得（`doc_path`・`doc_id`・`base_commit`・`convert`）にキーがあるかを確認し、無ければ `EditsRejectedError`（400）を送出する。メタデータの変更の列は、書き込みと削除への変換で元のキーへ戻せるかを確認する
       2. project-indexの呼び出し.配信元の設定の取得で `metadata` を取得する
       3. 編集を始めたときの項目ごとのバージョンで、`update` の変更ごとの `expected_version` の辞書を求める
       4. 書き込みと削除への変換をし、project-indexの呼び出し.直コミットの書き込みを呼ぶ（`message` は要求の説明、`dry_run` のときは固定の説明 `差分確認`。project-index の書き込みの API は `message` を必須にしている。`baseCommit` は要求の `base_commit`）
-      5. 200 は `results[]` の `kind`（`write`・`delete`）・`index` を変更の `key` に戻し、`conflict` があれば衝突の結果への変換をして `CommitResult` を返却する
+      5. 200 は `results[]` の `kind`（`write`・`delete`）・`index` を変更の `key` に戻し（`status` の `replaced` は `updated` にする）、`conflict` があれば衝突の結果への変換をして `CommitResult` を返却する
       6. 409 の `BaseCommitUnusableError` は `title` を `BaseCommitUnusableError`、`detail` を project-index の理由にした `EditsRejectedError`（409、`errors[]` なし）を送出する。403・404・409・422 は `errors[]`（`path` の先頭の `writes[{添字}]`・`deletes[{添字}]`）と `kinds`（変更の `doc_kind` と照合する）・`docId` を変更の `key` へ戻した `EditsRejectedError` を送出する。500・502 は 502、504 と待ちの上限の打ち切りは 504 にする
       7. 送信ごとに、配信元の ID・`dryRun`・変更の件数・状態コード・コミットの SHA（衝突したときは残したブランチ、打ち切ったときはその旨）を 1 行のログに出力する
     unit_tests:
@@ -307,6 +307,12 @@ functions:
         mock: project-indexの呼び出し（偽物）
         expected: 'どちらも `EditsRejectedError`（400）で、書き込みの API を呼ばない'
         exception: 修正できない項目のパス
+      - name: test_commit_edits_when_replaced
+        case: 正常
+        summary: ファイル全体の置き換えの結果
+        condition: YAML の文書の `@file` の変更と、`results[0].status` が `replaced` の 200 を返却する偽物
+        mock: project-indexの呼び出し（偽物）
+        expected: '`results[0].status` が `updated`'
     exceptions:
       - name: EditsRejectedError
         condition: 本文の検証・編集を始めたときの文書が無い・編集を始めたときのコミットが使用できない・project-index の 4xx・5xx・待ちの上限
@@ -448,6 +454,60 @@ functions:
         condition: '`errors[]` が `path: n1` の 1 件で、n1 のタグの `update` と用語の `add` を送信した'
         mock: なし
         expected: '`reasons` が `key: tags:n1:update` の 1 件'
+  - name: check_edits
+    title: 送信の前の変更の確認
+    kind: 関数
+    container: features/metadata/commits.py
+    usecase: 画面で編集中の変更をまとめて直コミットする
+    role: 検証
+    summary: project-index へ問い合わせる前に、種類の列・同じ文書の `@file` とほかの本文の変更の並び・`@file` の YAML を確認する
+    scope: public
+    args:
+      - name: edits
+        type: list[Edit]
+        required: true
+        passing: positional
+        description: 編集中の変更
+    returns:
+      type: None
+      description: 確認に合格した
+    process: |-
+      1. メタデータの変更の `values` のキーが、種類ごとの列（metadata.py の `KIND_SPECS` の `kind` の行）で修正できる列かを確認し、無い列は `errors[]` に `{key, path: 列, reason: この列は修正できません}` を入れる
+      2. 同じ `doc_id` に `@file` の `body` の変更とほかの `body` の変更があれば、その文書の全ての `body` の変更を `errors[]` に `{key, path: キー, reason: 同じ文書のファイル全体の変更と並べられません}` で入れる
+      3. YAML の文書（`doc_path` が `.md` で終わらない）の `@file` を共通の YAML の読み込み（`load_yaml`、`file` は `doc_path`）で読み込み、`YamlLoadError` は `errors[]` に `{key, path: @file, reason: YamlLoadError の文字列}` を入れる
+      4. `errors[]` があれば `EditsRejectedError`（400）を送出する
+    unit_tests:
+      - name: test_check_edits
+        case: 正常
+        summary: 修正できる列と本文の変更
+        condition: タグの `tags` の `update`、用語の `add`、n1 の `summary`、n2 の読み込める `@file`
+        mock: なし
+        expected: 例外を送出しない
+      - name: test_check_edits_when_column_not_editable
+        case: 異常
+        summary: 種類に無い列
+        condition: '`tags` の変更の `values` が `{description: 説明}`'
+        mock: なし
+        expected: '`EditsRejectedError`（400）で、`errors[0]` がその変更の `key`・`path` が `description`'
+        exception: 修正できない列
+      - name: test_check_edits_when_whole_file_mixed
+        case: 異常
+        summary: 同じ文書のファイル全体と項目の変更
+        condition: n1 の `@file` と n1 の `summary` の変更
+        mock: なし
+        expected: '`EditsRejectedError`（400）で、`errors[].key` が 2 件の変更の `key`'
+        exception: 同じ文書のファイル全体と項目の変更
+      - name: test_check_edits_when_whole_file_unparsable
+        case: 異常
+        summary: 読み込めないファイル全体
+        condition: 3 行目の行頭にタブを入れた YAML の `@file`
+        mock: なし
+        expected: '`EditsRejectedError`（400）で、`errors[0].path` が `@file`、`reason` に 3 行目'
+        exception: 読み込めない `@file`
+    exceptions:
+      - name: EditsRejectedError
+        condition: 修正できない列・同じ文書のファイル全体とほかの本文の変更・読み込めない `@file`
+        message: IF-155-29 の 400 の `title`・`detail`
 refs:
   - to: IF-155-29
     type: requires
