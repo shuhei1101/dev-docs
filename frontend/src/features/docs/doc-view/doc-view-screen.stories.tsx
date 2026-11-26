@@ -3,8 +3,8 @@ import { HttpResponse, http } from "msw";
 import { expect, userEvent, within } from "storybook/test";
 
 import { DocViewScreen } from "@/features/docs/doc-view/doc-view-screen";
-import type { DocEdit } from "@/features/docs/doc-view/edit";
-import { type PendingEdit, usePendingEditsStore } from "@/features/metadata/shared/pending-edits-store";
+import type { DocumentEdit as DocEdit } from "@/shared/api/generated/model";
+import { type PendingEdit, usePendingEditsStore } from "@/shared/stores/pending-edits-store";
 import { SIDEBAR_WIDTH, usePreferencesStore } from "@/shared/stores/preferences";
 
 const DOCUMENT = "*/_api/sources/:source/docs/*";
@@ -420,10 +420,12 @@ const ruleSource = [
 ].join("\n");
 
 const ruleEditOf = (long = false): DocEdit => ({
-  editable: true,
-  language: "yaml",
+  docId: "docs-a",
   kind: "rule",
+  filePath: "docs/a.yaml",
   version: "a1b2c3",
+  baseCommit: "1111111",
+  language: "yaml",
   source: ruleSource,
   blocks: ruleBlocks(long),
   titleBlock: { path: "name", label: "名前", type: "string", value: long ? LONG_TITLE : "文書の編集", markdown: "" },
@@ -465,12 +467,15 @@ const guideDoc = documentResponse({
   path: "docs/a",
   markdown: "# 画面で参照する\n\n## 手順\n\n1. 文書を開く\n2. 編集を押す\n",
   edit: {
-    editable: true,
-    language: "markdown",
+    docId: "guide",
     kind: "guide",
+    filePath: "docs/guide.md",
     version: "d4e5f6",
+    baseCommit: "1111111",
+    language: "markdown",
     source: "# 画面で参照する\n\n## 手順\n\n1. 文書を開く\n2. 編集を押す\n",
     blocks: [],
+    titleBlock: null,
   } satisfies DocEdit,
 });
 
@@ -509,7 +514,7 @@ export const EditButton: Story = {
 
 /** 書き込みの API が書き込めない種類（`write_api_kinds` に無い・`body: false`・SQLite の行）は、編集のボタンを出さない */
 export const NotEditable: Story = {
-  parameters: { msw: editHandlers(ruleDoc({ ...ruleEdit, editable: false })) },
+  parameters: { msw: editHandlers({ ...ruleDoc(), edit: null }) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await canvas.findByRole("heading", { level: 1 });

@@ -2,48 +2,56 @@ import { Check, Pencil } from "lucide-react";
 import { useState } from "react";
 
 import { MarkdownPreview } from "@/features/docs/doc-view/components/markdown-preview";
-import { type DocEdit, type EditBlock, upsertBodyEdit, usePendingBodyValue } from "@/features/docs/doc-view/edit";
-import type { DocumentResponse } from "@/shared/api/generated/model";
+import { upsertBodyEdit, usePendingBodyValue } from "@/features/docs/doc-view/edit";
+import type { DocumentEdit, EditBlock } from "@/shared/api/generated/model";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
+import type { EditValue } from "@/shared/stores/pending-edits-store";
 
 type Rows = Array<Record<string, string>>;
 
 type BlockProps = {
-  doc: DocumentResponse;
-  edit: DocEdit;
+  source: string;
+  edit: DocumentEdit;
   block: EditBlock;
 };
 
-const textOf = (value: EditBlock["value"]): string => (typeof value === "string" ? value : JSON.stringify(value));
+const isRows = (value: EditValue): value is Rows => Array.isArray(value) && value.every((item) => typeof item === "object");
+
+const textOf = (value: EditValue): string => (typeof value === "string" ? value : "");
 
 /** 書き換えをその場で編集中の変更に入れる（元の値に戻すと変更から除く） */
-const useBlockValue = ({ doc, edit, block }: BlockProps) => {
-  const before = textOf(block.value);
-  const pending = usePendingBodyValue(doc, block.path);
-  const set = (value: string) => upsertBodyEdit({ doc, edit, path: block.path, label: block.label, before, value });
-  return { before, current: pending ?? before, changed: pending !== undefined, set };
+const useBlockValue = ({ source, edit, block }: BlockProps) => {
+  const pending = usePendingBodyValue(source, edit, block.path);
+  const set = (value: EditValue) =>
+    upsertBodyEdit(source, edit, { path: block.path, label: block.label, before: block.value, value });
+  return { current: pending ?? block.value, changed: pending !== undefined, set };
 };
 
-/** 表の行を Markdown の表にする（編集中の値をブロックの描画に反映する） */
-const rowsMarkdown = (heading: string, columns: string[], rows: Rows): string =>
+/** 表の行を Markdown の表にする（編集中の行をブロックの描画に反映する） */
+const rowsMarkdown = (columns: string[], rows: Rows): string =>
   [
-    heading,
-    "",
     `| ${columns.join(" | ")} |`,
     `| ${columns.map(() => "---").join(" | ")} |`,
     ...rows.map((row) => `| ${columns.map((column) => row[column] ?? "").join(" | ")} |`),
-    "",
   ].join("\n");
 
-/** 編集中の値を描いたブロックの Markdown（元の値の箇所を置き換える） */
-const blockMarkdown = (block: EditBlock, current: string): string => {
-  if (block.type !== "table") return block.markdown.replace(textOf(block.value), current);
-  const heading = block.markdown.split("\n")[0] ?? "";
-  return rowsMarkdown(heading, block.columns ?? [], JSON.parse(current) as Rows);
+/** 元の値が描いた Markdown に現れる回数 */
+const occurrences = (markdown: string, value: string): number =>
+  value === "" ? 0 : markdown.split(value).length - 1;
+
+/** 編集中の値を描いたブロックの Markdown */
+const blockMarkdown = (block: EditBlock, current: EditValue, changed: boolean): string => {
+  if (!changed) return block.markdown;
+  if (block.type === "table") return rowsMarkdown(block.columns ?? [], isRows(current) ? current : []);
+  const before = textOf(block.value);
+  // 元の値がちょうど 1 回現れる: その箇所だけを編集中の値に置き換える
+  if (occurrences(block.markdown, before) === 1) return block.markdown.replace(before, textOf(current));
+  // 現れない（リンクの書き換え・表のセルの変換）か 2 回以上現れる: 編集中の値をそのまま描く
+  return textOf(current);
 };
 
 /** 短い文字列・enum の入力欄。フォーカスが離れると確定する */
@@ -117,27 +125,31 @@ const RowsTable = ({ block, rows, onChange }: { block: EditBlock; rows: Rows; on
   );
 };
 
-type BlockViewProps = BlockProps & { onMarkdownOpen: (block: EditBlock) => void };
+type BlockViewProps = BlockProps & {
+  docId: string;
+  editing: boolean;
+  onEditingChange: (editing: boolean) => void;
+  onMarkdownOpen: (block: EditBlock) => void;
+};
 
 /** 描いた本文の 1 ブロックと、その横の編集のボタン。押すとブロックを編集の部品に置き換える */
-const EditableBlock = ({ doc, edit, block, onMarkdownOpen }: BlockViewProps) => {
-  const value = useBlockValue({ doc, edit, block });
-  const [editing, setEditing] = useState(false);
+const EditableBlock = ({ source, docId, edit, block, editing, onEditingChange, onMarkdownOpen }: BlockViewProps) => {
+  const value = useBlockValue({ source, edit, block });
+  const setEditing = onEditingChange;
   const inline = editing && block.type !== "markdown";
   return (
     <div data-edit-path={block.path} className="doc-edit-block rounded-md p-2 hover:bg-muted/40 focus-within:bg-muted/40">
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1 wrap-anywhere">
           {inline && block.type === "table" && (
-            <div className="space-y-2">
-              <MarkdownPreview markdown={block.markdown.split("\n")[0] ?? ""} docId={`${doc.path}#${block.path}:heading`} />
-              <RowsTable block={block} rows={JSON.parse(value.current) as Rows} onChange={(rows) => value.set(JSON.stringify(rows))} />
-            </div>
+            <RowsTable block={block} rows={isRows(value.current) ? value.current : []} onChange={value.set} />
           )}
           {inline && block.type !== "table" && (
-            <ValueInput block={block} value={value.current} onChange={value.set} onDone={() => setEditing(false)} />
+            <ValueInput block={block} value={textOf(value.current)} onChange={value.set} onDone={() => setEditing(false)} />
           )}
-          {!inline && <MarkdownPreview markdown={blockMarkdown(block, value.current)} docId={`${doc.path}#${block.path}`} />}
+          {!inline && (
+            <MarkdownPreview markdown={blockMarkdown(block, value.current, value.changed)} docId={`${docId}#${block.path}`} />
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {value.changed && <Badge variant="outline">変更あり</Badge>}
@@ -162,32 +174,47 @@ const EditableBlock = ({ doc, edit, block, onMarkdownOpen }: BlockViewProps) => 
 };
 
 type Props = {
-  doc: DocumentResponse;
-  edit: DocEdit;
+  source: string;
+  /** mdmark の `docId`（`{source}@{ref}:{path}`） */
+  docId: string;
+  edit: DocumentEdit;
   onMarkdownOpen: (block: EditBlock) => void;
 };
 
-/** YAML の文書の描いた本文を、変換が目印を付けたブロックごとに編集のボタンを付けて並べる */
-export const DocFieldEditor = ({ doc, edit, onMarkdownOpen }: Props) => (
-  <div className="space-y-4">
-    {edit.blocks.map((block) => (
-      <EditableBlock key={block.path} doc={doc} edit={edit} block={block} onMarkdownOpen={onMarkdownOpen} />
-    ))}
-  </div>
-);
+/** YAML の文書の描いた本文を、表示した場所で修正できる項目のブロックごとに編集のボタンを付けて並べる */
+export const DocFieldEditor = ({ source, docId, edit, onMarkdownOpen }: Props) => {
+  // 部品を出している項目のパス（`string`・`enum`・`table` の項目）
+  const [editing, setEditing] = useState<string | null>(null);
+  return (
+    <div className="space-y-4">
+      {edit.blocks.map((block) => (
+        <EditableBlock
+          key={block.path}
+          source={source}
+          docId={docId}
+          edit={edit}
+          block={block}
+          editing={editing === block.path}
+          onEditingChange={(next) => setEditing(next ? block.path : null)}
+          onMarkdownOpen={onMarkdownOpen}
+        />
+      ))}
+    </div>
+  );
+};
 
-type TitleProps = { doc: DocumentResponse; edit: DocEdit; block: EditBlock };
+type TitleProps = { source: string; edit: DocumentEdit; block: EditBlock };
 
 /** 表示した場所で修正するときの文書のタイトル。横の編集のボタンで、タイトルをその場の入力欄にする */
-export const EditableTitle = ({ doc, edit, block }: TitleProps) => {
-  const value = useBlockValue({ doc, edit, block });
+export const EditableTitle = ({ source, edit, block }: TitleProps) => {
+  const value = useBlockValue({ source, edit, block });
   const [editing, setEditing] = useState(false);
   return (
     <div data-edit-path={block.path} className="flex min-w-0 flex-1 items-center gap-2">
       {editing ? (
-        <ValueInput block={block} value={value.current} onChange={value.set} onDone={() => setEditing(false)} />
+        <ValueInput block={block} value={textOf(value.current)} onChange={value.set} onDone={() => setEditing(false)} />
       ) : (
-        <h1 className="min-w-0 text-doc-title font-doc-title wrap-anywhere">{value.current}</h1>
+        <h1 className="min-w-0 text-doc-title font-doc-title wrap-anywhere">{textOf(value.current)}</h1>
       )}
       {value.changed && <Badge variant="outline">変更あり</Badge>}
       {editing ? (

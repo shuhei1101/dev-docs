@@ -1,84 +1,60 @@
 import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 
-import { type PendingEdit, usePendingEdits, usePendingEditsStore } from "@/features/metadata/shared/pending-edits-store";
-import { apiClient } from "@/shared/adapters/api-client";
-import type { DocumentResponse } from "@/shared/api/generated/model";
+import type { DocumentEdit, DocumentResponse, PreviewResponse } from "@/shared/api/generated/model";
+import { viewPostPreview } from "@/shared/api/generated/view/view";
+import { type EditValue, type PendingEdit, usePendingEdits, usePendingEditsStore } from "@/shared/stores/pending-edits-store";
 
-/** 本文の項目の値の型から選ぶ編集の部品 */
-export type EditBlockType = "string" | "enum" | "markdown" | "table";
-
-/** 表示した場所で修正できる本文の項目 1 つ（項目のパスと、スキーマの型から選んだ部品） */
-export type EditBlock = {
-  path: string;
-  label: string;
-  type: EditBlockType;
-  /** 本文に描いたこの項目のブロック（変換が項目のパスの目印を付けた範囲の Markdown） */
-  markdown: string;
-  /** `table` は行ごとの列の値、それ以外は文字列 */
-  value: string | Array<Record<string, string>>;
-  options?: string[];
-  columns?: string[];
-};
-
-/** 文書の本文の編集に要る情報 */
-export type DocEdit = {
-  editable: boolean;
-  language: "yaml" | "markdown";
-  /** 元のファイルの内容 */
-  source: string;
-  version: string;
-  kind: string;
-  /** 表示した場所で修正できる項目（Markdown の文書は持たない） */
-  blocks: EditBlock[];
-  /** 文書のタイトルに描く項目（タイトルの横の編集のボタンで修正する） */
-  titleBlock?: EditBlock;
-};
-
-/** ファイル全体の編集の変更の項目のパス */
+/** ファイル全体の編集の変更の `values` のキー */
 export const WHOLE_FILE = "@file";
 
-/** 文書の取得の応答の本文の編集の情報 */
-export const docEditOf = (doc: DocumentResponse): DocEdit | null =>
-  (doc as DocumentResponse & { edit?: DocEdit }).edit ?? null;
+/** ファイル全体のエディタの入力が止まってから本文のプレビューを呼ぶまでのミリ秒 */
+export const PREVIEW_DELAY_MS = 500;
 
-/** 本文の変更の key（リビジョンによらず、文書のパスと項目のパスで 1 つ） */
-const keyOf = (doc: DocumentResponse, path: string) => `body:${doc.path}:${path}`;
+/** 文書の取得の応答の本文の編集の情報（編集できない文書は `null`） */
+export const docEditOf = (doc: DocumentResponse): DocumentEdit | null => doc.edit ?? null;
 
-type BodyEditArgs = { doc: DocumentResponse; edit: DocEdit; path: string; label: string; before: string; value: string };
+/** 本文の変更の `key`（リビジョンによらず、文書の ID と項目のパスで 1 つ） */
+export const bodyEditKey = (edit: DocumentEdit, path: string): string => `body:${edit.docId}:${path}`;
 
-/** 文書の本文の変更を、メタデータの変更と同じ編集中の変更に溜める */
-export const upsertBodyEdit = ({ doc, edit, path, label, before, value }: BodyEditArgs) => {
+type BodyTarget = { path: string; label: string; before: EditValue; value: EditValue };
+
+/** 本文の項目かファイル全体の値を、編集中の変更のストアへ入れる（元の値に戻すと除かれる） */
+export const upsertBodyEdit = (source: string, edit: DocumentEdit, { path, label, before, value }: BodyTarget) => {
   const pending: PendingEdit = {
-    key: keyOf(doc, path),
+    key: bodyEditKey(edit, path),
     kind: "body",
     op: "update",
-    docId: doc.path,
+    docId: edit.docId,
     docKind: edit.kind,
     expectedVersion: edit.version,
-    docPath: doc.path,
+    docPath: edit.filePath,
     values: { [path]: value },
     before: { [path]: before },
-    label: `${label}（${doc.path}）`,
+    label: `${label}（${edit.filePath}）`,
   };
-  usePendingEditsStore.getState().upsert(doc.source, pending, doc.ref ?? "");
+  usePendingEditsStore.getState().upsert(source, pending, edit.baseCommit);
 };
 
-/** 本文の項目の、編集中の変更があればその値 */
-export const usePendingBodyValue = (doc: DocumentResponse, path: string): string | undefined => {
-  const edits = usePendingEdits(doc.source);
-  const value = edits.find((item) => item.key === keyOf(doc, path))?.values[path];
-  return typeof value === "string" ? value : undefined;
+/** 項目のパスの編集中の変更があれば、その値 */
+export const usePendingBodyValue = (source: string, edit: DocumentEdit, path: string): EditValue | undefined => {
+  const key = bodyEditKey(edit, path);
+  return usePendingEdits(source).find((item) => item.key === key)?.values[path];
 };
 
-/** 書き換えた YAML を種類のスキーマで変換したプレビューの Markdown */
-export const previewQueryOptions = (doc: DocumentResponse, content: string) =>
-  queryOptions({
-    queryKey: ["view", "preview", doc.source, doc.path, content],
-    queryFn: ({ signal }) =>
-      apiClient<{ markdown: string }>(`/_api/sources/${encodeURIComponent(doc.source)}/preview`, {
-        method: "POST",
-        body: JSON.stringify({ path: doc.path, content }),
-        signal,
-      }),
+/** 文書の編集中の変更が、項目のパスとファイル全体のどちらにあるか */
+export const usePendingBodyMode = (source: string, edit: DocumentEdit): { fields: boolean; file: boolean } => {
+  const edits = usePendingEdits(source).filter((item) => item.kind === "body" && item.docId === edit.docId);
+  return {
+    fields: edits.some((item) => !(WHOLE_FILE in item.values)),
+    file: edits.some((item) => WHOLE_FILE in item.values),
+  };
+};
+
+/** 書き換えた YAML を種類のスキーマで変換した本文のプレビューの問い合わせ */
+export const previewQueryOptions = (source: string, path: string, content: string) =>
+  queryOptions<PreviewResponse>({
+    queryKey: ["view", "preview", source, path, content],
+    queryFn: ({ signal }) => viewPostPreview(source, { path, content }, { signal }),
     placeholderData: keepPreviousData,
+    meta: { handleError: false },
   });

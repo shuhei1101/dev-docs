@@ -7,12 +7,13 @@ import { DocFieldEditor, EditableTitle } from "@/features/docs/doc-view/componen
 import { DocHeader } from "@/features/docs/doc-view/components/doc-header";
 import { EmptyTab } from "@/features/docs/doc-view/components/empty-tab";
 import { WholeFileEditor } from "@/features/docs/doc-view/components/whole-file-editor";
-import { type EditBlock, docEditOf } from "@/features/docs/doc-view/edit";
+import { docEditOf } from "@/features/docs/doc-view/edit";
 import type { ActivePage } from "@/features/docs/doc-view/nav";
 import type { DocEditMode, DocViewSearch } from "@/features/docs/doc-view/search";
-import type { DocComment } from "@/features/docs/shared/comments/comment-store";
+import { type DocComment, docIdOf } from "@/features/docs/shared/comments/comment-store";
 import type {
   DocumentResponse,
+  EditBlock,
   NavTab,
   RefsResponse,
 } from "@/shared/api/generated/model";
@@ -41,9 +42,28 @@ type ContentProps = Omit<Props, "emptyTab" | "busy"> & { editMode: DocEditMode |
 /** 本文か、編集の表示（表示した場所で修正・ファイル全体の編集） */
 const DocBodyOrEditor = ({ doc, editMode, ...handlers }: ContentProps) => {
   const edit = docEditOf(doc);
-  if (edit?.editable && editMode === "file") return <WholeFileEditor key={doc.path} doc={doc} edit={edit} />;
-  if (edit?.editable && editMode === "fields" && edit.language === "yaml") {
-    return <DocFieldEditor doc={doc} edit={edit} onMarkdownOpen={handlers.onMarkdownFieldOpen} />;
+  // 編集できない文書は URL の `edit` を無視して本文を出す
+  if (edit !== null && editMode === "file") {
+    return (
+      <WholeFileEditor
+        key={doc.path}
+        source={doc.source}
+        path={doc.path}
+        docId={docIdOf(doc)}
+        markdown={doc.markdown ?? null}
+        edit={edit}
+      />
+    );
+  }
+  if (edit !== null && editMode === "fields" && edit.language === "yaml") {
+    return (
+      <DocFieldEditor
+        source={doc.source}
+        docId={docIdOf(doc)}
+        edit={edit}
+        onMarkdownOpen={handlers.onMarkdownFieldOpen}
+      />
+    );
   }
   return (
     <DocBody
@@ -59,8 +79,8 @@ const DocBodyOrEditor = ({ doc, editMode, ...handlers }: ContentProps) => {
 /** 表示した場所で修正するときだけ、タイトルを編集のボタンを持つタイトルにする */
 const titleNodeOf = (doc: ContentProps["doc"], editMode: DocEditMode | undefined) => {
   const edit = docEditOf(doc);
-  if (!edit?.editable || editMode !== "fields" || edit.titleBlock === undefined) return undefined;
-  return <EditableTitle doc={doc} edit={edit} block={edit.titleBlock} />;
+  if (edit === null || editMode !== "fields" || !edit.titleBlock) return undefined;
+  return <EditableTitle source={doc.source} edit={edit} block={edit.titleBlock} />;
 };
 
 const DocContent = ({ doc, active, refs, ...handlers }: ContentProps) => (
@@ -72,8 +92,13 @@ const DocContent = ({ doc, active, refs, ...handlers }: ContentProps) => (
       path={doc.path}
       updatedAt={doc.updatedAt}
       actions={
-        doc.diff ? null : (
-          <DocEditBar edit={docEditOf(doc)} mode={handlers.editMode} onModeChange={handlers.onEditModeChange} />
+        doc.diff || docEditOf(doc) === null ? null : (
+          <DocEditBar
+            source={doc.source}
+            edit={docEditOf(doc) as NonNullable<ReturnType<typeof docEditOf>>}
+            mode={handlers.editMode}
+            onModeChange={handlers.onEditModeChange}
+          />
         )
       }
     />

@@ -12,7 +12,7 @@ import { SidebarToggle } from "@/features/docs/doc-view/components/sidebar-toggl
 import { useDocNavigation } from "@/features/docs/doc-view/hooks/use-doc-navigation";
 import { useLocating } from "@/features/docs/doc-view/hooks/use-locating";
 import { useDocScreenEffects } from "@/features/docs/doc-view/hooks/use-doc-screen-effects";
-import { type EditBlock, docEditOf } from "@/features/docs/doc-view/edit";
+import { docEditOf } from "@/features/docs/doc-view/edit";
 import { findActivePage, pageTitle } from "@/features/docs/doc-view/nav";
 import {
   baseMarkdownQueryOptions,
@@ -26,9 +26,9 @@ import {
 } from "@/features/docs/shared/comments/comment-store";
 import { SearchDialog } from "@/features/docs/shared/search-dialog/search-dialog";
 import { servingSources } from "@/features/docs/shared/serving-sources";
-import { PendingPanel } from "@/features/metadata/metadata/pending-panel";
-import { type PendingEdit, usePendingEdits } from "@/features/metadata/shared/pending-edits-store";
-import type { NavTab } from "@/shared/api/generated/model";
+import { PendingPanel } from "@/shared/components/pending-panel/pending-panel";
+import { type PendingEdit, usePendingEdits } from "@/shared/stores/pending-edits-store";
+import type { EditBlock, NavTab } from "@/shared/api/generated/model";
 import { useSettingsGetSettingsSources } from "@/shared/api/generated/settings/settings";
 import { useViewListRefs } from "@/shared/api/generated/view/view";
 import { ShortcutDialog } from "@/shared/components/shortcut-dialog/shortcut-dialog";
@@ -239,7 +239,8 @@ export const DocViewScreen = () => {
       />
       {edit !== null && (
         <MarkdownFieldPanel
-          doc={doc}
+          source={source}
+          docId={docIdOf(doc)}
           edit={edit}
           block={markdownField}
           onClose={() => setMarkdownField(null)}
