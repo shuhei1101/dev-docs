@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import ConfigDict, Field
 
 from dev_docs.features.documents.types import AliasType
 from dev_docs.shared.api_model import ApiModel
+
+if TYPE_CHECKING:
+    from dev_docs.features.view.edit import DocumentEdit
 
 
 class NavItem(ApiModel):
@@ -98,6 +101,8 @@ class DocumentResponse(ApiModel):
     aliases: list[AliasItem] = Field(default_factory=list)
     diff: DocumentDiff | None
     updated_at: datetime
+    # 文書の画面で本文を編集するときの元の内容・バージョン・表示した場所で修正できる項目（編集できない文書は `None`）
+    edit: DocumentEdit | None = None
 
 
 class ScreenSearchItem(ApiModel):

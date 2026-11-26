@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 
 from dev_docs.features.view.document import get_document, not_found_fields
+from dev_docs.features.view.edit import PreviewRequest, PreviewResponse, preview_document
 from dev_docs.features.view.search import (
     SEARCH_LIMIT_DEFAULT,
     SEARCH_LIMIT_MAX,
@@ -71,6 +72,23 @@ def build_view_router(handlers: Handlers) -> APIRouter:
         source: str, path: str, ref: str | None = None, diff: str | None = None
     ) -> Response | DocumentResponse:
         return await document(source, path, ref, diff)
+
+    @router.post(
+        "/_api/sources/{source}/preview",
+        name="post_preview",
+        response_model=PreviewResponse,
+    )
+    async def preview(source: str, body: PreviewRequest) -> Response | PreviewResponse:
+        """書き換えた YAML を変換し、見つからなかったときは何が無いかを追加した 404 にする。"""
+        try:
+            return await preview_document(source, body, handlers=handlers)
+        except ProjectIndexUnreachableError:
+            raise
+        except DevDocsError as error:
+            fields = not_found_fields(error, body.path, source_id=source)
+            if fields is None:
+                raise
+            return problem_of(error, fields)
 
     @router.get("/_api/sources/{source}/search", name="search_page")
     async def search(

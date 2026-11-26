@@ -14,6 +14,7 @@ from dev_docs.features.convert.embed import embed_paths
 from dev_docs.features.convert.types import ConvertFailure
 from dev_docs.features.documents.aliases import collect_aliases
 from dev_docs.features.view.document_lists import CachedDocumentList, resolve_commit
+from dev_docs.features.view.edit import DocumentEdit, build_document_edit
 from dev_docs.features.view.nav import build_nav, first_page, mark_nav_changes
 from dev_docs.features.view.paths import find_page, page_path
 from dev_docs.features.view.types import (
@@ -32,6 +33,7 @@ from dev_docs.integrations.project_index.types import (
     IndexedDocument,
     IndexFailure,
     RefList,
+    SettingsSourcesView,
     SourceView,
     parse_document_list,
 )
@@ -199,6 +201,16 @@ async def _embedded(
     return dict(zip(paths, values, strict=True))
 
 
+async def _settings_if_default(
+    handlers: Handlers, ref: str | None, refs: Awaitable[RefList]
+) -> SettingsSourcesView | None:
+    """既定のブランチを指した要求だけ、端末の設定の配信元の行を問い合わせる（それ以外は `None`）。"""
+    resolved = await refs
+    if ref is not None and ref != resolved.default_ref:
+        return None
+    return await handlers.project_index.settings_sources()
+
+
 def _conversion_error(failure: IndexFailure | ConvertFailure) -> ConversionError:
     """失敗を応答の `conversionError` にする。"""
     return ConversionError(
@@ -259,11 +271,15 @@ async def _get_document(
             listed_task = group.create_task(
                 _document_list(handlers, source_id, ref, refs_task, view_task)
             )
+            settings_task = group.create_task(_settings_if_default(handlers, ref, refs_task))
     except ExceptionGroup as group_error:
         # 呼び出し元へは最初の例外（UnknownSourceError など）をそのまま伝える
         raise group_error.exceptions[0] from None
     view = view_task.result()
     listed = listed_task.result()
+    settings = settings_task.result()
+    # 本文を編集できる要求: 文書を既定のブランチの先頭のコミットで取得し、その内容を編集の元にする
+    edit_commit = resolve_commit(refs_task.result(), None) if settings is not None else None
     response_ref = (ref if ref is not None else view.default_ref) if view.git else None
     tabs = build_nav(view, listed.documents)
     columns = await asyncio.to_thread(handlers.columns.get, view.id)
@@ -326,23 +342,26 @@ async def _get_document(
     detail_task = client.document(
         view.id,
         document.path,
-        ref=ref,
+        ref=edit_commit if edit_commit is not None else ref,
         document_id=document.id if document.record_index is not None else None,
     )
     if view.decision_folders:
         detail, decisions = await asyncio.gather(detail_task, client.decisions(view.id))
     else:
         detail, decisions = await detail_task, DecisionIndex(counts={})
+    item_ranges: list[tuple[str, str]] = []
     rendered = await asyncio.to_thread(
         handlers.converter.render,
         view,
         detail,
         listed.documents,
         linkable=decisions.linkable,
+        item_ranges=item_ranges,
     )
     markdown: str | None = None
     table_keys: list[str] = []
     conversion_error: ConversionError | None = None
+    edit: DocumentEdit | None = None
     if isinstance(rendered, ConvertFailure):
         conversion_error = _conversion_error(rendered)
     else:
@@ -350,6 +369,21 @@ async def _get_document(
         converted = handlers.converter.finish(rendered, document.kind, embedded)
         markdown = converted.markdown
         table_keys = list(converted.table_keys)
+        # 本文を編集できる要求: 項目の範囲も本文と同じく仕上げて、編集の情報を組み立てる
+        if settings is not None and edit_commit is not None:
+            finished = [
+                (item, handlers.converter.finish(text, document.kind, embedded).markdown.strip())
+                for item, text in item_ranges
+            ]
+            edit = build_document_edit(
+                view,
+                config_task.result().value,
+                detail,
+                write_api_kinds=settings.write_api_kinds.get(view.id, []),
+                base_commit=edit_commit,
+                version=document.version,
+                item_ranges=finished,
+            )
 
     # diff が指定された Git の配信元は、差分の結果とサイドバーの変化を求める
     diff: DocumentDiff | None = None
@@ -371,6 +405,7 @@ async def _get_document(
         aliases=[] if conversion_error is not None else _aliases(view, listed.documents),
         diff=diff,
         updated_at=_updated_at(view, detail.document or document),
+        edit=edit,
     )
 
 

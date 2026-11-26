@@ -11,7 +11,9 @@ from typing import Any, ClassVar, Literal
 
 from pydantic import Field, model_validator
 
+from dev_docs.features.convert.service import ConvertService
 from dev_docs.features.metadata.metadata import key_mapping
+from dev_docs.features.view.edit import WHOLE_FILE_PATH, body_item_paths
 from dev_docs.integrations.project_index.client import ProjectIndexClient
 from dev_docs.shared.api_model import ApiModel
 from dev_docs.shared.errors import (
@@ -20,9 +22,9 @@ from dev_docs.shared.errors import (
     ProjectIndexTimeoutError,
     RefNotFoundError,
 )
+from dev_docs.shared.yaml_io import YamlLoadError, load_yaml
 
 __all__ = [
-    "EDITABLE_COLUMNS",
     "CommitRequest",
     "CommitResult",
     "ConflictReason",
@@ -39,13 +41,6 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-EDITABLE_COLUMNS: Mapping[str, frozenset[str]] = {
-    "terms": frozenset({"name", "aliases", "description"}),
-    "aliases": frozenset({"name", "aliases"}),
-    "tags": frozenset({"tags"}),
-    "rules": frozenset({"rule", "paths", "tools"}),
-    "files": frozenset({"description"}),
-}
 # 行の追加・削除を受ける種類
 ROW_KINDS = frozenset({"terms", "rules"})
 HTTP_OK = 200
@@ -64,7 +59,14 @@ BASE_COMMIT_UNUSABLE = "BaseCommitUnusableError"
 PR_URL_PREFIX = "https://"
 NEXT_STEP_RELOAD = "メタデータを再読み込みし、変更が反映されたかを確認してください。"
 
-EditKind = Literal["terms", "aliases", "tags", "rules", "files"]
+EditKind = Literal["terms", "aliases", "tags", "rules", "files", "body"]
+# 文書の本文の変更の種類
+BODY_KIND = "body"
+# Markdown の本文のファイルの拡張子と、書き込みの API で本文を置き換えるキー
+MARKDOWN_SUFFIX = ".md"
+BODY_SET_KEY = "@body"
+# 項目のパスの最上位のキー（`#items[i1].body` は `items`、`summary` は `summary`）
+_TOP_KEY = re.compile(r"^#?([^.\[]+)")
 OperationKind = Literal["write", "delete"]
 # 違反の `path` の先頭の、書き込み・削除の 1 件を指す部分
 _OPERATION_PATH = re.compile(r"^(writes|deletes)\[(\d+)\]\.?(.*)$")
@@ -83,7 +85,8 @@ class Edit(ApiModel):
     expected_version: str | None = None
     # `update` で必須（編集を始めたときの項目ごとのバージョンを取得する文書のパス）
     doc_path: str | None = None
-    values: dict[str, str | list[str]] = Field(default_factory=dict)
+    # 変更後の値（`body` はキーが項目のパスか `@file`。表の項目は行ごとの列の値）
+    values: dict[str, str | list[str] | list[dict[str, str]]] = Field(default_factory=dict)
 
 
 class CommitRequest(ApiModel):
@@ -97,10 +100,21 @@ class CommitRequest(ApiModel):
 
     @model_validator(mode="after")
     def _check(self) -> CommitRequest:
-        """`key` の重複・`op` と `kind`・必須・`message` を検証する。"""
+        """`key` の重複・`op` と `kind`・必須・`message`・ファイル全体とほかの本文の変更の並びを検証する。"""
         keys = [edit.key for edit in self.edits]
         if len(keys) != len(set(keys)):
             raise ValueError("edits[].key が重複しています")
+        # ファイル全体の変更と項目のパスの変更は、同じ文書では書き込みが重なるため並べられない
+        whole = {
+            e.doc_id for e in self.edits if e.kind == BODY_KIND and WHOLE_FILE_PATH in e.values
+        }
+        for edit in self.edits:
+            if (
+                edit.kind == BODY_KIND
+                and edit.doc_id in whole
+                and WHOLE_FILE_PATH not in edit.values
+            ):
+                raise ValueError(f"{edit.key}: 同じ文書の @file とほかの本文の変更は並べられません")
         for edit in self.edits:
             # 行の追加・削除は用語集と索引だけ
             if edit.op != "update" and edit.kind not in ROW_KINDS:
@@ -242,6 +256,11 @@ def to_operations(
             indexes.append(("delete", len(deletes), edit.key))
             deletes.append({"id": edit.doc_id, "expectedVersion": edit.expected_version})
             continue
+        # 文書の本文の変更: 項目のパスへの set か、ファイル全体の置き換え
+        if edit.kind == BODY_KIND:
+            indexes.append(("write", len(writes), edit.key))
+            writes.append(_body_operation(edit, expected_versions.get(edit.key)))
+            continue
         values = _checked_values(edit, mappings.get(edit.doc_kind))
         indexes.append(("write", len(writes), edit.key))
         if edit.op == "update":
@@ -261,6 +280,38 @@ def to_operations(
     return writes, deletes, indexes
 
 
+def _body_operation(edit: Edit, expected: Mapping[str, str] | str | None) -> dict[str, Any]:
+    """文書の本文の変更を、書き込みの API の 1 件の操作にする。"""
+    version = _expected_version(expected)
+    whole = edit.values.get(WHOLE_FILE_PATH)
+    # 項目のパスの変更: 項目のパスのキーのまま set に入れる
+    if whole is None:
+        return {
+            "op": "update",
+            "id": edit.doc_id,
+            "expected_version": version,
+            "set": dict(edit.values),
+        }
+    # Markdown の本文のファイルの文書: 本文を置き換える
+    if str(edit.doc_path or "").lower().endswith(MARKDOWN_SUFFIX):
+        return {
+            "op": "update",
+            "id": edit.doc_id,
+            "expected_version": version,
+            "set": {BODY_SET_KEY: whole},
+        }
+    # YAML の文書: 書き換えた YAML を読み込んだ値で文書を置き換える
+    try:
+        data = load_yaml(str(whole), file=edit.doc_path)
+    except YamlLoadError as error:
+        raise EditsRejectedError(
+            message="ファイル全体の内容を YAML として読み込めません",
+            status_code=HTTP_BAD_REQUEST,
+            errors=[EditError(key=edit.key, path=WHOLE_FILE_PATH, reason=str(error))],
+        ) from error
+    return {"op": "replace", "id": edit.doc_id, "expected_version": version, "data": data}
+
+
 def _expected_version(value: Mapping[str, str] | str | None) -> dict[str, str] | str:
     """書き込みの操作の `expected_version`（辞書は複製し、文書の全体のバージョンはそのまま）。"""
     if isinstance(value, str):
@@ -268,17 +319,40 @@ def _expected_version(value: Mapping[str, str] | str | None) -> dict[str, str] |
     return dict(value or {})
 
 
-def _check_columns(edits: list[Edit]) -> None:
-    """種類ごとに修正できる列だけかを確認する。"""
+async def _check_body_paths(
+    client: ProjectIndexClient, source_id: str, request: CommitRequest, convert: ConvertService
+) -> None:
+    """本文の変更のキーが、編集を始めたときの文書で修正できる項目のパスかを確認する。"""
+    bodies = [edit for edit in request.edits if edit.kind == BODY_KIND]
+    targets = {(str(edit.doc_path), edit.doc_id) for edit in bodies}
+    allowed = dict(
+        zip(
+            targets,
+            await asyncio.gather(
+                *(
+                    body_item_paths(
+                        client,
+                        source_id,
+                        doc_path,
+                        doc_id,
+                        base_commit=request.base_commit,
+                        convert=convert,
+                    )
+                    for doc_path, doc_id in targets
+                )
+            ),
+            strict=True,
+        )
+    )
     errors = [
-        EditError(key=edit.key, path=column, reason="この列は修正できません")
-        for edit in edits
-        for column in edit.values
-        if column not in EDITABLE_COLUMNS[edit.kind]
+        EditError(key=edit.key, path=path, reason="この項目は修正できません")
+        for edit in bodies
+        for path in edit.values
+        if path not in allowed[(str(edit.doc_path), edit.doc_id)]
     ]
     if errors:
         raise EditsRejectedError(
-            message="修正できない列があります", status_code=HTTP_BAD_REQUEST, errors=errors
+            message="修正できない項目があります", status_code=HTTP_BAD_REQUEST, errors=errors
         )
 
 
@@ -376,7 +450,12 @@ async def item_expected_versions(
     修正したキーのどれかが編集を始めたときの文書に無い変更は、文書の全体のバージョンにする
     （空の辞書は project-index の照合で常に一致し、ほかの変更が同じ項目を加えても衝突にならないため）。
     """
-    updates = [edit for edit in request.edits if edit.op == "update"]
+    # ファイル全体の変更は文書の全体のバージョンで照合するため、項目ごとのバージョンを取得しない
+    updates = [
+        edit
+        for edit in request.edits
+        if edit.op == "update" and not (edit.kind == BODY_KIND and WHOLE_FILE_PATH in edit.values)
+    ]
 
     async def fetch(edit: Edit) -> dict[str, str] | None:
         """編集を始めたときの文書の `itemVersions`。文書が無ければ None。"""
@@ -400,7 +479,11 @@ async def item_expected_versions(
                 problem_title=BASE_COMMIT_UNUSABLE,
             ) from first
         raise first from None
-    result: dict[str, dict[str, str] | str] = {}
+    result: dict[str, dict[str, str] | str] = {
+        edit.key: str(edit.expected_version)
+        for edit in request.edits
+        if edit.kind == BODY_KIND and WHOLE_FILE_PATH in edit.values
+    }
     missing: list[EditError] = []
     for edit, task in zip(updates, tasks, strict=True):
         versions = task.result()
@@ -408,12 +491,7 @@ async def item_expected_versions(
         if versions is None:
             missing.append(EditError(key=edit.key, reason="編集を始めたときの文書がありません"))
             continue
-        metadata = mappings.get(edit.doc_kind)
-        keys = {
-            mapping.key
-            for column in edit.values
-            if (mapping := key_mapping(metadata, column)) is not None
-        }
+        keys = _top_keys(edit, mappings.get(edit.doc_kind))
         # 編集を始めたときの文書に無い項目を加える: 文書の全体のバージョンで照合する
         if not keys <= versions.keys():
             result[edit.key] = str(edit.expected_version)
@@ -426,6 +504,17 @@ async def item_expected_versions(
             errors=missing,
         )
     return result
+
+
+def _top_keys(edit: Edit, metadata: Mapping[str, str] | None) -> set[str]:
+    """変更が修正する文書の最上位のキーを求める（本文の変更は項目のパスの先頭）。"""
+    if edit.kind == BODY_KIND:
+        return {matched.group(1) for path in edit.values if (matched := _TOP_KEY.match(path))}
+    return {
+        mapping.key
+        for column in edit.values
+        if (mapping := key_mapping(metadata, column)) is not None
+    }
 
 
 def _pr_url(stdout: str) -> str | None:
@@ -483,11 +572,15 @@ def to_conflict(
 
 
 async def commit_edits(
-    client: ProjectIndexClient, source_id: str, request: CommitRequest
+    client: ProjectIndexClient,
+    source_id: str,
+    request: CommitRequest,
+    *,
+    convert: ConvertService,
 ) -> CommitResult:
     """変更を検証・変換して書き込みの API へ 1 回送信し、結果か変更ごとの理由を返却する。"""
-    # 1. 種類ごとに修正できる列だけか
-    _check_columns(request.edits)
+    # 1. 本文の変更は修正できる項目のパスか（メタデータの列は書き込みと削除への変換で確認する）
+    await _check_body_paths(client, source_id, request, convert)
     # 2. 列と文書のキーの対応（元のキーへ戻せる列かの確認に使用する）
     config = await client.source_config(source_id)
     mappings = {
