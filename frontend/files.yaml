@@ -1224,9 +1224,9 @@ files:
   related:
   - to: frontend/src/features/metadata/metadata/metadata-screen.tsx
     type: see_also
-- path: src/features/metadata/shared/pending-edits-store.ts
+- path: src/shared/stores/pending-edits-store.ts
   name: '編集中の変更のストア'
-  description: '配信元ごとの編集中の変更をブラウザのタブに保つストアを受け持ち、メタデータの画面の pending-edits-store.ts を修正するときに参照する。'
+  description: '配信元ごとの編集中の変更（メタデータの行と文書の本文）をブラウザのタブに保つストアを受け持ち、共通の pending-edits-store.ts を修正するときに参照する。'
   tags:
   - topic:メタデータ
   - topic:ストア
@@ -1234,9 +1234,9 @@ files:
   related:
   - to: MOD-155-221
     type: implements
-- path: src/features/metadata/metadata/queries.ts
+- path: src/shared/components/pending-panel/queries.ts
   name: '編集中の変更の直コミットの mutation'
-  description: 'メタデータの取得の問い合わせと直コミットの mutation を受け持ち、メタデータの画面の queries.ts を修正するときに参照する。'
+  description: '編集中の変更の直コミットの mutation と、最新の内容で続けるを受け持ち、共通の pending-panel の queries.ts を修正するときに参照する。'
   tags:
   - topic:メタデータ
   - tool:tanstack-query
@@ -1254,15 +1254,25 @@ files:
   related:
   - to: MOD-155-223
     type: implements
-- path: src/features/metadata/metadata/pending-panel.tsx
+- path: src/shared/components/pending-panel/pending-panel.tsx
   name: '編集中のパネル'
-  description: '編集中のパネルとコミットの確認のダイアログを受け持ち、メタデータの画面の pending-panel.tsx を修正するときに参照する。'
+  description: '文書の画面とメタデータの画面に共通の編集中のパネルとコミットの確認のダイアログを受け持ち、共通の pending-panel.tsx を修正するときに参照する。'
   tags:
   - topic:メタデータ
   - topic:直コミット
   - topic:パネル
   related:
   - to: MOD-155-224
+    type: implements
+- path: src/shared/components/pending-panel/pending-panel.stories.tsx
+  name: '編集中のパネルのストーリー'
+  description: '編集中のパネルの状態ごとのストーリーを受け持ち、編集中のパネルの見た目を確認するときに参照する。'
+  tags:
+  - topic:直コミット
+  - topic:パネル
+  - tool:storybook
+  related:
+  - to: CMP-155-4
     type: implements
 - path: src/routes/$source/[_]metadata.tsx
   name: '`/{配信元の ID}/_metadata` のルート'
@@ -1281,6 +1291,9 @@ files:
   - topic:文書
   - topic:本文
   - action:編集
+  related:
+  - to: MOD-155-230
+    type: implements
 - path: src/features/docs/doc-view/components/doc-edit-bar.tsx
   name: 文書のヘッダーの編集のボタンと編集の方式の切り替え
   description: 文書のヘッダーの編集のボタンと、表示した場所での修正・ファイル全体の編集の切り替えを受け持ち、文書の画面の編集の開始と終了を修正するときに参照する。
@@ -1288,6 +1301,9 @@ files:
   - topic:文書
   - topic:画面
   - action:編集
+  related:
+  - to: MOD-155-231
+    type: implements
 - path: src/features/docs/doc-view/components/doc-field-editor.tsx
   name: YAML の文書の本文の項目ごとの修正
   description: YAML の文書の本文を項目ごとにスキーマの型から選んだ部品で修正する表示を受け持ち、表示した場所での修正を修正するときに参照する。
@@ -1295,6 +1311,9 @@ files:
   - topic:文書
   - topic:スキーマ
   - action:編集
+  related:
+  - to: MOD-155-232
+    type: implements
 - path: src/features/docs/doc-view/components/markdown-field-panel.tsx
   name: Markdown の文字列の項目を編集する画面の横のパネル
   description: Markdown の文字列の項目をエディタとプレビューで編集する画面の横のパネルを受け持ち、Markdown の項目の編集を修正するときに参照する。
@@ -1302,12 +1321,18 @@ files:
   - topic:パネル
   - topic:markdown
   - action:編集
+  related:
+  - to: MOD-155-233
+    type: implements
 - path: src/features/docs/doc-view/components/markdown-preview.tsx
   name: 編集中の Markdown のプレビュー
   description: 編集中の Markdown を mdmark で描くプレビューを受け持ち、編集のプレビューを修正するときに参照する。
   tags:
   - topic:プレビュー
   - tool:mdmark
+  related:
+  - to: MOD-155-234
+    type: implements
 - path: src/features/docs/doc-view/components/whole-file-editor.tsx
   name: 文書のファイル全体の編集
   description: 元のファイルをエディタで書き換えてプレビューと並べる表示を受け持ち、ファイル全体の編集を修正するときに参照する。
@@ -1315,6 +1340,9 @@ files:
   - topic:文書
   - topic:ファイル
   - action:編集
+  related:
+  - to: MOD-155-235
+    type: implements
 checkpoint:
   commit: 05915628138ff51e7b1be495775c9f556a2a0825
   reviewed: []
