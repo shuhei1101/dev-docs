@@ -42,6 +42,7 @@ test("test_use_missing_view", async () => {
   await waitFor(() => expect(view.current.refs).toBeDefined());
   expect(view.current.source).toBe("s");
   expect(view.current.missing.kind).toBe("doc");
+  expect(view.current.unserved).toEqual([]);
   expect(refs).toHaveBeenCalled();
 });
 

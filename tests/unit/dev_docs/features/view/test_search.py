@@ -103,3 +103,32 @@ def test_screen_search_when_excluded(
     assert included.items[0].excluded is True
     assert included.excluded_count == 0
     assert default.excluded_count == 1
+
+
+def test_screen_search_when_match_count(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """一致した行の数（正常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json(
+        "sample", documents=[{"id": "rules", "paths": ["docs/*.yaml"], "schema": {}}]
+    )
+    fake_index.docs["sample"] = {None: [doc_json("a", "docs/a.yaml"), doc_json("b", "docs/b.yaml")]}
+    fake_index.search_results = {
+        "totalCount": 2,
+        "items": [
+            {
+                "path": "docs/a",
+                "id": "a",
+                "filePath": "docs/a.yaml",
+                "name": "A",
+                "snippets": [],
+                "matchCount": 4,
+            },
+            {"path": "docs/b", "id": "b", "filePath": "docs/b.yaml", "name": "B", "snippets": []},
+        ],
+    }
+    # 実行
+    result = asyncio.run(screen_search(make_client(), "sample", "foo", ref=None, limit=20))
+    # 検証
+    assert [item.match_count for item in result.items] == [4, None]

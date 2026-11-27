@@ -754,3 +754,24 @@ def test_search_when_excluded(
     assert included_params["include_excluded"] == "true"
     assert included_hits.excluded_count == 0
     assert included_hits.items[0].excluded is True
+
+
+def test_search_when_match_count(
+    fake_index: FakeIndex, make_client: Callable[..., ProjectIndexClient]
+) -> None:
+    """一致した行の数（正常系）。"""
+    # 準備
+    fake_index.configs["sample"] = config_json()
+    item = {"path": "docs/a", "id": "a", "filePath": "docs/a.yaml", "name": "A", "snippets": []}
+    fake_index.search_results = {
+        "totalCount": 3,
+        "items": [
+            item | {"matchCount": 4},
+            item | {"id": "b", "filePath": "docs/b.yaml"},
+            item | {"id": "c", "filePath": "docs/c.yaml", "matchCount": True},
+        ],
+    }
+    # 実行
+    hits = asyncio.run(make_client().search("sample", "a", limit=5))
+    # 検証
+    assert [hit.match_count for hit in hits.items] == [4, None, None]
