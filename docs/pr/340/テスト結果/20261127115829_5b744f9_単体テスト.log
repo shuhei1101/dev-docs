@@ -1,0 +1,24 @@
+# 単体テスト（Red）: テストコードの末尾の commit 5b744f9
+
+## 単体テスト（バック）
+$ gh workflow run test.yml --ref fix/doc-view/search-dialog-and-layout -f layer=backend-unit  # run 45931210676
+2026-11-27T02:56:21.5007106Z tests/unit/dev_docs/integrations/project_index/test_client.py::test_search_when_match_count FAILED [ 71%]
+2026-11-27T02:56:25.4374509Z FAILED tests/unit/dev_docs/features/view/test_search.py::test_screen_search_when_match_count - AttributeError: 'ScreenSearchItem' object has no attribute 'match_count'
+2026-11-27T02:56:25.4376256Z FAILED tests/unit/dev_docs/integrations/project_index/test_client.py::test_search_when_match_count - AttributeError: 'SearchHit' object has no attribute 'match_count'
+2026-11-27T02:56:25.4377227Z ======================== 2 failed, 655 passed in 7.50s =========================
+
+fail は 2 件とも match_count の実装が無いことによる（SearchHit・ScreenSearchItem に属性が無い）
+
+## 単体テスト（フロント）
+$ gh workflow run test.yml --ref fix/doc-view/search-dialog-and-layout -f layer=frontend-unit  # run 45931213466
+2026-11-27T02:58:00.0339617Z  Test Files  67 passed (67)
+
+実装の前から pass したテストと、振る舞いを持つ作業ブランチのコード（テストコードより前の commit）:
+- search-dialog.test.tsx の test_search_dialog（onResultSelect の配信元）・when_only_excluded・when_include_excluded（文言）・when_all_sources・when_over_limit: search-dialog.tsx の SearchDialog（d1acfea・e4237bd）
+- search-dialog.test.tsx の when_sorted・when_pending_source・when_source_failed: search-dialog.tsx の byMatches・summarize の waiting と failures（9307baa・e4237bd）
+- serving-sources.test.ts の test_unserved_sources・when_undefined: serving-sources.ts の unservedSources（e4237bd）
+- use-doc-navigation.test.tsx の when_search_result_in_other_source: use-doc-navigation.ts の openSearchResult（d1acfea）
+- use-missing-view.test.tsx の unserved・not-found-screen.test.tsx の when_search_other_source: use-missing-view.ts・not-found-screen.tsx（e4237bd）
+- doc-sidebar.test.tsx の when_long_name: doc-sidebar.tsx の truncate と title（d1acfea）
+- doc-view-screen.test.tsx の when_layout: doc-view-screen.tsx の h-dvh と #doc-scroll（d1acfea）
+いずれもモック作成でストーリーとして合意した部品・画面の実装で、作業ブランチに既にある
