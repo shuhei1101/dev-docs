@@ -23,7 +23,7 @@ export const NotFoundScreen = ({ data }: Props) => {
   const [dialog, setDialog] = useState<"search" | "help" | null>(null);
   const { colorScheme, singleKeyShortcuts, setColorScheme } =
     usePreferencesStore();
-  const { source, urlSource, rev, refs, missing, serving } =
+  const { source, urlSource, rev, refs, missing, serving, unserved } =
     useMissingView(data);
 
   useEffect(() => {
@@ -82,11 +82,13 @@ export const NotFoundScreen = ({ data }: Props) => {
           onOpenChange={(open) => setDialog(open ? "search" : null)}
           source={source}
           ref={missing.kind === "ref" ? undefined : rev}
-          onResultSelect={(path) =>
+          sources={serving.map((item) => item.id)}
+          unavailable={unserved}
+          onResultSelect={(path, resultSource) =>
             void navigate({
               to: "/$source/$",
-              params: { source, _splat: path },
-              search: { rev: rev },
+              params: { source: resultSource, _splat: path },
+              search: { rev: resultSource === source ? rev : undefined },
             })
           }
         />

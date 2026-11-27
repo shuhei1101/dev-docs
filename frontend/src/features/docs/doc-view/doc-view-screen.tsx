@@ -25,7 +25,10 @@ import {
   useCommentStore,
 } from "@/features/docs/shared/comments/comment-store";
 import { SearchDialog } from "@/features/docs/shared/search-dialog/search-dialog";
-import { servingSources } from "@/features/docs/shared/serving-sources";
+import {
+  servingSources,
+  unservedSources,
+} from "@/features/docs/shared/serving-sources";
 import { PendingPanel } from "@/shared/components/pending-panel/pending-panel";
 import { type PendingEdit, usePendingEdits } from "@/shared/stores/pending-edits-store";
 import type { EditBlock, NavTab } from "@/shared/api/generated/model";
@@ -140,7 +143,7 @@ export const DocViewScreen = () => {
   );
 
   return (
-    <div className="min-h-screen">
+    <div className="flex h-dvh flex-col overflow-hidden">
       <SkipLink />
       <Topbar
         screen="doc-view"
@@ -160,7 +163,7 @@ export const DocViewScreen = () => {
         onSidebarOpen={() => open("drawer")}
         onColorSchemeToggle={() => setColorScheme(NEXT_SCHEME[colorScheme])}
       />
-      <div className="sticky top-12 z-20 bg-background px-3">
+      <div className="shrink-0 bg-background px-3">
         <DocTabs
           tabs={doc.tabs}
           currentIndex={Math.max(0, doc.tabs.indexOf(active.tab))}
@@ -169,13 +172,13 @@ export const DocViewScreen = () => {
           onEmptyTab={(tab) => setEmpty({ tab, path: doc.path })}
         />
       </div>
-      <div className="flex px-4">
+      <div className="flex min-h-0 flex-1 px-4">
         {sidebarOpen ? (
           <>
             <div
               id="doc-sidebar"
               style={{ width: sidebarWidth }}
-              className="sticky top-24 hidden max-h-screen shrink-0 self-start overflow-y-auto py-2 md:block"
+              className="hidden shrink-0 overflow-y-auto py-2 md:block"
             >
               <div className="flex justify-end">
                 <SidebarToggle open onOpenChange={setSidebarOpen} />
@@ -190,27 +193,29 @@ export const DocViewScreen = () => {
             </div>
           </>
         ) : (
-          <div className="sticky top-24 mr-3 hidden shrink-0 self-start py-2 md:block">
+          <div className="mr-3 hidden shrink-0 py-2 md:block">
             <SidebarToggle open={false} onOpenChange={setSidebarOpen} />
           </div>
         )}
-        <DocMain
-          doc={doc}
-          active={active}
-          search={search}
-          refs={refs}
-          emptyTab={emptyTab}
-          busy={query.isFetching}
-          onCommentSaved={() => open("comments")}
-          locating={place.locating}
-          baseMarkdown={base}
-          onLocated={place.onLocated}
-          onRetry={() => void query.refetch()}
-          onCompare={nav.compare}
-          onClearDiff={nav.clearDiff}
-          onEditModeChange={setEditMode}
-          onMarkdownFieldOpen={setMarkdownField}
-        />
+        <div id="doc-scroll" className="min-w-0 flex-1 overflow-y-auto">
+          <DocMain
+            doc={doc}
+            active={active}
+            search={search}
+            refs={refs}
+            emptyTab={emptyTab}
+            busy={query.isFetching}
+            onCommentSaved={() => open("comments")}
+            locating={place.locating}
+            baseMarkdown={base}
+            onLocated={place.onLocated}
+            onRetry={() => void query.refetch()}
+            onCompare={nav.compare}
+            onClearDiff={nav.clearDiff}
+            onEditModeChange={setEditMode}
+            onMarkdownFieldOpen={setMarkdownField}
+          />
+        </div>
       </div>
       <SidebarDrawer
         open={panels.drawer}
@@ -223,7 +228,9 @@ export const DocViewScreen = () => {
         onOpenChange={(value) => open("search", value)}
         source={source}
         ref={doc.ref ?? undefined}
-        onResultSelect={nav.openDoc}
+        sources={servingSources(settings).map((item) => item.id)}
+        unavailable={unservedSources(settings)}
+        onResultSelect={nav.openSearchResult}
       />
       <ShortcutDialog
         open={panels.help}

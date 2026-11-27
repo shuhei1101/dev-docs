@@ -1,4 +1,5 @@
 import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { expect, test, vi } from "vitest";
 
@@ -43,4 +44,30 @@ test("test_not_found_screen_when_source_missing", async () => {
   expect(await screen.findByRole("heading", { name: "配信元 unknown はありません" })).toBeInTheDocument();
   await waitFor(() => expect(screen.getByRole("list", { name: "配信中の配信元" })).toBeInTheDocument());
   expect(refs).not.toHaveBeenCalled();
+});
+
+test("test_not_found_screen_when_search_other_source", async () => {
+  useHandlers();
+  server.use(
+    http.get("/_api/sources/:source/search", ({ params }) =>
+      HttpResponse.json(
+        params.source === "t"
+          ? { totalCount: 1, items: [{ path: "c.md", name: "文書 C", snippets: [] }] }
+          : { totalCount: 0, items: [] },
+      ),
+    ),
+  );
+  const { router } = renderInRouter(
+    <NotFoundScreen data={{ missing: "doc", value: "x.md" }} />,
+    "/s/x.md?rev=v1",
+  );
+  await screen.findByRole("heading", { name: "文書が見つかりません" });
+
+  await userEvent.keyboard("{Control>}k{/Control}");
+  await userEvent.type(await screen.findByRole("combobox"), "foo");
+  await userEvent.click(screen.getByRole("radio", { name: "全ての配信元" }));
+  await userEvent.click(await screen.findByRole("option", { name: /文書 C/ }));
+
+  await waitFor(() => expect(router.state.location.pathname).toBe("/t/c.md"));
+  expect(router.state.location.search).toEqual({});
 });

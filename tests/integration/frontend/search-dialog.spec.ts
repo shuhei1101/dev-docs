@@ -19,7 +19,7 @@ test.describe("Empty", () => {
 });
 
 test.describe("Results", () => {
-  // 2 件に一致し、1 件目を選んだ状態。一致した単語を強調する（正常系）
+  // 2 件に一致し、1 件目を選んだ状態。区切り線の行に名前・一致 N 行・パス・一致した箇所を出し、一致した単語を強調する（正常系）
   test("results", async ({ page }) => {
     await openStory(page, "docs-searchdialog--results");
     const status = dialog(page).getByRole("status");
@@ -28,6 +28,8 @@ test.describe("Results", () => {
     await expect(options).toHaveCount(2);
     await expect(options.first()).toHaveAttribute("aria-selected", "true");
     await expect(options.first().locator("mark")).toHaveText("ページング");
+    await expect(options.first()).toContainText("一致 9 行");
+    await expect(options.first()).toContainText("docs/design/paging");
     expect(await axeViolations(page)).toEqual([]);
   });
 
@@ -93,7 +95,7 @@ test.describe("ExcludedCount", () => {
     );
     await expect(dialog(page).getByRole("option")).toHaveCount(2);
     await expect(
-      dialog(page).getByRole("switch", { name: "検索から除外した文書も含める" }),
+      dialog(page).getByRole("switch", { name: "配信元の設定で検索から除外した文書も含める" }),
     ).toHaveAttribute("aria-checked", "false");
     expect(await axeViolations(page)).toEqual([]);
   });
@@ -105,7 +107,7 @@ test.describe("IncludeExcluded", () => {
     await openStory(page, "docs-searchdialog--include-excluded");
     const options = dialog(page).getByRole("option");
     await expect(
-      dialog(page).getByRole("switch", { name: "検索から除外した文書も含める" }),
+      dialog(page).getByRole("switch", { name: "配信元の設定で検索から除外した文書も含める" }),
     ).toHaveAttribute("aria-checked", "true");
     await expect(options).toHaveCount(3);
     await expect(dialog(page).getByRole("status")).toHaveText("3 件（リビジョン develop）");
@@ -117,7 +119,7 @@ test.describe("IncludeExcluded", () => {
   // スイッチは Tab で移り、Space で切り替える（正常系）
   test("include_excluded_keyboard", async ({ page }) => {
     await openStory(page, "docs-searchdialog--excluded-count");
-    const toggle = dialog(page).getByRole("switch", { name: "検索から除外した文書も含める" });
+    const toggle = dialog(page).getByRole("switch", { name: "配信元の設定で検索から除外した文書も含める" });
     await toggle.focus();
     await page.keyboard.press("Space");
     await expect(toggle).toHaveAttribute("aria-checked", "true");
@@ -129,9 +131,159 @@ test.describe("OnlyExcludedMatched", () => {
   test("only_excluded_matched", async ({ page }) => {
     await openStory(page, "docs-searchdialog--only-excluded-matched");
     await expect(dialog(page).getByRole("status")).toHaveText(
-      "該当する文書はありません。検索から除外した文書を含めると 1 件あります。",
+      "該当する文書はありません。配信元の設定で検索から除外した文書を含めると 1 件あります。",
     );
     await expect(dialog(page).getByRole("option")).toHaveCount(0);
     expect(await axeViolations(page)).toEqual([]);
+  });
+});
+
+test.describe("ProjectIndexUnreachable", () => {
+  // project-index につながらず 503 を返却し、detail（アドレスと理由）を件数の文言に出す（異常系）
+  test("project_index_unreachable", async ({ page }) => {
+    await openStory(page, "docs-searchdialog--project-index-unreachable");
+    await expect(dialog(page).getByRole("status")).toHaveText(
+      "project-index（http://127.0.0.1:8786）に接続できませんでした。接続を拒否されました（Connection refused）",
+    );
+    await expect(dialog(page).getByRole("option")).toHaveCount(0);
+  });
+});
+
+test.describe("ManyResults", () => {
+  // 一覧の高さを超える 30 件。一覧の中で縦にスクロールして 30 件目まで参照でき、一致した行の数の多い順に並ぶ（正常系）
+  test("many_results", async ({ page }) => {
+    await openStory(page, "docs-searchdialog--many-results");
+    await expect(dialog(page).getByRole("status")).toHaveText(
+      "30 件（リビジョン develop）",
+    );
+    const options = dialog(page).getByRole("option");
+    await expect(options).toHaveCount(30);
+    await expect(options.first()).toContainText("一致 42 行");
+    const list = dialog(page).locator("[cmdk-list]");
+    const scrollable = await list.evaluate(
+      (element) => element.scrollHeight > element.clientHeight,
+    );
+    expect(scrollable).toBe(true);
+    await options.last().scrollIntoViewIfNeeded();
+    await expect(options.last()).toBeInViewport();
+    const box = await dialog(page).boundingBox();
+    expect(box?.y ?? 0).toBeLessThan(100);
+  });
+});
+
+test.describe("SortedByName", () => {
+  // 並び順に「名前」を選ぶと、結果が名前の順に並ぶ（正常系）
+  test("sorted_by_name", async ({ page }) => {
+    await openStory(page, "docs-searchdialog--sorted-by-name");
+    await expect(
+      dialog(page).getByRole("radio", { name: "名前" }),
+    ).toBeChecked();
+    const names = await dialog(page)
+      .getByRole("option")
+      .evaluateAll((items) =>
+        items.map((item) => item.querySelector("span span")?.textContent ?? ""),
+      );
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, "ja")));
+  });
+
+  // 範囲と並び順の切り替えは矢印キーで選び直せる（正常系）
+  test("sorted_by_name_keyboard", async ({ page }) => {
+    await openStory(page, "docs-searchdialog--many-results");
+    await expect(dialog(page).getByRole("status")).toHaveText(
+      "30 件（リビジョン develop）",
+    );
+    const matches = dialog(page).getByRole("radio", { name: "一致した行の数" });
+    await matches.focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(
+      dialog(page).getByRole("radio", { name: "名前" }),
+    ).toBeChecked();
+  });
+});
+
+test.describe("WithoutMatchCount", () => {
+  // matchCount が null の結果は「一致 N 行」を出さず、名前の順に並ぶ（正常系）
+  test("without_match_count", async ({ page }) => {
+    await openStory(page, "docs-searchdialog--without-match-count");
+    await expect(dialog(page).getByRole("status")).toHaveText(
+      "2 件（リビジョン develop）",
+    );
+    const options = dialog(page).getByRole("option");
+    await expect(options.first()).toContainText("インデックス");
+    await expect(dialog(page).getByText(/一致 \d+ 行/)).toHaveCount(0);
+  });
+});
+
+test.describe("AllSources", () => {
+  // 全ての配信元を検索し、行に配信元の ID のバッジを出す。件数の文言にリビジョンを出さない（正常系）
+  test("all_sources", async ({ page }) => {
+    await openStory(page, "docs-searchdialog--all-sources");
+    await expect(
+      dialog(page).getByRole("radio", { name: "全ての配信元" }),
+    ).toBeChecked();
+    await expect(dialog(page).getByRole("status")).toHaveText("3 件");
+    await expect(
+      dialog(page).getByRole("option").filter({ hasText: "ページングのメモ" }),
+    ).toContainText("notes");
+    expect(await axeViolations(page)).toEqual([]);
+  });
+});
+
+test.describe("AllSourcesPartialFailure", () => {
+  // 配信していない配信元を「検索できなかった配信元」に理由つきで並べ、ほかの配信元の結果を出す（異常系）
+  test("all_sources_partial_failure", async ({ page }) => {
+    await openStory(page, "docs-searchdialog--all-sources-partial-failure");
+    const failures = dialog(page).getByRole("list", {
+      name: "検索できなかった配信元",
+    });
+    await expect(failures).toContainText("broken");
+    await expect(failures).toContainText(
+      "project-index が起動時の検証で除外しました。",
+    );
+    await expect(dialog(page).getByRole("option")).toHaveCount(3);
+  });
+});
+
+test.describe("AllSourcesPending", () => {
+  // 応答を待っている配信元があるとき、返却された結果を先に出し、件数の文言に検索中を続ける（正常系）
+  test("all_sources_pending", async ({ page }) => {
+    await openStory(page, "docs-searchdialog--all-sources-pending");
+    await expect(dialog(page).getByRole("status")).toHaveText(
+      "2 件・1 件の配信元を検索しています",
+    );
+    await expect(dialog(page).getByRole("option")).toHaveCount(2);
+  });
+});
+
+test.describe("AllSourcesSearchFailed", () => {
+  // 配信中の配信元の検索が 503 のとき、その配信元を detail つきで並べ、ほかの配信元の結果を出す（異常系）
+  test("all_sources_search_failed", async ({ page }) => {
+    await openStory(page, "docs-searchdialog--all-sources-search-failed");
+    const failures = dialog(page).getByRole("list", {
+      name: "検索できなかった配信元",
+    });
+    await expect(failures).toContainText("notes");
+    await expect(failures).toContainText("応答がありませんでした（45 秒）");
+    await expect(dialog(page).getByRole("status")).toHaveText("2 件");
+    await expect(dialog(page).getByRole("option")).toHaveCount(2);
+  });
+});
+
+test.describe("Mobile", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  // スマホの幅では画面いっぱいに開き、右上の閉じるボタンで閉じられる（正常系）
+  test("mobile_full_screen", async ({ page }) => {
+    await openStory(page, "docs-searchdialog--many-results");
+    // 開くときの拡大のアニメーションを終えた大きさで比べる
+    await expect
+      .poll(async () => (await dialog(page).boundingBox())?.width)
+      .toBe(390);
+    await expect
+      .poll(async () => (await dialog(page).boundingBox())?.height)
+      .toBe(844);
+    await expect(
+      dialog(page).getByRole("button", { name: "閉じる" }),
+    ).toBeVisible();
   });
 });

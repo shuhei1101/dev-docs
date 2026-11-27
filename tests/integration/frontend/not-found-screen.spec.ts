@@ -332,3 +332,44 @@ test.describe("ショートカットの一覧", () => {
     await expect(page.getByRole("dialog", { name: "キーボードのショートカット" })).toBeVisible();
   });
 });
+
+test.describe("検索のダイアログ", () => {
+  // 全ての配信元の検索で、配信していない配信元を理由つきで並べ、ほかの配信元の結果は rev を付けずにその配信元の文書を開く（正常系）
+  test("search_dialog_other_source", async ({ page }) => {
+    // 準備
+    const view = settingsView([
+      settingsSource("sample"),
+      settingsSource("notes"),
+      settingsSource("broken", {
+        status: "not_served",
+        errors: [{ path: "documents[0]", reason: "paths は必須です" }],
+      }),
+    ]);
+    await mockApi(page, {
+      document: missingDoc,
+      settings: () => ({ body: view }),
+      search: ({ source }) => ({
+        body:
+          source === "notes"
+            ? searchResult({
+                totalCount: 1,
+                items: [{ path: "notes/n-1", name: "メモ 1", snippets: [] }],
+              })
+            : searchResult({ totalCount: 0, items: [] }),
+      }),
+    });
+    await page.goto("/sample/docs/no-such?rev=v1");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    // 実行
+    await page.getByRole("button", { name: /^検索/ }).click();
+    const dialog = page.getByRole("dialog", { name: "文書を検索" });
+    await dialog.getByRole("combobox").fill("メモ");
+    await dialog.getByText("全ての配信元", { exact: true }).click();
+    // 検証
+    await expect(
+      dialog.getByRole("list", { name: "検索できなかった配信元" }),
+    ).toContainText("broken");
+    await dialog.getByRole("option", { name: /メモ 1/ }).click();
+    await expect(page).toHaveURL(/\/notes\/notes\/n-1$/);
+  });
+});

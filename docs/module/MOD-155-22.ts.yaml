@@ -79,7 +79,7 @@ functions:
         passing: positional
         description: リビジョンの一覧（比較を始めるときの比較元に使用する）
     returns:
-      type: '{openDoc: (splat: string) => void; selectRef: (rev: string) => void; compare: (rev: string | undefined, base: string) => void; clearDiff: () => void; startCompare: () => void; selectSource: (id: string) => void; locate: (comment: DocComment) => void}'
+      type: '{openDoc: (splat: string) => void; openSearchResult: (splat: string, resultSource: string) => void; selectRef: (rev: string) => void; compare: (rev: string | undefined, base: string) => void; clearDiff: () => void; startCompare: () => void; selectSource: (id: string) => void; locate: (comment: DocComment) => void}'
       description: 移る操作
     process: |-
       1. `openDoc` は同じ配信元の `splat` の文書へ、`rev` を保って移る（`base` は除外する）
@@ -87,7 +87,8 @@ functions:
       3. `compare` は同じ文書の `rev`・`base` を指定した値にする。`clearDiff` は `base` を除外する
       4. `startCompare` は比較を始めるときの比較元を `base` にして移る。比較元が無ければ移らない
       5. `selectSource` はその配信元のトップ（`/$source`）へ移る
-      6. `locate` はコメントの配信元・パスの文書へ、コメントの `ref` を `rev` にして移る
+      6. `openSearchResult` は、`resultSource` が開いている配信元なら `openDoc` と同じく `rev` を保って `splat` の文書へ移り、ほかの配信元なら `rev`・`base` を付けずにその配信元の `splat` の文書へ移る
+      7. `locate` はコメントの配信元・パスの文書へ、コメントの `ref` を `rev` にして移る
     unit_tests:
       - name: test_use_doc_navigation
         case: 正常
@@ -119,6 +120,12 @@ functions:
         condition: 配信元 `t`・パス `c.md`・`ref` が `v3` のコメントで `locate`
         mock: なし（メモリの履歴のルーター）
         expected: URL が `/t/c.md?rev=v3`
+      - name: test_use_doc_navigation_when_search_result_in_other_source
+        case: 正常
+        summary: ほかの配信元の検索の結果を開く
+        condition: '`/s/a.md?rev=v1&base=v0` で `openSearchResult("c.md", "t")` と `openSearchResult("b.md", "s")`'
+        mock: なし（メモリの履歴のルーター）
+        expected: 1 つ目は URL が `/t/c.md`（`rev`・`base` を持たない）、2 つ目は `/s/b.md?rev=v1`
 tags:
   - name: topic:文書
     main: true

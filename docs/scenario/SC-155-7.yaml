@@ -37,6 +37,7 @@ scenarios:
       - 本文を下までスクロールしても、種類のタブとサイドバーが画面に残る
       - 文書 2 を選ぶと URL が文書 2 を指すものに変わり、文書 2 の本文と右端の目次の線が出る
       - 文書 2 の URL を直接開いても、文書 2 の本文と右端の目次の線が出る
+      - 開いた直後と本文を下までスクロールした後のどちらも、画面全体（ページ）に縦のスクロールバーが出ず、本文とサイドバーの中だけがスクロールする
     test: test_normal
   - name: 正常シナリオ（nav が無い）
     setup:
@@ -157,8 +158,8 @@ scenarios:
         UI-->>U: doc-view（文書 2）
       ```
     expected:
-      - Ctrl+K で検索のダイアログが開き、入力欄にフォーカスがある
-      - 結果に文書 2 だけが一致した箇所つきで並ぶ
+      - Ctrl+K で検索のダイアログが画面の上寄りに開き、入力欄にフォーカスがある
+      - 結果に文書 2 だけが、一致した箇所と一致した行の数つきで並ぶ
       - 結果を選ぶとダイアログが閉じ、文書 2 が出る
     test: test_normal_when_searched
   - name: 正常シナリオ（表の列を隠す）
@@ -925,6 +926,9 @@ scenarios:
       - name: dev-docs
         description: sample を配信している dev-docs
         notes: '-'
+      - name: 長い名前の文書
+        description: group `lang` の中に、境目で広げられる最大の幅にも収まらない長さの名前の文書を 1 件配置する
+        notes: group `lang` の見出しも、初めの幅では収まらない長さにする
     flow: |-
       <!-- map -->
 
@@ -941,6 +945,8 @@ scenarios:
         UI-->>U: group lang の page を開いた文書の一覧
         U->>UI: サイドバーと本文の境目を右へドラッグする
         UI-->>U: 広げた幅のサイドバーと、その分だけ狭まった本文
+        U->>UI: 長い名前の文書の行にポインターを乗せる
+        UI-->>U: 省略した名前の全文
         U->>UI: サイドバーを閉じるボタンを押す
         UI-->>U: サイドバーの無い、広がった本文
         U->>UI: サイドバーを開くボタンを押す
@@ -954,7 +960,119 @@ scenarios:
       - 境目をドラッグすると、サイドバーの幅が変わり、本文の左端がその分だけ動く
       - 閉じるボタンを押すとサイドバーが消え、本文がサイドバーの幅だけ広がる。開くボタンを押すと、閉じる前の幅でサイドバーが出る
       - どの操作でも URL は変わらず、本文は開いている文書のまま
+      - 長い名前の文書の行と group `lang` の見出しは折り返さず 1 行で出て、収まらない末尾が「…」になる。境目を最大まで広げても収まらない名前は「…」のままで、ポインターを乗せるかフォーカスすると全文が出る
     test: test_normal_when_sidebar_toggled
+  - name: 正常シナリオ（多くの文書に一致する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。ブラウザは Playwright で操作する）
+        notes: 画面幅は 1280px、高さは 800px
+      - name: 一致する文書の多い配信元
+        description: 正常シナリオと同じ sample に、同じ単語を本文に含む文書を 30 件追加する。単語を含む行の数は文書ごとに変え、名前の順と一致した行の数の順が食い違う並びにする
+        notes: 一致した行の数が最も多い文書を、名前の順で最後になる名前にする
+      - name: dev-docs
+        description: sample を配信している dev-docs
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+
+        U->>UI: 文書 1 を開いて Ctrl+K を押し、30 件に共通の単語を入力する
+        UI->>API: 画面の検索
+        API-->>UI: 30 件の結果と一致した行の数
+        UI-->>U: 一致した行の数の多い順の結果
+        U->>UI: 結果の一覧を一番下までスクロールする
+        UI-->>U: 30 件目までの結果
+        U->>UI: 並び順を名前の順に切り替える
+        UI-->>U: 名前の順の結果
+        U->>UI: 並び順を一致した行の数の順に戻す
+        UI-->>U: 一致した行の数の多い順の結果
+        U->>UI: 並び順をもう一度名前の順に切り替える
+        UI-->>U: 名前の順の結果
+        U->>UI: ↓ を押して最後の結果まで選び、Enter を押す
+        UI-->>U: doc-view（選んだ文書）
+      ```
+
+      <!-- /map -->
+    expected:
+      - 件数の文言が 30 件を示し、結果の一覧の中で縦にスクロールして 30 件全てを参照できる。ダイアログの背後の画面はスクロールしない
+      - 結果はカードでなく区切り線で区切った行で並び、各行に名前・パス・一致した箇所・一致した行の数が出る
+      - 既定の並びは一致した行の数の多い順で、既定の並びが何の順かが画面から分かる
+      - 名前の順に切り替えると名前の昇順に並び替わり、一致した行の数の順に戻すと、一致した行の数の多い順に戻る
+      - ↓ で選んだ結果が一覧の表示範囲を越えると、一覧がスクロールして選んだ結果が表示範囲に入る
+      - Enter で選んだ文書が開き、ダイアログが閉じる
+    test: test_normal_when_many_matched
+  - name: 正常シナリオ（全ての配信元を検索する）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行。ブラウザは Playwright で操作する）
+      - name: 2 つ目の配信元
+        description: sample と別に、文書を 2 件持つ配信元 notes を配信する
+        notes: sample の文書 2 と notes の文書 A だけが同じ単語を含む
+      - name: dev-docs
+        description: sample と notes を配信している dev-docs
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+
+        U->>UI: sample の文書 1 を開いて Ctrl+K を押し、単語を入力する
+        UI->>API: 画面の検索（sample）
+        API-->>UI: sample の文書 2
+        UI-->>U: sample の結果
+        U->>UI: Tab で検索の範囲へ移り、矢印キーで全ての配信元を選ぶ
+        UI->>API: 全ての配信元の検索
+        API-->>UI: sample の文書 2 と notes の文書 A
+        UI-->>U: 配信元の名前つきの結果
+        U->>UI: notes の文書 A を選ぶ
+        UI-->>U: doc-view（notes の文書 A）
+      ```
+
+      <!-- /map -->
+    expected:
+      - 範囲が開いている配信元のときは、sample の文書 2 だけが並ぶ
+      - 範囲を全ての配信元に切り替えると、sample の文書 2 と notes の文書 A が並び、各行に配信元の名前が出る
+      - notes の文書 A を選ぶとダイアログが閉じ、URL が notes の文書 A を指し、notes の `default_ref` の文書 A が出る
+      - キーボードの操作だけで範囲が全ての配信元に変わり、同じ単語の結果が配信元の名前つきに変わる
+    test: test_normal_when_searched_all_sources
+  - name: 異常シナリオ（全ての配信元の検索で配信していない配信元がある）
+    setup:
+      - name: Mock
+        description: なし（実環境で実行）
+      - name: 検証に失敗する配信元
+        description: 異常シナリオ（配信していない配信元を開く）と同じ broken
+        notes: project-index の起動時の検証で配信から外れる
+      - name: dev-docs
+        description: sample と broken を端末の設定に並べた project-index につないで起動した dev-docs
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        actor U as 利用者
+        participant UI as dev-docs の画面
+        participant API as 画面の API
+
+        U->>UI: sample の文書 1 を開いて検索のダイアログを開き、範囲を全ての配信元にして単語を入力する
+        UI->>API: 全ての配信元の検索
+        API-->>UI: sample の結果と、検索できなかった配信元 broken
+        UI-->>U: sample の結果と、検索できなかった配信元の案内
+      ```
+
+      <!-- /map -->
+    expected:
+      - sample の一致した文書が並ぶ
+      - 結果の場所に、broken を検索できなかったことと、project-index が起動時の検証で除外した理由（`documents[0]` に必須のキー `paths` が無い）が出る
+      - 検索できなかった配信元があっても、ほかの配信元の結果を選んで開ける
+    test: test_error_when_cross_search_source_not_served
 lead: 利用者が文書の画面をタブ・サイドバー・検索・リビジョンの切り替え・差分で参照するシナリオを定め、文書の画面の流れを変えるときに参照する。
 primary_actor: 利用者
 stakeholders:

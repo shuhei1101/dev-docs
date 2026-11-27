@@ -33,6 +33,14 @@ export const useDocNavigation = (
     });
   return {
     openDoc: (splat: string) => go({ splat, rev: search.rev }),
+    /** 検索の結果を開く（ほかの配信元の結果は、その配信元の default_ref で開く） */
+    openSearchResult: (splat: string, resultSource: string) =>
+      resultSource === source
+        ? go({ splat, rev: search.rev })
+        : void navigate({
+            to: "/$source/$",
+            params: { source: resultSource, _splat: splat },
+          }),
     selectRef: (rev: string) => go({ splat: path, rev, base: search.base }),
     compare: (rev: string | undefined, base: string) =>
       go({ splat: path, rev, base }),

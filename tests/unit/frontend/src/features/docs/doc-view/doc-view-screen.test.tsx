@@ -135,3 +135,16 @@ test("test_doc_view_screen_when_pending_panel", async () => {
   await waitFor(() => expect(router.state.location.search).toMatchObject({ edit: "file" }));
   expect(router.state.location.pathname).toBe("/s/notes/n1.yaml");
 });
+
+test("test_doc_view_screen_when_layout", async () => {
+  useHandlers(documentResponse());
+
+  renderApp("/s/a.md");
+
+  const heading = await screen.findByRole("heading", { level: 1, name: "A" });
+  const scroll = document.getElementById("doc-scroll");
+  expect(scroll).not.toBeNull();
+  expect(scroll).toContainElement(heading);
+  expect(scroll?.closest(".h-dvh")).toHaveClass("overflow-hidden");
+  expect(document.getElementById("doc-sidebar")?.className ?? "").not.toMatch(/\bsticky\b/);
+});

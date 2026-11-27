@@ -687,3 +687,69 @@ export const BodyEditInvalid: Story = {
     await userEvent.click(await body.findByRole("button", { name: "差分確認" }));
   },
 };
+
+/** 収まらない長さの名前の page と group の見出し（折り返さず末尾を「…」で省略する） */
+const longNameTabs = [
+  {
+    title: "設計書",
+    active: true,
+    items: [
+      group(
+        "開発ドキュメントサーバー / 画面の API / 文書の取得と検索とリビジョンの一覧",
+        [
+          page("文書の画面", "docs/a"),
+          page(
+            "画面 / 文書の画面 / search-dialog.tsx（配信元を横断して文書を単語で探すダイアログ）",
+            "docs/b",
+          ),
+          page("見つからない画面", "docs/c"),
+        ],
+      ),
+    ],
+  },
+  tabs[1],
+];
+
+/** サイドバーの名前が長いとき（既定の幅） */
+export const LongNames: Story = {
+  beforeEach: withSidebar({}),
+  parameters: { msw: handlers(documentResponse({ tabs: longNameTabs })) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const link = await canvas.findByRole("link", {
+      name: /search-dialog\.tsx/,
+    });
+    await expect(link.querySelector("[title]")).toHaveAttribute(
+      "title",
+      "画面 / 文書の画面 / search-dialog.tsx（配信元を横断して文書を単語で探すダイアログ）",
+    );
+  },
+};
+
+/** サイドバーの名前が長く、幅を最大まで広げたとき */
+export const LongNamesWide: Story = {
+  beforeEach: withSidebar({ sidebarWidth: SIDEBAR_WIDTH.max }),
+  parameters: { msw: handlers(documentResponse({ tabs: longNameTabs })) },
+};
+
+/** 画面の高さを超える本文（本文の領域の中だけがスクロールし、画面全体はスクロールしない） */
+export const LongBody: Story = {
+  beforeEach: withSidebar({}),
+  parameters: {
+    msw: handlers(
+      documentResponse({
+        markdown: [
+          markdown,
+          ...Array.from({ length: 12 }, (_, i) =>
+            [
+              `## 節 ${i + 1}`,
+              "",
+              "本文の領域の中でスクロールし、トップバー・種類のタブ・サイドバーは画面に残る。",
+              "",
+            ].join("\n"),
+          ),
+        ].join("\n"),
+      }),
+    ),
+  },
+};

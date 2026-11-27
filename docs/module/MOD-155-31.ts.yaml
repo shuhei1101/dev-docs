@@ -19,14 +19,14 @@ functions:
         passing: positional
         description: '`notFound` の `data`'
     returns:
-      type: '{source: string | undefined; urlSource: string | undefined; rev: string | undefined; refs: RefsResponse | undefined; missing: MissingDescription; serving: ServingSource[]}'
-      description: リビジョンを参照した配信元（`source`）・URL の配信元（`urlSource`）・URL のリビジョン・リビジョンの一覧・見つからなかったものの説明・配信中の配信元
+      type: '{source: string | undefined; urlSource: string | undefined; rev: string | undefined; refs: RefsResponse | undefined; missing: MissingDescription; serving: ServingSource[]; unserved: UnservedSource[]}'
+      description: リビジョンを参照した配信元（`source`）・URL の配信元（`urlSource`）・URL のリビジョン・リビジョンの一覧・見つからなかったものの説明・配信中の配信元・配信していない配信元
     process: |-
       1. URL の配信元・リビジョンを参照し、`data` の `missing` を `MissingSchema` で参照する
       2. `missing` が `source`・`not_served` のときは配信元を undefined にし、リビジョンの一覧を参照しない。それ以外で `missing` を読めたときだけ、URL の配信元のリビジョンの一覧を参照する（orval が生成した問い合わせ）
       3. 端末の設定の取得を読み込む（orval が生成した問い合わせ）
       4. 見つからなかったものの説明の `context` へ、リビジョンの一覧の `defaultRef`、端末の設定の取得の URL の配信元の `config`、URL の配信元の ID、リビジョン（git でない配信元は指定しない。URL に無ければ `defaultRef`）を指定する（見つからなかったものの説明）
-      5. 端末の設定の取得から配信中の配信元を取り出す（配信中の配信元の取り出し）
+      5. 端末の設定の取得から配信中の配信元と配信していない配信元を取り出す（配信中の配信元の取り出し・配信していない配信元の取り出し）
     unit_tests:
       - name: test_use_missing_view
         case: 正常

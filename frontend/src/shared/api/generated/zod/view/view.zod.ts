@@ -245,7 +245,8 @@ export const ViewSearchPageResponse = zod.object({
   "path": zod.string(),
   "name": zod.string(),
   "snippets": zod.array(zod.string()),
-  "excluded": zod.boolean().default(viewSearchPageResponseItemsItemExcludedDefault)
+  "excluded": zod.boolean().default(viewSearchPageResponseItemsItemExcludedDefault),
+  "matchCount": zod.union([zod.int(),zod.null()]).optional()
 }).describe('画面の検索の結果の文書。')),
   "excludedCount": zod.int().default(viewSearchPageResponseExcludedCountDefault)
 }).describe('GET `/_api/sources/{source}/search` の応答。')

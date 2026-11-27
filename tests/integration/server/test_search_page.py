@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from .conftest import IndexSource, RealIndex, ServerEnv, doc, row
+from .conftest import IndexSource, MockIndex, RealIndex, ServerEnv, doc, row
 
 
 def _server(index: RealIndex, make_server: Callable[..., ServerEnv]) -> ServerEnv:
@@ -111,3 +111,50 @@ def test_normal_when_search_excluded(
         ("docs/doc-2", True),
     ]
     assert second["excludedCount"] == 0
+
+
+def test_normal_when_match_count(
+    mock_index: MockIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """project-index が返却した一致した行の数を文書ごとに返却し、返却しないときは null にする（正常系）。"""
+    # 準備
+    documents = [
+        doc("doc-1", "docs/doc-1.yaml", data={"id": "doc-1", "name": "文書 1"}),
+        doc("doc-2", "docs/doc-2.yaml", data={"id": "doc-2", "name": "文書 2"}),
+    ]
+
+    def hit(doc_id: str, name: str, extra: dict[str, int] | None = None) -> dict[str, object]:
+        return {
+            "path": f"docs/{doc_id}",
+            "id": doc_id,
+            "filePath": f"docs/{doc_id}.yaml",
+            "name": name,
+            "snippets": ["…ページング…"],
+            **(extra or {}),
+        }
+
+    counted = IndexSource(
+        docs={None: documents},
+        search={
+            "totalCount": 2,
+            "items": [
+                hit("doc-1", "文書 1", {"matchCount": 4}),
+                hit("doc-2", "文書 2", {"matchCount": 1}),
+            ],
+        },
+    )
+    uncounted = IndexSource(
+        docs={None: documents},
+        search={"totalCount": 2, "items": [hit("doc-1", "文書 1"), hit("doc-2", "文書 2")]},
+    )
+    mock_index.serve("sample", counted)
+    mock_index.serve("notes", uncounted)
+    env = make_server(mock_index)
+    # 実行
+    with_count = env.client.get("/_api/sources/sample/search", params={"q": "ページング"})
+    without_count = env.client.get("/_api/sources/notes/search", params={"q": "ページング"})
+    # 検証
+    assert with_count.status_code == 200
+    assert [item["matchCount"] for item in with_count.json()["items"]] == [4, 1]
+    assert without_count.status_code == 200
+    assert [item["matchCount"] for item in without_count.json()["items"]] == [None, None]

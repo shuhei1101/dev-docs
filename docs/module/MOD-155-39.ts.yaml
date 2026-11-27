@@ -17,6 +17,19 @@ data_models:
       - name: writable
         type: boolean
         description: コメントを記載できる範囲を持つか（`scope.write` が null か 1 件以上）
+  - name: UnservedSource
+    title: 配信していない配信元
+    container: features/docs/shared/serving-sources.ts
+    usecase: 文書を探す
+    role: DTO
+    summary: 検索のダイアログの「検索できなかった配信元」に並べる配信元と理由
+    properties:
+      - name: source
+        type: string
+        description: 配信元の ID
+      - name: reason
+        type: string
+        description: 配信していない理由
 functions:
   - name: servingSources
     title: 配信中の配信元の取り出し
@@ -52,6 +65,39 @@ functions:
         mock: なし
         expected: '`writable` が順に true・false・true'
       - name: test_serving_sources_when_undefined
+        case: 正常
+        summary: 読み込み中
+        condition: '`view` が undefined'
+        mock: なし
+        expected: 空の配列
+  - name: unservedSources
+    title: 配信していない配信元の取り出し
+    kind: 関数
+    container: features/docs/shared/serving-sources.ts
+    usecase: 文書を探す
+    role: 変換
+    summary: 端末の設定の取得の `sources[]` のうち、状態が `not_served` で `id` を持つものを理由つきで取り出す
+    scope: public
+    args:
+      - name: view
+        type: SettingsSourcesView | undefined
+        required: true
+        passing: positional
+        description: 端末の設定の取得の応答（読み込み中は undefined）
+    returns:
+      type: UnservedSource[]
+      description: 配信していない配信元の並び（`sources[]` の順）。`view` が undefined なら空
+    process: |-
+      1. `view.sources` を順に確認して、`status` が `not_served` で `id` を持つ行だけを残す
+      2. 残した行を `{source: id, reason}` にする。`reason` は `project-index が起動時の検証で除外しました。` に、`errors[]` の `{path} {reason}` を空白でつないで続ける
+    unit_tests:
+      - name: test_unserved_sources
+        case: 正常
+        summary: 配信していない行だけ
+        condition: '`serving`・`not_served`（`errors` が 1 件）・`disabled` の 3 行'
+        mock: なし
+        expected: '`not_served` の行の 1 件で、`reason` が固定の文言と `errors[0]` の `path`・`reason` を含む'
+      - name: test_unserved_sources_when_undefined
         case: 正常
         summary: 読み込み中
         condition: '`view` が undefined'

@@ -176,3 +176,24 @@ test("test_doc_sidebar_when_change_appeared", async () => {
   expect(b).toHaveAttribute("aria-expanded", "true");
   expect(screen.getByLabelText("変更")).toBeInTheDocument();
 });
+
+test("test_doc_sidebar_when_long_name", async () => {
+  const longGroup = "設計".repeat(50);
+  const longPage = "文書".repeat(50);
+  const tab = {
+    title: "設計書",
+    active: true,
+    items: [group(longGroup, [page(longPage, "a.md")])],
+  };
+
+  renderInRouter(
+    <DocSidebar tab={tab as never} source="s" currentPath="a.md" search={{}} />,
+  );
+
+  const groupName = await screen.findByText(longGroup);
+  const pageName = screen.getByText(longPage);
+  expect(groupName).toHaveClass("truncate");
+  expect(groupName).toHaveAttribute("title", longGroup);
+  expect(pageName).toHaveClass("truncate");
+  expect(pageName).toHaveAttribute("title", longPage);
+});

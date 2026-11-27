@@ -54,6 +54,12 @@ data_models:
         access: 公開
         default: 'False'
         description: project-index の検索の結果の `excluded`
+      - name: match_count
+        title: 一致した行の数
+        type: int | None
+        access: 公開
+        default: None
+        description: 'project-index の検索の結果の `matchCount`。返却しないバージョンの project-index では `None`（JSON は `matchCount: null`）'
   - name: ScreenSearchResult
     title: 画面の検索の結果
     container: features/view/types.py

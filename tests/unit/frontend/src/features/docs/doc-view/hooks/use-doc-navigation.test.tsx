@@ -84,3 +84,17 @@ test("test_use_doc_navigation_when_locate", async () => {
   await waitFor(() => expect(router.state.location.pathname).toBe("/t/c.md"));
   expect(router.state.location.search).toEqual({ rev: "v3" });
 });
+
+test("test_use_doc_navigation_when_search_result_in_other_source", async () => {
+  const { router, navigation } = await renderNavigation("/s/a.md?rev=v1&base=v0", { rev: "v1", base: "v0" });
+
+  act(() => navigation.current.openSearchResult("c.md", "t"));
+
+  await waitFor(() => expect(router.state.location.pathname).toBe("/t/c.md"));
+  expect(router.state.location.search).toEqual({});
+
+  act(() => navigation.current.openSearchResult("b.md", "s"));
+
+  await waitFor(() => expect(router.state.location.pathname).toBe("/s/b.md"));
+  expect(router.state.location.search).toEqual({ rev: "v1" });
+});

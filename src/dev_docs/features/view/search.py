@@ -42,7 +42,11 @@ async def screen_search(
 
     items = [
         ScreenSearchItem(
-            path=_page(hit), name=hit.name, snippets=list(hit.snippets), excluded=hit.excluded
+            path=_page(hit),
+            name=hit.name,
+            snippets=list(hit.snippets),
+            excluded=hit.excluded,
+            match_count=hit.match_count,
         )
         for hit in hits.items
     ]

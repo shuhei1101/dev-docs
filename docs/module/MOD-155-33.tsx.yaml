@@ -16,7 +16,7 @@ components:
         type: unknown
         required: false
         description: '`notFound` の `data`'
-    description: 見つからなかったものの説明・配信中の配信元・リビジョンの一覧を参照し（見つからない画面の内容）、配信元のトップ・設定画面へのリンクと配信中の配信元を出す（次のリンク）。画面の先頭に本文へのスキップを配置する
+    description: 見つからなかったものの説明・配信中の配信元・リビジョンの一覧を参照し（見つからない画面の内容）、配信元のトップ・設定画面へのリンクと配信中の配信元を出す（次のリンク）。画面の先頭に本文へのスキップを配置する。検索のダイアログへは配信中の配信元の ID と配信していない配信元を指定し、結果を選んだら、URL の配信元の結果は URL の `rev` を保って、ほかの配信元の結果は `rev` を付けずにその文書へ移る
     state:
       - name: searchOpen
         type: boolean
@@ -41,6 +41,12 @@ components:
         condition: '`{missing: "source", value: "unknown"}` の `data`'
         mock: MSW のハンドラ
         expected: リビジョンの一覧が呼ばれず、トップバーに配信元が渡らない
+      - name: test_not_found_screen_when_search_other_source
+        case: 正常
+        summary: ほかの配信元の検索の結果を開く
+        condition: '`/s/x.md?rev=v1` の見つからない画面で検索を開き、全ての配信元の結果から配信元 `t` の `c.md` を選ぶ'
+        mock: MSW のハンドラ（配信中の配信元 2 件・配信元ごとの画面の検索）
+        expected: URL が `/t/c.md` で `rev` を持たない
 refs:
   - to: SCR-155-2
     type: requires

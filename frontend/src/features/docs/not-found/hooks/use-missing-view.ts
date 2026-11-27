@@ -1,7 +1,10 @@
 import { useParams, useSearch } from "@tanstack/react-router";
 
 import { describeMissing } from "@/features/docs/not-found/missing";
-import { servingSources } from "@/features/docs/shared/serving-sources";
+import {
+  servingSources,
+  unservedSources,
+} from "@/features/docs/shared/serving-sources";
 import { useSettingsGetSettingsSources } from "@/shared/api/generated/settings/settings";
 import { useViewListRefs } from "@/shared/api/generated/view/view";
 import { MissingSchema } from "@/shared/core/schema";
@@ -32,5 +35,6 @@ export const useMissingView = (data: unknown) => {
     refs,
     missing,
     serving: servingSources(settings),
+    unserved: unservedSources(settings),
   };
 };

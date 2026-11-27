@@ -94,7 +94,9 @@ const Group = ({ group, ...rest }: GroupProps) => {
             open && "rotate-90",
           )}
         />
-        <span className="min-w-0 break-words">{group.title}</span>
+        <span className="min-w-0 truncate" title={group.title}>
+          {group.title}
+        </span>
       </button>
       {open && (
         <div className="pl-3">
@@ -136,12 +138,18 @@ const Items = ({
             aria-current={item.path === currentPath ? "page" : undefined}
             onClick={onNavigate}
             className={cn(
-              "flex items-center justify-between gap-2 rounded-md px-2 py-1 text-sm hover:bg-accent",
+              "flex min-w-0 items-center justify-between gap-2 rounded-md px-2 py-1 text-sm hover:bg-accent",
               item.path === currentPath && "bg-accent font-medium",
               item.excluded && "text-muted-foreground",
             )}
           >
-            <span className={cn(item.change === "deleted" && "line-through")}>
+            <span
+              title={item.title}
+              className={cn(
+                "min-w-0 truncate",
+                item.change === "deleted" && "line-through",
+              )}
+            >
               {item.title}
             </span>
             <span className="flex shrink-0 items-center gap-1">
