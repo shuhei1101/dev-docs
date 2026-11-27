@@ -414,7 +414,7 @@ classes:
           description: 検索の結果
         process: |-
           1. 呼び出しの共通の手順で `GET /sources/{source}/search` を呼ぶ
-          2. `items[]` の `id`・`filePath`・`name`・`snippets`・`excluded`（無いときは `False`）を `SearchHit` の `id`・`path`・`name`・`snippets`・`excluded` にし、`totalCount` と `excludedCount`（無いときは `0`）とともに `SearchHits` にして返却する
+          2. `items[]` の `id`・`filePath`・`name`・`snippets`・`excluded`（無いときは `False`）・`matchCount`（整数でないときと無いときは `None`）を `SearchHit` の `id`・`path`・`name`・`snippets`・`excluded`・`match_count` にし、`totalCount` と `excludedCount`（無いときは `0`）とともに `SearchHits` にして返却する
         unit_tests:
           - name: test_search
             case: 正常
@@ -428,6 +428,12 @@ classes:
             condition: '1 回目は `include_excluded` を省き、応答が `excludedCount: 1`。2 回目は `include_excluded=True` で、応答の `items[]` の 1 件が `excluded: true`'
             mock: '`httpx.MockTransport` で project-index の応答を返却する'
             expected: 1 回目の要求のクエリに `include_excluded` が無く `excluded_count` が 1。2 回目の要求のクエリに `include_excluded=true` があり、`excluded_count` が 0 でその 1 件の `excluded` が `True`
+          - name: test_search_when_match_count
+            case: 正常
+            summary: 一致した行の数
+            condition: '応答の `items[]` の 1 件目が `matchCount: 4`、2 件目が `matchCount` を持たない'
+            mock: '`httpx.MockTransport` で project-index の応答を返却する'
+            expected: 1 件目の `match_count` が 4、2 件目が `None`
       - name: refs
         title: リビジョンの一覧の取得
         kind: メソッド

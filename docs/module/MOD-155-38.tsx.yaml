@@ -1,6 +1,6 @@
 id: MOD-155-38
 title: 画面 / 文書の画面 / search-dialog.tsx
-lead: 開いている配信元・リビジョンの文書を単語で探すダイアログを受け持ち、文書の画面の search-dialog.tsx を修正するときに参照する。
+lead: 開いている配信元・リビジョンか全ての配信元の文書を単語で探すダイアログを受け持ち、文書の画面の search-dialog.tsx を修正するときに参照する。
 test_files:
   - tests/unit/frontend/src/features/docs/shared/search-dialog/search-dialog.test.tsx
 components:
@@ -10,7 +10,7 @@ components:
     container: features/docs/shared/search-dialog/search-dialog.tsx
     usecase: 文書を探す
     role: 部品
-    summary: shadcn/ui の `CommandDialog` に入力欄と結果を出し、画面の検索（orval が生成した `view-search_page` の問い合わせ）を入力の 200 ミリ秒の待ちの後に呼ぶ
+    summary: shadcn/ui の `CommandDialog` に入力欄・検索の範囲と並び順の切り替え・結果の行を出し、画面の検索（orval が生成した `view-search_page` の問い合わせ）を入力の 200 ミリ秒の待ちの後に、検索する配信元ごとに `useQueries` で同時に呼ぶ
     props:
       - name: open
         type: boolean
@@ -29,9 +29,17 @@ components:
         required: false
         description: リビジョン
       - name: onResultSelect
-        type: '(path: string) => void'
+        type: '(path: string, source: string) => void'
         required: true
-        description: '`resultSelect`'
+        description: '`resultSelect`。結果の文書のパスと、その結果の配信元の ID'
+      - name: sources
+        type: string[]
+        required: false
+        description: 全ての配信元の検索で問い合わせる配信中の配信元の ID。省くと `[]`
+      - name: unavailable
+        type: '{ source: string; reason: string }[]'
+        required: false
+        description: 全ての配信元の検索で、問い合わせずに「検索できなかった配信元」に並べる配信していない配信元と理由。省くと `[]`
     state:
       - name: query
         type: string
@@ -41,15 +49,25 @@ components:
       - name: includeExcluded
         type: boolean
         initial: 'false'
-        description: 「検索から除外した文書も含める」のスイッチ
+        description: 「配信元の設定で検索から除外した文書も含める」のスイッチ
         notes: '`useState`。`true` のときだけ画面の検索に `include_excluded: true` を指定する'
+      - name: scope
+        type: '"current" | "all"'
+        initial: '"current"'
+        description: 検索の範囲。`current` は開いている配信元とリビジョン、`all` は `source` と `sources` を重なりなく並べた配信元をそれぞれの `defaultRef` で検索する
+        notes: '`useState`'
+      - name: order
+        type: '"matches" | "name"'
+        initial: '"matches"'
+        description: 並び順。`matches` は一致した行の数の多い順（数が `null` の結果はその後ろに名前の順）、`name` は名前の順（`localeCompare` の `ja`）
+        notes: '`useState`'
     unit_tests:
       - name: test_search_dialog
         case: 正常
         summary: 結果を選ぶ
         condition: '`foo` を入力して 1 件目を Enter'
         mock: MSW のハンドラ（画面の検索が 2 件を返却する）
-        expected: '`onResultSelect` が 1 件目の `path` で 1 回'
+        expected: '`onResultSelect` が 1 件目の `path` と開いている配信元の ID で 1 回'
       - name: test_search_dialog_when_empty_query
         case: 正常
         summary: 空の単語では呼ばない
@@ -67,13 +85,43 @@ components:
         summary: 一致が全て除外される文書
         condition: '画面の検索が `totalCount: 0`・`excludedCount: 1` を返却する'
         mock: MSW のハンドラ
-        expected: 件数の文言が `該当する文書はありません。検索から除外した文書を含めると 1 件あります。`
+        expected: 件数の文言が `該当する文書はありません。配信元の設定で検索から除外した文書を含めると 1 件あります。`
       - name: test_search_dialog_when_include_excluded
         case: 正常
         summary: 除外した文書も含める
         condition: '単語を入力し、スイッチを入れる。画面の検索は `include_excluded=true` のとき `excluded: true` の 1 件を含めて返却する'
         mock: MSW のハンドラ（要求のクエリを記録する）
         expected: 2 回目の要求のクエリに `include_excluded=true` があり、`検索から除外` のバッジが 1 件出る
+      - name: test_search_dialog_when_all_sources
+        case: 正常
+        summary: 全ての配信元を検索する
+        condition: '`sources` に `sample`・`notes` を指定し、単語を入力して「全ての配信元」を選ぶ。`notes` の結果を選んで Enter'
+        mock: MSW のハンドラ（配信元ごとに結果を返却し、要求のクエリを記録する）
+        expected: 両方の配信元へ `ref` を付けずに要求し、件数の文言が合計の件数でリビジョンを出さず、行に配信元の ID が出る。`onResultSelect` がその `path` と `notes` で 1 回
+      - name: test_search_dialog_when_sorted
+        case: 正常
+        summary: 並び順
+        condition: 画面の検索が `matchCount` の違う 3 件（うち 1 件は `null`）を返却する。並び順を「名前」に切り替える
+        mock: MSW のハンドラ
+        expected: 既定では数の多い順で `null` の結果が最後、`null` の結果に `一致 N 行` が無い。切り替えると名前の順
+      - name: test_search_dialog_when_source_failed
+        case: 異常
+        summary: 配信元の検索の失敗と配信していない配信元
+        condition: 全ての配信元で、`notes` の画面の検索が 503。`unavailable` に `broken` を指定する
+        mock: MSW のハンドラ
+        expected: 「検索できなかった配信元」に `broken`（理由）と `notes`（503 の `detail`）が並び、`sample` の結果は出る。`broken` へは要求しない
+      - name: test_search_dialog_when_pending_source
+        case: 正常
+        summary: 応答を待っている配信元
+        condition: 全ての配信元で、`notes` の画面の検索が応答しない
+        mock: MSW のハンドラ（`notes` は `delay("infinite")`）
+        expected: '`sample` の結果が出て、件数の文言が `2 件・1 件の配信元を検索しています`'
+      - name: test_search_dialog_when_over_limit
+        case: 正常
+        summary: 返却の上限を超える総件数
+        condition: '画面の検索が `totalCount: 150` と 100 件を返却する'
+        mock: MSW のハンドラ（要求のクエリを記録する）
+        expected: 要求の `limit` が `100` で、件数の文言が `150 件（リビジョン develop）のうち 100 件を表示`
 refs:
   - to: CMP-155-3
     type: requires

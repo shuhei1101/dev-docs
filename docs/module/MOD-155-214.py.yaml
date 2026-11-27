@@ -458,6 +458,13 @@ data_models:
         access: 公開
         default: 'False'
         description: project-index の検索の結果の `excluded`。応答が持たないときは `False`
+      - name: match_count
+        title: 一致した行の数
+        type: int | None
+        access: 公開
+        default: None
+        description: project-index の検索の結果の `matchCount`。応答が持たないときは `None`
+        notes: 契約は [語での検索の結果の文書ごとに、一致した行の数を返却する](https://github.com/shuhei1101/project-index/issues/299) の入出力
   - name: NamedRef
     title: 名前のあるリビジョン
     container: integrations/project_index/types.py

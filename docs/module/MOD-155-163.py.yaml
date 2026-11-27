@@ -99,7 +99,7 @@ functions:
     process: |-
       1. project-indexの呼び出し.検索（`q`・`ref`・`limit`・`include_excluded`）を呼ぶ。検索から除外される文書を除くかの判定も project-index が行う。単語の照合・`search: false` の行の除外・一致した箇所の抜き出しは project-index が行う
       2. project-indexの呼び出し.配信元の表示の設定の取得と文書の一覧の取得（`ref`。`record_kinds` は `records` を持つ行の ID、`values` は `False`）で、結果ごとに `path` と `id` が同じ文書を引き当てる。引き当てられない結果は `path` から拡張子を落としたパスにする
-      3. `items` を `ScreenSearchItem(path=文書のページのパス(引き当てた文書), name, snippets, excluded)` にし、`total_count`・`excluded_count` とともに返却する
+      3. `items` を `ScreenSearchItem(path=文書のページのパス(引き当てた文書), name, snippets, excluded, match_count)`（`match_count` は project-index の値をそのまま。dev-docs では数えない） にし、`total_count`・`excluded_count` とともに返却する
     unit_tests:
       - name: test_screen_search
         case: 正常
@@ -120,6 +120,12 @@ functions:
         condition: '`include_excluded=True` で呼び、検索の結果が `excluded_count` 0 と `excluded=True` の 1 件を返却する。`include_excluded` を省き、`excluded_count` 1 を返却する'
         mock: project-indexの呼び出し（検索の結果を返却し、受けた `include_excluded` を記録する偽物）
         expected: 偽物が受けた `include_excluded` がそれぞれ `True`・`False`。前者の `items` の 1 件が `excluded=True`、後者の `excluded_count` が 1
+      - name: test_screen_search_when_match_count
+        case: 正常
+        summary: 一致した行の数
+        condition: 検索の結果が `match_count` 4 の文書と `None` の文書を返却する
+        mock: project-indexの呼び出し（検索の結果を返却する偽物）
+        expected: '`items` の `match_count` が順に 4・`None`'
     is_async: true
     exceptions:
       - name: ProjectIndexUnreachableError
