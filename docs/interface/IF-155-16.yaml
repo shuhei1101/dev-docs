@@ -92,6 +92,33 @@ flows:
       - '1 回目が `totalCount: 1` で `items` が文書 1 だけ、`excludedCount` が 1、文書 1 の `excluded` が `false`'
       - '2 回目が `totalCount: 2` で `items` が文書 1 と文書 2、文書 2 だけが `excluded: true`、`excludedCount` が 0'
     test: test_normal_when_search_excluded
+  - name: 正常系（一致した行の数）
+    summary: project-index が返却した一致した行の数を文書ごとに返却し、返却しないときは `null` にする
+    setup:
+      - name: Mock
+        description: project-index のクライアントを、[語での検索の結果の文書ごとに、一致した行の数を返却する](https://github.com/shuhei1101/project-index/issues/299) の入出力に沿って `items[].matchCount` を返却するスタブと、返却しないスタブに差し替える
+      - name: サンプルの配信元
+        description: 文書 1 と文書 2 がどちらも含む単語を持つ sample
+    flow: |-
+      <!-- map -->
+
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/search
+        participant PI as project-index（スタブ）
+
+        C->>E: q: 文書 1 と文書 2 が含む単語
+        E->>PI: 語での検索
+        PI-->>E: 文書 1（matchCount 4）・文書 2（matchCount 1）
+        E-->>C: 200 文書ごとの matchCount
+      ```
+
+      <!-- /map -->
+    expected:
+      - '`matchCount` を返却するスタブでは、文書 1 が `4`、文書 2 が `1`'
+      - 返却しないスタブでは、どちらも `null`
+    test: test_normal_when_match_count
 lead: トップバーの検索が呼び、単語を含む文書と一致した箇所を返却する画面の検索の入出力を定め、画面の検索を修正するときに参照する。
 identifier: search_page
 permissions: なし（`127.0.0.1` でだけ待ち受ける）
@@ -157,6 +184,10 @@ response:
     type: bool
     description: 検索から除外される文書か
     notes: '`include_excluded` が `true` で該当する文書だけ `true`、それ以外は `false`'
+  - name: items[].matchCount
+    type: int | null
+    description: 文書の本文のうち、単語に一致した行の数
+    notes: project-index の語での検索が返却する `items[].matchCount` をそのまま返却する。返却しないバージョンの project-index では `null`
 response_example: |-
   ```json
   {"totalCount": 1, "items": [
@@ -188,6 +219,10 @@ constraints:
     constraint: '`{tag}-{関数名}` の `view-search_page`'
   - item: 検索から除外される文書
     constraint: project-index の語での検索が返却する `excludedCount`（無いときは `0`）と `items[].excluded`（無いときは `false`）をそのまま返却する。除外するかの判定は project-index に任せる
+  - item: 一致した行の数
+    constraint: 数えるのは project-index で、dev-docs では数えない。契約は [語での検索の結果の文書ごとに、一致した行の数を返却する](https://github.com/shuhei1101/project-index/issues/299) の入出力で、本物につなぐ作業は [画面の検索の一致した行の数を、project-index の本物の応答につなぐ](https://github.com/shuhei1101/dev-docs/issues/341)
+  - item: 配信元の横断
+    constraint: 画面は配信元を横断するとき、配信中の配信元ごとにこのエンドポイントを `ref` を指定せずに呼び、結果をまとめる。横断のエンドポイントは持たない
 test_file: tests/integration/server/test_search_page.py
 tags:
   - name: action:検索

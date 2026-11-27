@@ -75,7 +75,7 @@ endpoints:
   - name: GET /sources/{source}/search
     method: GET
     path: /sources/{source}/search
-    summary: '単語を含む文書の ID（`id`）・文書のファイルのパス（`filePath`）・名前と一致した箇所、一致した総件数を返却する（IF-28）。`documents[].search_exclude` に該当する文書は既定の結果から除き、除いた件数を `excludedCount`（1 件以上除いたときだけ持つ）で返却する。`?include_excluded=true` で除かずに返却し、該当する文書に `excluded: true` を付ける'
+    summary: '単語を含む文書の ID（`id`）・文書のファイルのパス（`filePath`）・名前と一致した箇所、一致した総件数を返却する（IF-28）。`documents[].search_exclude` に該当する文書は既定の結果から除き、除いた件数を `excludedCount`（1 件以上除いたときだけ持つ）で返却する。`?include_excluded=true` で除かずに返却し、該当する文書に `excluded: true` を付ける。文書ごとの一致した行の数（`items[].matchCount`）は [語での検索の結果の文書ごとに、一致した行の数を返却する](https://github.com/shuhei1101/project-index/issues/299) の入出力で、返却するバージョンは未リリース（持たない応答も受ける）'
     status_codes:
       - code: '200'
         condition: 返却した（一致が 0 件のときも 200）
