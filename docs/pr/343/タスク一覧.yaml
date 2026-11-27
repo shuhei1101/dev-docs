@@ -75,8 +75,10 @@ tasks:
     updated_by: planner
     updated_at: '2026-11-27T03:46:35.979229+00:00'
   - process: 画面設計
-    status: todo
+    status: done
     note: 画面設計要否 ※2・※3 YES（mdmark の参照先の変更で、列の表示のメニューの UI 項目が表のメニューのボタンとメニューの項目に変わった）。SCR-155-1 の 列の表示のメニュー を書き換え、mdmark のバージョンを固定するかを決める
+    updated_by: planner
+    updated_at: '2026-11-27T03:51:13.115569+00:00'
   - process: モジュール構成設計
     status: skipped
     reason: 実装のクラス・関数の構成は変わらない（画面のコードは mdmark のボタン名に依存しない）
@@ -91,8 +93,11 @@ tasks:
     updated_by: planner
     updated_at: '2026-11-27T03:46:35.979229+00:00'
   - process: 実装
-    status: todo
+    status: skipped
     note: mdmark のバージョンを固定する案 B を採ったときだけ use-mdmark.ts の読み込み先を変える。案 A なら skipped にする
+    reason: mdmark のバージョンを固定せず develop を読み込むため、画面のコードは変えない
+    updated_by: planner
+    updated_at: '2026-11-27T03:51:13.115569+00:00'
   - process: 結合テスト作成
     status: todo
     note: doc-view-screen.spec.ts の 列の表示のメニュー のテストを表のメニューから開く操作に合わせる
