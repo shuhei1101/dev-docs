@@ -132,6 +132,24 @@ states:
         value: '`["sample", "notes"]`'
       - name: unavailable
         value: '`[{source: "broken", reason: "project-index が起動時の検証で除外しました。…"}]`'
+  - name: AllSourcesPending
+    description: 全ての配信元で、1 つの配信元の応答を待っている。返却された配信元の結果を先に出し、件数の文言に `・{数} 件の配信元を検索しています` を続ける
+    args:
+      - name: open
+        value: 'true'
+      - name: source
+        value: sample
+      - name: sources
+        value: '`["sample", "notes"]`'
+  - name: AllSourcesSearchFailed
+    description: 全ての配信元で、配信中の配信元の 1 つで画面の検索が 503 を返却した。ほかの配信元の結果を出し、「検索できなかった配信元」にその配信元の ID と `detail` を並べる
+    args:
+      - name: open
+        value: 'true'
+      - name: source
+        value: sample
+      - name: sources
+        value: '`["sample", "notes"]`'
 lead: 配信元の文書を単語で探し、件数と一致した箇所を並べるモーダルの引数と状態を定め、検索のダイアログを修正するときに参照する。
 status: planned
 args:
@@ -180,7 +198,7 @@ refs:
     when: 検索のダイアログに出す件数と一致した箇所を変えるときに、画面の検索の応答と突き合わせる。
 notes:
   モック: '`docs/mock/pages/doc-view/36/default/index.html` の `検索`・`結果` の状態'
-  補足: 入力のたびに画面の検索を呼び、件数と、一致した文書の名前・一致した行の数・パス・一致した箇所を並べる。返却する件数は画面の検索の `limit` の上限（100）で、総件数が上回るときは件数の文言に `{件数} 件のうち {表示件数} 件を表示` を出す。全ての配信元では配信中の配信元へ同時に呼び、返却された配信元から順に一覧へ加え、全ての応答がそろうまで件数の文言に検索中であることを出す（非機能要件『配信元の横断の検索の問い合わせ』）。スイッチを入れると、画面の検索に `include_excluded=true` を指定してもう一度呼ぶ。
+  補足: 入力のたびに画面の検索を呼び、件数と、一致した文書の名前・一致した行の数・パス・一致した箇所を並べる。返却する件数は画面の検索の `limit` の上限（100）で、総件数が上回るときは件数の文言に `{件数} 件のうち {表示件数} 件を表示` を出す。全ての配信元では配信中の配信元へ同時に呼び、返却された配信元から順に一覧へ加え、全ての応答がそろうまで件数の文言に検索中であることを出す（非機能要件『配信元の横断の検索の問い合わせ』）。「検索できなかった配信元」には、引数 `unavailable` の配信していない配信元と、画面の検索が失敗した配信元（Problem Details の `detail` を理由にする）の両方を並べる。`matchCount` が `null` の結果は、並び順が「一致した行の数」のとき数のある結果の後ろに名前の順で並べる。スイッチを入れると、画面の検索に `include_excluded=true` を指定してもう一度呼ぶ。
 test_file: tests/integration/frontend/search-dialog.spec.ts
 tags:
   - name: action:検索
