@@ -305,3 +305,96 @@ export const AllSourcesPartialFailure: Story = {
     ).toBeInTheDocument();
   },
 };
+
+/** 画面の検索が一致した行の数を返却しないとき（数を出さず、名前の順に並べる） */
+export const WithoutMatchCount: Story = {
+  parameters: {
+    msw: [
+      http.get(SEARCH, () =>
+        HttpResponse.json({
+          totalCount: 2,
+          items: [
+            {
+              path: "docs/design/paging",
+              name: "ページング",
+              snippets: ["…一覧のページングは…"],
+              matchCount: null,
+            },
+            {
+              path: "docs/design/index",
+              name: "インデックス",
+              snippets: ["…ページングの索引…"],
+              matchCount: null,
+            },
+          ],
+        }),
+      ),
+    ],
+  },
+  play: async (context) => {
+    await typeQuery(context);
+    const body = within(context.canvasElement.ownerDocument.body);
+    await body.findByText("2 件（リビジョン develop）");
+    await expect(body.queryByText(/一致 \d+ 行/)).not.toBeInTheDocument();
+    const options = body.getAllByRole("option");
+    await expect(options[0]).toHaveTextContent("インデックス");
+  },
+};
+
+/** 全ての配信元の検索で、一部の配信元の応答を待っているとき（返却された配信元の結果を先に出す） */
+export const AllSourcesPending: Story = {
+  args: { sources: ["sample", "notes"] },
+  parameters: {
+    msw: [
+      http.get(SEARCH, async ({ params }) => {
+        if (params.source === "notes") await delay("infinite");
+        return HttpResponse.json({ totalCount: 2, items });
+      }),
+    ],
+  },
+  play: async (context) => {
+    await typeQuery(context);
+    const body = within(context.canvasElement.ownerDocument.body);
+    await userEvent.click(body.getByRole("radio", { name: "全ての配信元" }));
+    await expect(
+      await body.findByText("2 件・1 件の配信元を検索しています"),
+    ).toBeInTheDocument();
+  },
+};
+
+/** 全ての配信元の検索で、配信中の配信元の検索が失敗したとき（ほかの配信元の結果と、失敗の理由を並べる） */
+export const AllSourcesSearchFailed: Story = {
+  args: { sources: ["sample", "notes"] },
+  parameters: {
+    msw: [
+      http.get(SEARCH, ({ params }) =>
+        params.source === "notes"
+          ? HttpResponse.json(
+              {
+                type: "about:blank",
+                title: "Service Unavailable",
+                status: 503,
+                detail:
+                  "project-index（http://127.0.0.1:8786）に接続できませんでした。応答がありませんでした（45 秒）",
+                nextSteps: [],
+              },
+              {
+                status: 503,
+                headers: { "Content-Type": "application/problem+json" },
+              },
+            )
+          : HttpResponse.json({ totalCount: 2, items }),
+      ),
+    ],
+  },
+  play: async (context) => {
+    await typeQuery(context);
+    const body = within(context.canvasElement.ownerDocument.body);
+    await userEvent.click(body.getByRole("radio", { name: "全ての配信元" }));
+    const failures = await body.findByRole("list", {
+      name: "検索できなかった配信元",
+    });
+    await expect(failures).toHaveTextContent("notes");
+    await expect(await body.findByText("2 件")).toBeInTheDocument();
+  },
+};

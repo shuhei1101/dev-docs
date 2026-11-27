@@ -40,10 +40,10 @@ type Props = {
   onResultSelect: (path: string, source: string) => void;
 };
 
-/** 一致した行の数（`matchCount`）を持つ結果。応答に無ければ一致した箇所の数を使用する */
-type SearchItem = ScreenSearchItem & { matchCount?: number };
+/** 一致した行の数（`matchCount`）を持つ結果。project-index が数を返却しないときは `null` */
+type SearchItem = ScreenSearchItem & { matchCount?: number | null };
 
-type Row = SearchItem & { source: string; matches: number };
+type Row = SearchItem & { source: string; matches: number | null };
 
 type Failure = { source: string; reason: string };
 
@@ -60,6 +60,8 @@ type StatusProps = {
   shown: number;
   excludedCount: number | undefined;
   revision: string | undefined;
+  /** 全ての配信元の検索で、まだ応答の無い配信元の数 */
+  waiting: number;
 };
 
 /** 件数・読み込み中・失敗・一致なしの文言（変わるたびに支援技術へ通知する） */
@@ -71,6 +73,7 @@ const SearchStatus = ({
   shown,
   excludedCount,
   revision,
+  waiting,
 }: StatusProps) => {
   let text = "";
   if (sent !== "") {
@@ -84,6 +87,7 @@ const SearchStatus = ({
       text = `${total} 件${revision ? `（リビジョン ${revision}）` : ""}`;
       if (shown < total) text += `のうち ${shown} 件を表示`;
       if (excludedCount) text += `・検索から除外 ${excludedCount} 件`;
+      if (waiting > 0) text += `・${waiting} 件の配信元を検索しています`;
     }
   }
   return (
@@ -158,10 +162,20 @@ type SummarizeInput = {
   unavailable: Failure[];
 };
 
-const compareRows = (order: Order) => (a: Row, b: Row) =>
-  order === "name"
-    ? a.name.localeCompare(b.name, "ja")
-    : b.matches - a.matches || a.name.localeCompare(b.name, "ja");
+const byName = (a: Row, b: Row) => a.name.localeCompare(b.name, "ja");
+
+/** 一致した行の数の多い順。数の無い結果は数のある結果の後ろに名前の順で並べる */
+const byMatches = (a: Row, b: Row) => {
+  if (a.matches === null || b.matches === null) {
+    return (
+      (a.matches === null ? 1 : 0) - (b.matches === null ? 1 : 0) ||
+      byName(a, b)
+    );
+  }
+  return b.matches - a.matches || byName(a, b);
+};
+
+const compareRows = (order: Order) => (order === "name" ? byName : byMatches);
 
 /** 配信元ごとの検索の結果を、並べた行・件数・検索できなかった配信元にまとめる */
 const summarize = ({
@@ -192,7 +206,7 @@ const summarize = ({
             (search.data?.items ?? []).map((item) => ({
               ...item,
               source: targets[index] ?? "",
-              matches: item.matchCount ?? item.snippets.length,
+              matches: item.matchCount ?? null,
             })),
           )
           .sort(compareRows(order));
@@ -201,6 +215,10 @@ const summarize = ({
   return {
     failures,
     rows,
+    waiting:
+      sent === ""
+        ? 0
+        : searches.filter((search) => !search.data && !search.error).length,
     total:
       sent === "" || settled.length === 0
         ? undefined
@@ -250,7 +268,7 @@ export const SearchDialog = ({
   });
   /* eslint-enable react-hooks/refs */
 
-  const { failures, rows, total, excludedCount } = summarize({
+  const { failures, rows, waiting, total, excludedCount } = summarize({
     searches,
     targets,
     sent,
@@ -347,6 +365,7 @@ export const SearchDialog = ({
           shown={rows.length}
           excludedCount={excludedCount}
           revision={scope === "all" ? undefined : revision}
+          waiting={scope === "all" ? waiting : 0}
         />
         {scope === "all" && sent !== "" && failures.length > 0 && (
           <ul
@@ -383,9 +402,11 @@ export const SearchDialog = ({
                         検索から除外
                       </Badge>
                     )}
-                    <span className="ml-auto shrink-0 text-xs whitespace-nowrap text-muted-foreground tabular-nums">
-                      一致 {row.matches} 行
-                    </span>
+                    {row.matches !== null && (
+                      <span className="ml-auto shrink-0 text-xs whitespace-nowrap text-muted-foreground tabular-nums">
+                        一致 {row.matches} 行
+                      </span>
+                    )}
                   </span>
                   <span className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
                     {scope === "all" && (
