@@ -190,8 +190,8 @@ response:
     notes: project-index の語での検索が返却する `items[].matchCount` をそのまま返却する。返却しないバージョンの project-index では `null`
 response_example: |-
   ```json
-  {"totalCount": 1, "items": [
-    {"path": "docs/doc-2", "name": "文書 2", "snippets": ["…一覧のページングは…"]}
+  {"totalCount": 1, "excludedCount": 0, "items": [
+    {"path": "docs/doc-2", "name": "文書 2", "snippets": ["…一覧のページングは…"], "excluded": false, "matchCount": 3}
   ]}
   ```
 status_codes:
@@ -223,6 +223,7 @@ constraints:
     constraint: 数えるのは project-index で、dev-docs では数えない。契約は [語での検索の結果の文書ごとに、一致した行の数を返却する](https://github.com/shuhei1101/project-index/issues/299) の入出力で、本物につなぐ作業は [画面の検索の一致した行の数を、project-index の本物の応答につなぐ](https://github.com/shuhei1101/dev-docs/issues/341)
   - item: 配信元の横断
     constraint: 画面は配信元を横断するとき、配信中の配信元ごとにこのエンドポイントを `ref` を指定せずに呼び、結果をまとめる。横断のエンドポイントは持たない
+    decided_by: NFR-155-1#requirements[配信元の横断の検索の問い合わせ]
 test_file: tests/integration/server/test_search_page.py
 tags:
   - name: action:検索

@@ -209,6 +209,23 @@ requirements:
         item: requirements[project-index への問い合わせの制限時間]
         type: references
         when: 読み取りの制限時間を変えるときに、書き込みの待ちと取り違えていないかを確認する。
+  - id: NFR-19
+    name: 配信元の横断の検索の問い合わせ
+    english_name: cross_source_search
+    category: 性能
+    external_constraint: 画面の検索は配信元ごとのエンドポイントで、1 回の検索は project-index への問い合わせ（語での検索と配信元の設定を同時、続けて文書の一覧）をそれぞれ project-index への問い合わせの制限時間（NFR-14、45 秒）で打ち切る。配信元の数は端末の設定の行の数で、計測した端末（[配信元を選んだときの最初の表示を短い時間で終わらせる](https://github.com/shuhei1101/dev-docs/pull/230) の計画書）は 14 件
+    source_kind: 外部 API の制限
+    source: NFR-155-1#requirements[project-index への問い合わせの制限時間]
+    value: 配信中の全ての配信元へ同時に送信し、配信元の数の上限と全体を待つ上限は設けない。1 つの配信元の検索を待つのは最大 90 秒（NFR-14 の 2 回分）
+    rationale: 配信元ごとの結果は互いに待ち合わせる必要が無いため、返却された配信元から順に結果に加え、遅い配信元が全体を止めないようにする。配信元の数は端末の設定の行の数に限られ、計測した端末の 14 件では同時に送信しても project-index が並行して処理した（NFR-16 の計測）。1 つの配信元の待ちは、サーバーが project-index への問い合わせを 2 回続けて送信するため、NFR-14 の 2 回分が上限になる
+    overflow: 配信元ごとに打ち切る。サーバーが NFR-14 で打ち切った配信元は 503 の `detail` を理由にして「検索できなかった配信元」に出し、ほかの配信元の結果はそのまま出す。全ての配信元の応答がそろうまで、件数の文言に検索中であることを出す
+    measurement: 接続を受けたまま応答しない偽の project-index を 1 つの配信元にだけ向け、横断の検索でほかの配信元の結果が先に出ることと、その配信元が 90 秒以内に「検索できなかった配信元」へ移ることを確認する
+    status: planned
+    refs:
+      - to: NFR-155-1
+        item: requirements[project-index への問い合わせの制限時間]
+        type: requires
+        when: project-index への問い合わせの制限時間を変えるときに、1 つの配信元の検索を待つ上限を合わせて変える。
 lead: 外部の制約から逆算した dev-docs の決定値を定め、時間・上限などの値を決める・変えるときに参照する。
 tags:
   - name: topic:非機能要件
