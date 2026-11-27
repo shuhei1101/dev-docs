@@ -94,10 +94,14 @@ elements:
         value: URL の配信元の ID
       - name: ref
         value: URL の `rev`（無いリビジョンのときは指定しない）
-    position: 画面の中央の上
-    description: 開こうとした配信元の文書を単語で探す
+      - name: sources
+        value: 端末の設定の取得.sources[]（`status` が `serving` の行の `id`）
+      - name: unavailable
+        value: 端末の設定の取得.sources[]（`status` が `not_served` の行の `id` と、`errors[]` の `path`・`reason` をつないだ理由）
+    position: 画面の上寄り（上端から 3rem、幅は最大 48rem、高さは最大で画面の 5/6）。画面幅が 48rem 未満では画面いっぱい
+    description: 開こうとした配信元の文書か、配信中の全ての配信元の文書を単語で探す
     visible_when: 配信元が配信中で、検索を開いたとき
-    action: '`resultSelect` でその文書を開く'
+    action: '`resultSelect` で、開こうとした配信元の結果は `rev` を保ったその文書、ほかの配信元の結果は `rev` を付けずにその配信元のその文書を開く'
     action_ref: IF-155-16#
   - name: ショートカットの一覧
     kind: dialog

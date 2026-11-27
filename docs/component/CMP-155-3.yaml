@@ -13,7 +13,7 @@ states:
       - name: ref
         value: develop
   - name: Results
-    description: 2 件に一致し、1 件目を選んだ状態。一致した単語を強調する
+    description: 2 件に一致し、1 件目を選んだ状態。結果は区切り線で区切った行で、名前・`一致 N 行`・パス・一致した箇所を出し、一致した単語を強調する
     args:
       - name: open
         value: 'true'
@@ -61,7 +61,7 @@ states:
       - name: ref
         value: develop
   - name: IncludeExcluded
-    description: 「検索から除外した文書も含める」のスイッチを入れた。検索から除外される文書も結果に並び、その結果に `検索から除外` のバッジを付ける
+    description: 「配信元の設定で検索から除外した文書も含める」のスイッチを入れた。検索から除外される文書も結果に並び、その結果に `検索から除外` のバッジを付ける
     args:
       - name: open
         value: 'true'
@@ -70,7 +70,7 @@ states:
       - name: ref
         value: develop
   - name: OnlyExcludedMatched
-    description: 一致した文書が全て検索から除外される文書で 0 件。`該当する文書はありません。検索から除外した文書を含めると 1 件あります。` を出す
+    description: 一致した文書が全て検索から除外される文書で 0 件。`該当する文書はありません。配信元の設定で検索から除外した文書を含めると 1 件あります。` を出す
     args:
       - name: open
         value: 'true'
@@ -78,6 +78,60 @@ states:
         value: sample
       - name: ref
         value: develop
+  - name: ProjectIndexUnreachable
+    description: project-index につながらず画面の検索が 503 を返却し、`detail`（project-index のアドレスと理由）を件数の文言に出す
+    args:
+      - name: open
+        value: 'true'
+      - name: source
+        value: sample
+  - name: ManyResults
+    description: 一覧の高さを超える 30 件に一致した。一覧の中で縦にスクロールして 30 件目まで参照でき、一致した行の数の多い順に並ぶ
+    args:
+      - name: open
+        value: 'true'
+      - name: source
+        value: sample
+      - name: ref
+        value: develop
+  - name: SortedByName
+    description: 並び順に「名前」を選んだ。結果が名前の順に並ぶ
+    args:
+      - name: open
+        value: 'true'
+      - name: source
+        value: sample
+      - name: ref
+        value: develop
+  - name: WithoutMatchCount
+    description: 画面の検索が `matchCount` を `null` で返却した。行に `一致 N 行` を出さず、並び順が「一致した行の数」でも名前の順に並ぶ
+    args:
+      - name: open
+        value: 'true'
+      - name: source
+        value: sample
+      - name: ref
+        value: develop
+  - name: AllSources
+    description: 検索の範囲に「全ての配信元」を選んだ。配信元ごとの結果を 1 つの一覧にまとめ、行に配信元の ID のバッジを出す。件数の文言にリビジョンを出さない
+    args:
+      - name: open
+        value: 'true'
+      - name: source
+        value: sample
+      - name: sources
+        value: '`["sample", "notes"]`'
+  - name: AllSourcesPartialFailure
+    description: 全ての配信元で、1 つの配信元が配信されていない。ほかの配信元の結果を出し、「検索できなかった配信元」に配信元の ID と理由を並べる
+    args:
+      - name: open
+        value: 'true'
+      - name: source
+        value: sample
+      - name: sources
+        value: '`["sample", "notes"]`'
+      - name: unavailable
+        value: '`[{source: "broken", reason: "project-index が起動時の検証で除外しました。…"}]`'
 lead: 配信元の文書を単語で探し、件数と一致した箇所を並べるモーダルの引数と状態を定め、検索のダイアログを修正するときに参照する。
 status: planned
 args:
@@ -93,21 +147,32 @@ args:
     type: 文字列
     default: なし（配信元の `defaultRef` を検索する。件数の文言にリビジョンを出さない）
     description: 検索するリビジョン。画面の検索の `ref` に指定し、件数の文言にも出す
+  - name: sources
+    type: 配列
+    default: なし（`source` だけ。検索の範囲の切り替えを出さない）
+    description: 配信中の配信元の ID。検索の範囲が「全ての配信元」のとき、配信元ごとに画面の検索を呼ぶ
+  - name: unavailable[].source
+    type: 文字列
+    default: なし（`unavailable` を省くと空の配列）
+    description: 配信していない配信元の ID。検索の範囲が「全ての配信元」のとき、「検索できなかった配信元」に並べる
+  - name: unavailable[].reason
+    type: 文字列
+    description: 配信していない理由
 events:
   - name: openChange
-    when: Esc・ダイアログの外のクリック・結果の選択でダイアログが閉じる
+    when: Esc・ダイアログの外のクリック・閉じるボタン・結果の選択でダイアログが閉じる
     value: '`false`'
     description: 開閉の状態を戻す。閉じた後は開いたボタンへフォーカスを戻す
   - name: resultSelect
     when: 結果をクリックするか、結果を選んで Enter を押した
-    value: 画面の検索の `items[].path`
-    description: 同じリビジョンのその文書を文書の画面で開く
+    value: 画面の検索の `items[].path` と、その結果の配信元の ID
+    description: 開いている配信元の結果は同じリビジョン、ほかの配信元の結果はその配信元の `defaultRef` で、その文書を文書の画面で開く
 accessibility:
   - 検索欄は `role="combobox"` で、`aria-controls` に結果の一覧、`aria-activedescendant` に選んでいる結果を持つ
   - ↑・↓ で結果を選び、Enter で開き、Esc 1 回で閉じる
   - 件数の文言は `role="status"` で、変わるたびに読み上げる
   - 一致した単語の強調は色だけにせず `mark` 要素で表す
-  - 「検索から除外した文書も含める」は `role="switch"` で、ラベルを `for` と `id` で関連付ける。Tab で移り、Space で切り替える
+  - 「配信元の設定で検索から除外した文書も含める」は `role="switch"` で、ラベルを `for` と `id` で関連付ける。Tab で移り、Space で切り替える
   - 検索から除外される文書は、色ではなく `検索から除外` のバッジの文字で示す
 refs:
   - to: IF-155-16
@@ -115,7 +180,7 @@ refs:
     when: 検索のダイアログに出す件数と一致した箇所を変えるときに、画面の検索の応答と突き合わせる。
 notes:
   モック: '`docs/mock/pages/doc-view/36/default/index.html` の `検索`・`結果` の状態'
-  補足: 入力のたびに画面の検索を呼び、件数と、一致した文書のパンくず・パス・一致した箇所を並べる。スイッチを入れると、画面の検索に `include_excluded=true` を指定してもう一度呼ぶ。
+  補足: 入力のたびに画面の検索を呼び、件数と、一致した文書の名前・一致した行の数・パス・一致した箇所を並べる。返却する件数は画面の検索の `limit` の上限（100）で、総件数が上回るときは件数の文言に `{件数} 件のうち {表示件数} 件を表示` を出す。全ての配信元では配信中の配信元へ同時に呼び、返却された配信元から順に一覧へ加え、全ての応答がそろうまで件数の文言に検索中であることを出す（非機能要件『配信元の横断の検索の問い合わせ』）。スイッチを入れると、画面の検索に `include_excluded=true` を指定してもう一度呼ぶ。
 test_file: tests/integration/frontend/search-dialog.spec.ts
 tags:
   - name: action:検索
