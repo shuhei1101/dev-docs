@@ -1,0 +1,98 @@
+tasks:
+  - process: 初期構築
+    status: skipped
+    reason: 既存リポジトリのため対象外
+    updated_by: planner
+    updated_at: '2026-11-27T03:46:35.979229+00:00'
+  - process: リバースエンジニアリング
+    status: skipped
+    reason: 既存の設計書がある
+    updated_by: planner
+    updated_at: '2026-11-27T03:46:35.979229+00:00'
+  - process: 方針決め
+    status: skipped
+    reason: 方針決めを依頼する Issue ではない
+    updated_by: planner
+    updated_at: '2026-11-27T03:46:35.979229+00:00'
+  - process: PoC 検証
+    status: skipped
+    reason: 未検証の技術機構に依存しない（テストの操作と設計書の要素を mdmark の表のメニューに合わせる）
+    updated_by: planner
+    updated_at: '2026-11-27T03:46:35.979229+00:00'
+  - process: 複合ユースケース設計
+    status: skipped
+    reason: 業務フローは変わらない
+    updated_by: planner
+    updated_at: '2026-11-27T03:46:35.979229+00:00'
+  - process: デザインスタイル選定
+    status: skipped
+    reason: モック要否 ※3 NO（見た目は mdmark の表のメニューで決まり、作る人が決める余地が無い）
+    updated_by: planner
+    updated_at: '2026-11-27T03:46:35.979229+00:00'
+  - process: 画面一覧・画面遷移
+    status: skipped
+    reason: モック要否 ※2 NO（画面の追加・削除と画面遷移の変更が無い）
+    updated_by: planner
+    updated_at: '2026-11-27T03:46:35.979229+00:00'
+  - process: 単一ユースケース設計
+    status: skipped
+    reason: 利用者が列を出し入れして文書ごとに記憶する流れは変わらない
+    updated_by: planner
+    updated_at: '2026-11-27T03:46:35.979229+00:00'
+  - process: モック作成
+    status: skipped
+    reason: モック要否 ※3 NO（見た目は mdmark の表のメニューで決まり、作る人が決める余地が無い）
+    updated_by: planner
+    updated_at: '2026-11-27T03:46:35.979229+00:00'
+  - process: データ設計
+    status: skipped
+    reason: 保存する列のデータは変わらない
+    updated_by: planner
+    updated_at: '2026-11-27T03:46:35.979229+00:00'
+  - process: インターフェース定義設計
+    status: skipped
+    reason: 画面の API は変わらない
+    updated_by: planner
+    updated_at: '2026-11-27T03:46:35.979229+00:00'
+  - process: エージェント・MCP サーバー設計
+    status: skipped
+    reason: エージェント・MCP サーバーを扱わない
+    updated_by: planner
+    updated_at: '2026-11-27T03:46:35.979229+00:00'
+  - process: エージェントフロー・LLM 呼び出し設計
+    status: skipped
+    reason: LLM を呼ぶ処理を扱わない
+    updated_by: planner
+    updated_at: '2026-11-27T03:46:35.979229+00:00'
+  - process: 精度評価設計
+    status: skipped
+    reason: LLM を呼ぶ処理を扱わない
+    updated_by: planner
+    updated_at: '2026-11-27T03:46:35.979229+00:00'
+  - process: 部品設計
+    status: skipped
+    reason: 画面の部品は変わらない（表のメニューは mdmark が描く）
+    updated_by: planner
+    updated_at: '2026-11-27T03:46:35.979229+00:00'
+  - process: 画面設計
+    status: todo
+    note: 画面設計要否 ※2・※3 YES（mdmark の参照先の変更で、列の表示のメニューの UI 項目が表のメニューのボタンとメニューの項目に変わった）。SCR-155-1 の 列の表示のメニュー を書き換え、mdmark のバージョンを固定するかを決める
+  - process: モジュール構成設計
+    status: skipped
+    reason: 実装のクラス・関数の構成は変わらない（画面のコードは mdmark のボタン名に依存しない）
+    updated_by: planner
+    updated_at: '2026-11-27T03:46:35.979229+00:00'
+  - process: ドキュメント修正
+    status: todo
+    note: LIB-155-9 の onColumnsChange の説明と確認の記録を mdmark の develop の表のメニューに合わせる
+  - process: 単体テスト作成
+    status: skipped
+    reason: 単体のモジュールのロジックは変わらない
+    updated_by: planner
+    updated_at: '2026-11-27T03:46:35.979229+00:00'
+  - process: 実装
+    status: todo
+    note: mdmark のバージョンを固定する案 B を採ったときだけ use-mdmark.ts の読み込み先を変える。案 A なら skipped にする
+  - process: 結合テスト作成
+    status: todo
+    note: doc-view-screen.spec.ts の 列の表示のメニュー のテストを表のメニューから開く操作に合わせる
