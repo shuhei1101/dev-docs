@@ -119,6 +119,28 @@ flows:
       - '`matchCount` を返却するスタブでは、文書 1 が `4`、文書 2 が `1`'
       - 返却しないスタブでは、どちらも `null`
     test: test_normal_when_match_count
+  - name: 正常系（本物の project-index の一致した行の数）
+    summary: 本物の project-index が数えた本文の一致した行の数を、文書ごとに返却する
+    setup:
+      - name: Mock
+        description: テストの中で起動した project-index（shuhei1101/project-index の develop の `2588d67`（[語での検索の結果の文書ごとに、一致した行の数を返却する](https://github.com/shuhei1101/project-index/pull/300) をマージした commit））が、setup の配信元を配信する
+      - name: 本文のファイルを持つ配信元
+        description: 管理用の YAML の行の文書 3 件。本文が単語を含む行を 4 行（1 行に 2 回含む行を含む）持つ文書、1 行持つ文書、本文は含まず文書のパスだけが含む文書。パスの順・名前の順と、一致した行の数の多い順が違う並びになる名前にする（1 行の文書を `a-one`、4 行の文書を `z-many`）
+    flow: |-
+      ```mermaid
+      sequenceDiagram
+        participant C as クライアント
+        participant E as GET /_api/sources/{source}/search
+        participant PI as project-index
+
+        C->>E: q: 3 件が含む単語
+        E->>PI: 語での検索
+        E-->>C: 200 文書ごとの matchCount
+      ```
+    expected:
+      - 文書ごとの `matchCount` が、本文の単語を含む行が 4 行の文書で `4`、1 行の文書で `1`、文書のパスだけが含む文書で `0`
+      - 応答が、検索のダイアログの結合テストが API の応答に使用する `tests/integration/frontend/support/search-match-count.json` と一致する
+    test: test_normal_when_match_count_from_real_index
 lead: トップバーの検索が呼び、単語を含む文書と一致した箇所を返却する画面の検索の入出力を定め、画面の検索を修正するときに参照する。
 identifier: search_page
 permissions: なし（`127.0.0.1` でだけ待ち受ける）

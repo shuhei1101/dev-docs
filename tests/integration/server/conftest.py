@@ -36,6 +36,9 @@ PROJECT_INDEX_WRITE_COMMIT = "7153469bf6e3ac45a26848e32d2ddda91bade001"
 # 配信元の設定の取得が本文の直コミットを断る種類（`directCommit.metadataOnlyKinds`）を返却する commit（develop の b59c3ae）。
 # 文書の本文の編集を確かめるテストだけがこの commit の project-index を相手にする
 PROJECT_INDEX_BODY_COMMIT = "b59c3ae4882f3f8656973370bb088c35aa665cde"
+# 語での検索の結果の文書ごとに一致した行の数（`items[].matchCount`）を返却する commit（develop の 2588d67。
+# project-index #299 を含む）。一致した行の数を確かめるテストだけがこの commit の project-index を相手にする
+PROJECT_INDEX_MATCH_COUNT_COMMIT = "2588d67cf5b95cb1a593cca4cf5189440a502ae1"
 # 起動の待ち受けを待つ上限。2026-11-12 の実測で、負荷の低いときは 1 回 18 秒、
 # ロードアベレージ 20 では 30 秒を超えたため、30 秒 + 50% の余裕を持たせて 60 秒にする
 SERVE_WAIT_SEC = 60
@@ -1185,6 +1188,23 @@ def storage_index(
 ) -> Iterator[RealIndex]:
     """読み書きの方法を持つ本物の project-index を返却する（終了時に止める）。"""
     index = RealIndex(tmp_path / "storage-index", storage_index_clone, free_port())
+    index.root.mkdir()
+    yield index
+    index.stop()
+
+
+@pytest.fixture(scope="session")
+def match_count_index_clone() -> Path:
+    """一致した行の数を返却する commit の project-index のクローンを返却する（テストの実行ごとに 1 回用意する）。"""
+    return project_index_clone(PROJECT_INDEX_MATCH_COUNT_COMMIT)
+
+
+@pytest.fixture
+def match_count_index(
+    tmp_path: Path, match_count_index_clone: Path, free_port: Callable[[], int]
+) -> Iterator[RealIndex]:
+    """一致した行の数を返却する本物の project-index を返却する（終了時に止める）。"""
+    index = RealIndex(tmp_path / "match-count-index", match_count_index_clone, free_port())
     index.root.mkdir()
     yield index
     index.stop()

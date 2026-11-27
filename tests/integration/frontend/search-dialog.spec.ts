@@ -1,6 +1,14 @@
+import { readFileSync } from "node:fs";
+
 import { expect, test } from "@playwright/test";
 
+import { mockApi } from "./support/api-mock";
 import { axeViolations, openStory } from "./support/storybook";
+
+/** 本物の project-index（2588d67）を相手にした画面の検索の結合テストが確かめた応答 */
+const matchCountResponse: unknown = JSON.parse(
+  readFileSync(new URL("./support/search-match-count.json", import.meta.url), "utf8"),
+);
 
 const dialog = (page: import("@playwright/test").Page) =>
   page.getByRole("dialog", { name: "文書を検索" });
@@ -287,3 +295,27 @@ test.describe("Mobile", () => {
     ).toBeVisible();
   });
 });
+
+test.describe("RealMatchCount", () => {
+  // 本物の project-index の応答で、一致した行の数の多い順に並び、0 行の文書を含めて「一致 N 行」を出す（正常系）
+  test("real_match_count", async ({ page }) => {
+    // 準備
+    await mockApi(page, { search: () => ({ body: matchCountResponse }) });
+    await page.goto("/sample/docs/doc-1");
+    await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toBeVisible();
+    // 実行
+    await page.getByRole("button", { name: /^検索/ }).click();
+    await page.getByPlaceholder("文書を検索").fill("ページング");
+    // 検証
+    const options = dialog(page).getByRole("option");
+    await expect(options).toHaveCount(3);
+    // 応答の順（パスの順）と名前の順は a-one・z-many・ページングの案内で、一致した行の数の多い順だけが z-many から始まる
+    await expect(options.nth(0)).toContainText("z-many");
+    await expect(options.nth(0)).toContainText("一致 4 行");
+    await expect(options.nth(1)).toContainText("a-one");
+    await expect(options.nth(1)).toContainText("一致 1 行");
+    await expect(options.nth(2)).toContainText("ページングの案内");
+    await expect(options.nth(2)).toContainText("一致 0 行");
+  });
+});
+
