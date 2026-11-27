@@ -146,7 +146,11 @@ const Segment = <T extends string>({
 );
 
 type SearchState = {
-  data?: { totalCount: number; items: ScreenSearchItem[]; excludedCount?: number };
+  data?: {
+    totalCount: number;
+    items: ScreenSearchItem[];
+    excludedCount?: number;
+  };
   error: unknown;
 };
 
@@ -392,7 +396,10 @@ export const SearchDialog = ({
                   className="flex min-w-0 cursor-default flex-col gap-0.5 px-3 py-2 text-sm outline-hidden select-none aria-selected:bg-muted"
                 >
                   <span className="flex min-w-0 items-center gap-2">
-                    <span className="min-w-0 truncate font-medium">
+                    <span
+                      className="min-w-0 truncate font-medium"
+                      title={row.name}
+                    >
                       {row.name}
                     </span>
                     {row.excluded && (
@@ -412,7 +419,10 @@ export const SearchDialog = ({
                         {row.source}
                       </Badge>
                     )}
-                    <code className="min-w-0 truncate font-mono">
+                    <code
+                      className="min-w-0 truncate font-mono"
+                      title={row.path}
+                    >
                       {row.path}
                     </code>
                   </span>
