@@ -137,8 +137,11 @@ docs:
     updated_at: '2026-11-27T02:47:39.111395+00:00'
 scope_out:
   - item: project-index の HTTP の語での検索への、配信元の横断と一致した行の数の追加
-    reason: 取得の方法をインターフェース定義設計で決める（要件.mark.md の未確定）。案 B を採るときだけ project-index の Issue が要る
-    plan: to_file
+    reason: 'インターフェース定義設計で、横断は画面から配信元ごとに呼び、一致した行の数だけを project-index が返却すると決めた。提供する側の変更は project-index の作業（shuhei1101/project-index#299）で、本物につなぐ作業は #341'
+    plan: '#341'
   - item: 検索の結果のページング（100 件を超える分の続き）
     reason: 要望は返却した結果を全件スクロールして参照できること。100 件を超える分の続きの取得は要望に含まれない
     plan: none
+  - item: 結合テスト（フロント）の「列の表示のメニュー」が develop でも `テーブル設定` のボタンを見つけられず fail する
+    reason: mdmark の develop の表のメニューの変更による既存の不具合で、今回の要望（検索のダイアログ・差分の案内・骨格の高さ・サイドバー）に含まれない
+    plan: '#342'

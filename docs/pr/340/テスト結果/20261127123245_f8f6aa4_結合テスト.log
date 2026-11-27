@@ -1,0 +1,26 @@
+# 結合テスト: テストコードの commit f8f6aa4（計画書『画面』の結合テストの実行範囲の表の範囲）
+
+## 結合テスト（バック）（TL-2）
+$ gh workflow run test.yml --ref fix/doc-view/search-dialog-and-layout -f layer=backend-integration -f paths="tests/integration/server/test_search_page.py"  # run 45934143751
+2026-11-27T03:26:24.3857807Z tests/integration/server/test_search_page.py::test_normal PASSED         [ 20%]
+2026-11-27T03:26:25.4351200Z tests/integration/server/test_search_page.py::test_error_when_query_invalid PASSED [ 40%]
+2026-11-27T03:26:26.5488105Z tests/integration/server/test_search_page.py::test_error_when_not_found PASSED [ 60%]
+2026-11-27T03:26:27.6794512Z tests/integration/server/test_search_page.py::test_normal_when_search_excluded PASSED [ 80%]
+2026-11-27T03:26:28.2615964Z tests/integration/server/test_search_page.py::test_normal_when_match_count PASSED [100%]
+2026-11-27T03:26:28.2616800Z ============================== 5 passed in 8.65s ===============================
+
+## 結合テスト（フロント）（TL-3）
+$ gh workflow run test.yml --ref fix/doc-view/search-dialog-and-layout -f layer=frontend-integration -f paths="tests/integration/frontend/search-dialog.spec.ts tests/integration/frontend/doc-view-screen.spec.ts tests/integration/frontend/not-found-screen.spec.ts tests/integration/frontend/shortcut-dialog.spec.ts tests/integration/frontend/topbar.spec.ts tests/integration/frontend/pending-panel.spec.ts"  # run 45934141046
+2026-11-27T03:28:28.3565806Z   ✘   77 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1203:3 › 列の表示のメニュー › columns_menu_visible (16.0s)
+2026-11-27T03:28:28.5500679Z   ✘   78 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1209:3 › 列の表示のメニュー › columns_menu_hidden_columns (15.8s)
+2026-11-27T03:29:28.8812510Z   ✘   79 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1220:3 › 列の表示のメニュー › columns_menu_save (1.0m)
+2026-11-27T03:29:29.1723663Z   ✘   80 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1236:3 › 列の表示のメニュー › columns_menu_save_failure (1.0m)
+2026-11-27T03:30:29.4362320Z   ✘   81 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1250:3 › 列の表示のメニュー › columns_menu_save_when_tables_mixed (1.0m)
+2026-11-27T03:30:29.8534293Z   ✘   82 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1280:3 › 列の表示のメニュー › columns_menu_json_marker (1.0m)
+2026-11-27T03:32:14.3441109Z   6 failed
+2026-11-27T03:32:14.3446139Z   239 passed (4.8m)
+
+fail の 6 件は doc-view-screen.spec.ts の「列の表示のメニュー」だけで、この作業 PR の変更を含まない develop（70e8e72）の worktree でも同じく fail する既存の不具合（`テーブル設定` のボタンが見つからない。mdmark の develop の表のメニューの変更）。スコープ外として #342 を起票した。
+
+$ (develop の worktree) npx playwright test --config tests/integration/frontend/playwright.config.ts tests/integration/frontend/doc-view-screen.spec.ts -g "columns_menu_visible"
+  1 failed（Locator: getByRole('button', { name: 'テーブル設定' }) / element(s) not found）
