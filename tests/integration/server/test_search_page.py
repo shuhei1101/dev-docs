@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
+from pathlib import Path
 
 from .conftest import IndexSource, MockIndex, RealIndex, ServerEnv, doc, row
+
+# 本物の project-index が返却した画面の検索の応答。検索のダイアログの結合テストが API の応答に使用する
+MATCH_COUNT_RESPONSE = (
+    Path(__file__).parents[1] / "frontend" / "support" / "search-match-count.json"
+)
 
 
 def _server(index: RealIndex, make_server: Callable[..., ServerEnv]) -> ServerEnv:
@@ -158,3 +165,52 @@ def test_normal_when_match_count(
     assert [item["matchCount"] for item in with_count.json()["items"]] == [4, 1]
     assert without_count.status_code == 200
     assert [item["matchCount"] for item in without_count.json()["items"]] == [None, None]
+
+
+def test_normal_when_match_count_from_real_index(
+    match_count_index: RealIndex, make_server: Callable[..., ServerEnv]
+) -> None:
+    """本物の project-index が数えた本文の一致した行の数を、文書ごとに返却する（正常系）。"""
+    # 準備
+    rows = [row("sample", ["docs/*.yaml"]), row("notes", ["notes/files.yaml"], records="files")]
+    bodies = {
+        # 単語を含む行が 4 行（`snippets` の上限の 3 件より多い）。1 行に 2 回含む行も 1 行と数える
+        "many": "# 概要\n\nページングの説明\n他の行\nページングの例とページングの注意\n他の行\nページング\n末尾のページング\n",
+        # 単語を含む行が 1 行
+        "one": "# 概要\n\n一覧のページング\n他の行\n",
+    }
+    notes = [
+        doc(
+            f"notes/{name}.md",
+            "notes/files.yaml",
+            kind="notes",
+            record_index=index,
+            body_path=f"notes/{name}.md",
+            body=body,
+            data={"path": f"{name}.md"},
+        )
+        for index, (name, body) in enumerate(bodies.items())
+    ]
+    # 本文は単語を含まず、文書の ID（パス）だけが単語を含む
+    named = doc(
+        "notes/ページングの案内.md",
+        "notes/files.yaml",
+        kind="notes",
+        record_index=len(notes),
+        body_path="notes/ページングの案内.md",
+        body="# 概要\n\n他の行\n",
+        data={"path": "ページングの案内.md"},
+    )
+    match_count_index.serve("sample", IndexSource(documents=rows, docs={None: [*notes, named]}))
+    env = make_server(match_count_index)
+    # 実行
+    found = env.client.get("/_api/sources/sample/search", params={"q": "ページング"})
+    # 検証
+    assert found.status_code == 200
+    counts = {item["path"]: item["matchCount"] for item in found.json()["items"]}
+    assert counts == {
+        "notes/files/notes/many.md": 4,
+        "notes/files/notes/one.md": 1,
+        "notes/files/notes/ページングの案内.md": 0,
+    }
+    assert found.json() == json.loads(MATCH_COUNT_RESPONSE.read_text(encoding="utf-8"))
