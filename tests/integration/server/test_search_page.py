@@ -173,11 +173,13 @@ def test_normal_when_match_count_from_real_index(
     """本物の project-index が数えた本文の一致した行の数を、文書ごとに返却する（正常系）。"""
     # 準備
     rows = [row("sample", ["docs/*.yaml"]), row("notes", ["notes/files.yaml"], records="files")]
+    # パスの順・名前の順（a-one・z-many・ページングの案内）と、一致した行の数の多い順
+    # （z-many・a-one・ページングの案内）が違う並びになる名前にする
     bodies = {
         # 単語を含む行が 4 行（`snippets` の上限の 3 件より多い）。1 行に 2 回含む行も 1 行と数える
-        "many": "# 概要\n\nページングの説明\n他の行\nページングの例とページングの注意\n他の行\nページング\n末尾のページング\n",
+        "z-many": "# 概要\n\nページングの説明\n他の行\nページングの例とページングの注意\n他の行\nページング\n末尾のページング\n",
         # 単語を含む行が 1 行
-        "one": "# 概要\n\n一覧のページング\n他の行\n",
+        "a-one": "# 概要\n\n一覧のページング\n他の行\n",
     }
     notes = [
         doc(
@@ -209,8 +211,8 @@ def test_normal_when_match_count_from_real_index(
     assert found.status_code == 200
     counts = {item["path"]: item["matchCount"] for item in found.json()["items"]}
     assert counts == {
-        "notes/files/notes/many.md": 4,
-        "notes/files/notes/one.md": 1,
+        "notes/files/notes/z-many.md": 4,
+        "notes/files/notes/a-one.md": 1,
         "notes/files/notes/ページングの案内.md": 0,
     }
     assert found.json() == json.loads(MATCH_COUNT_RESPONSE.read_text(encoding="utf-8"))

@@ -309,9 +309,10 @@ test.describe("RealMatchCount", () => {
     // 検証
     const options = dialog(page).getByRole("option");
     await expect(options).toHaveCount(3);
-    await expect(options.nth(0)).toContainText("many");
+    // 応答の順（パスの順）と名前の順は a-one・z-many・ページングの案内で、一致した行の数の多い順だけが z-many から始まる
+    await expect(options.nth(0)).toContainText("z-many");
     await expect(options.nth(0)).toContainText("一致 4 行");
-    await expect(options.nth(1)).toContainText("one");
+    await expect(options.nth(1)).toContainText("a-one");
     await expect(options.nth(1)).toContainText("一致 1 行");
     await expect(options.nth(2)).toContainText("ページングの案内");
     await expect(options.nth(2)).toContainText("一致 0 行");
