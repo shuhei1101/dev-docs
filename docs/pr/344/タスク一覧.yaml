@@ -1,0 +1,100 @@
+tasks:
+  - process: 初期構築
+    status: skipped
+    reason: 既存リポジトリのため対象外
+    updated_by: planner
+    updated_at: '2026-11-27T04:29:27.966968+00:00'
+  - process: リバースエンジニアリング
+    status: skipped
+    reason: 既存の設計書があり、棚卸しは要らない
+    updated_by: planner
+    updated_at: '2026-11-27T04:29:27.966968+00:00'
+  - process: 方針決め
+    status: skipped
+    reason: 方針決めを依頼する Issue ではない
+    updated_by: planner
+    updated_at: '2026-11-27T04:29:27.966968+00:00'
+  - process: PoC 検証
+    status: skipped
+    reason: project-index の読み取り API の検索の応答に 1 キー加わるだけで、未検証の技術機構に依存しない
+    updated_by: planner
+    updated_at: '2026-11-27T04:29:27.966968+00:00'
+  - process: 複合ユースケース設計
+    status: skipped
+    reason: 業務フロー（ユースケースの連鎖）は変わらない
+    updated_by: planner
+    updated_at: '2026-11-27T04:29:27.966968+00:00'
+  - process: デザインスタイル選定
+    status: skipped
+    reason: 'モック要否の Q1 が NO（画面の見た目は #340 で作った表示のまま変わらない）'
+    updated_by: planner
+    updated_at: '2026-11-27T04:29:27.966968+00:00'
+  - process: 画面一覧・画面遷移
+    status: skipped
+    reason: モック要否の Q1 が NO（画面の追加・削除・遷移の変更が無い）
+    updated_by: planner
+    updated_at: '2026-11-27T04:29:27.966968+00:00'
+  - process: 単一ユースケース設計
+    status: skipped
+    reason: 利用者の操作は変わらず、検索の流れ（SC-155-7）の記述は変わらない
+    updated_by: planner
+    updated_at: '2026-11-27T04:29:27.966968+00:00'
+  - process: モック作成
+    status: skipped
+    reason: モック要否の Q1 が NO
+    updated_by: planner
+    updated_at: '2026-11-27T04:29:27.966968+00:00'
+  - process: データ設計
+    status: skipped
+    reason: データストアの構造は変わらない
+    updated_by: planner
+    updated_at: '2026-11-27T04:29:27.966968+00:00'
+  - process: インターフェース定義設計
+    status: skipped
+    reason: '画面の検索（IF-155-16）の入出力は #340 で `items[].matchCount` を定義済み。本物と食い違いがあれば実装で設計書から直し、この行を todo へ戻す'
+    updated_by: planner
+    updated_at: '2026-11-27T04:29:27.966968+00:00'
+  - process: エージェント・MCP サーバー設計
+    status: skipped
+    reason: 機能を呼ぶインターフェースの選び方の Q0・Q2 が NO で、エージェント・MCP のツールを追加・変更しない
+    updated_by: planner
+    updated_at: '2026-11-27T04:29:27.966968+00:00'
+  - process: エージェントフロー・LLM 呼び出し設計
+    status: skipped
+    reason: エージェントフロー・LLM の呼び出しを追加・変更しない
+    updated_by: planner
+    updated_at: '2026-11-27T04:29:27.966968+00:00'
+  - process: 精度評価設計
+    status: skipped
+    reason: 精度評価をするかの Q1 が NO（LLM・意思決定モデルを使用しない）
+    updated_by: planner
+    updated_at: '2026-11-27T04:29:27.966968+00:00'
+  - process: 部品設計
+    status: skipped
+    reason: 検索のダイアログ（CMP-155-3）の引数と状態は変わらない
+    updated_by: planner
+    updated_at: '2026-11-27T04:29:27.966968+00:00'
+  - process: 画面設計
+    status: skipped
+    reason: 画面設計要否の Q2 が NO（UI 項目・操作は変わらない）
+    updated_by: planner
+    updated_at: '2026-11-27T04:29:27.966968+00:00'
+  - process: モジュール構成設計
+    status: skipped
+    reason: クラス・関数の構成は変わらない（食い違いの修正で変わるときはこの行を todo へ戻す）
+    updated_by: planner
+    updated_at: '2026-11-27T04:29:27.966968+00:00'
+  - process: ドキュメント修正
+    status: todo
+    note: API-155-1 の `GET /sources/{source}/search` の行・`verification`・`version` を本物と照合した内容に書き換える
+  - process: 単体テスト作成
+    status: skipped
+    reason: '`matchCount` の受け取りと変換の単体テストは #340 で作成済み。食い違いの修正で振る舞いが変わるときはこの行を todo へ戻す'
+    updated_by: planner
+    updated_at: '2026-11-27T04:29:27.966968+00:00'
+  - process: 実装
+    status: todo
+    note: 本物の応答とモック（#340）を照合し、食い違いがあれば修正する。無ければ変更なしを記録する
+  - process: 結合テスト作成
+    status: todo
+    note: 画面の検索の結合テスト（tests/integration/server/test_search_page.py）の一致した行の数のテストを、`matchCount` を返却する project-index の commit（2588d67）に固定した本物の project-index を相手にする

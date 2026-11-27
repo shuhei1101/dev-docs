@@ -1,0 +1,20 @@
+use_cases:
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: none
+    detail: 配信元の文書を画面で参照する全体の流れは変わらない
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: 検索で、一致した行の数の多い文書から並び「一致 N 行」が出ることを、本物の project-index の応答で確かめる。シナリオの記述は変わらない
+    depends_on: []
+docs:
+  - page: docs/external-api/API-155-1.yaml
+    new: false
+    change: '`GET /sources/{source}/search` の行の `items[].matchCount` を未リリースの記述から本物と照合した内容に書き換え、`verification` に照合した commit と結合テストの結果を追記し、`version` を照合した commit にする'
+    status: todo
+scope_out:
+  - item: 結合テストのほかのテスト（文書の取得・リビジョンの一覧 等）が相手にする project-index の commit（`PROJECT_INDEX_COMMIT` の 978cc5d）の更新
+    reason: 要望に含まれない。一致した行の数のテストだけを 2588d67 の project-index の相手にする（既存の `PROJECT_INDEX_STORAGE_COMMIT` と同じ分け方）
+    plan: none
