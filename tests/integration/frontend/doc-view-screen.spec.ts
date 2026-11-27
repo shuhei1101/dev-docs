@@ -1199,13 +1199,34 @@ test.describe("本文", () => {
 });
 
 test.describe("列の表示のメニュー", () => {
-  // `+columns` の表に `テーブル設定` を出す（正常系）
+  /** 列の表示・非表示の機能を持つ表の、見出し行の右上の表のメニューのボタン（`index` は出る順） */
+  const tableMenu = (page: Page, index = 0) => page.getByRole("button", { name: /^表のメニュー/ }).nth(index);
+
+  /** 表のメニューを開き、`テーブル設定` の項目でパネルを開く */
+  const openTableSettings = async (page: Page, index = 0) => {
+    await tableMenu(page, index).click();
+    await page.getByRole("button", { name: "テーブル設定", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "テーブル設定" })).toBeVisible();
+  };
+
+  // `+columns` の表に表のメニューのボタンを出し、メニューに `テーブル設定` の項目を並べる（正常系）
   test("columns_menu_visible", async ({ page }) => {
     await openRendered(page);
-    await expect(page.getByRole("button", { name: "テーブル設定" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "表のメニュー", exact: true })).toBeVisible();
+    await tableMenu(page).click();
+    await expect(page.getByRole("button", { name: "テーブル設定", exact: true })).toBeVisible();
   });
 
-  // 隠した列を表から除き、件数を `テーブル設定` のスクリーンリーダー向けの名前に添える（正常系）
+  // 先頭の列は隠せない（正常系）
+  test("columns_menu_first_column_locked", async ({ page }) => {
+    await openRendered(page);
+    await openTableSettings(page);
+    const dialog = page.getByRole("dialog", { name: "テーブル設定" });
+    await expect(dialog.getByRole("button", { name: "「キー」を隠す" })).toBeDisabled();
+    await expect(dialog.getByText("先頭の列は隠せません")).toBeVisible();
+  });
+
+  // 隠した列を表から除き、件数を表のメニューのボタンのスクリーンリーダー向けの名前に添える（正常系）
   test("columns_menu_hidden_columns", async ({ page }) => {
     await openRendered(page, "/sample/docs/doc-1", {
       document: ({ path }) => ({
@@ -1213,14 +1234,14 @@ test.describe("列の表示のメニュー", () => {
       }),
     });
     await expect(page.locator("th:visible")).toHaveText(["キー", "名称"]);
-    await expect(page.getByRole("button", { name: "テーブル設定（1 列を非表示）" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "表のメニュー（1 列を非表示）", exact: true })).toBeVisible();
   });
 
   // 列の出し入れのたびに、その表の隠した列を保存する（正常系）
   test("columns_menu_save", async ({ page }) => {
     // 準備
     const api = await openRendered(page);
-    await page.getByRole("button", { name: "テーブル設定" }).click();
+    await openTableSettings(page);
     // 実行
     await page.getByRole("dialog", { name: "テーブル設定" }).getByRole("button", { name: "「備考」を隠す" }).click();
     // 検証
@@ -1238,7 +1259,7 @@ test.describe("列の表示のメニュー", () => {
     await openRendered(page, "/sample/docs/doc-1", {
       putColumns: () => problem(500),
     });
-    await page.getByRole("button", { name: "テーブル設定" }).click();
+    await openTableSettings(page);
     // 実行
     await page.getByRole("dialog", { name: "テーブル設定" }).getByRole("button", { name: "「備考」を隠す" }).click();
     // 検証
@@ -1265,8 +1286,8 @@ test.describe("列の表示のメニュー", () => {
         body: documentResponse({ path, markdown, tableKeys: ["sample:fixed", "sample:a", "sample:b"] }),
       }),
     });
-    // 実行（3 つ目の表の `テーブル設定` で備考を隠す）
-    await page.getByRole("button", { name: "テーブル設定" }).nth(1).click();
+    // 実行（3 つ目の表の表のメニューの `テーブル設定` で備考を隠す）
+    await openTableSettings(page, 1);
     await page.getByRole("dialog", { name: "テーブル設定" }).getByRole("button", { name: "「備考」を隠す" }).click();
     // 検証
     await expect.poll(() => api.callsOf("putColumns").length).toBe(1);
@@ -1296,8 +1317,8 @@ test.describe("列の表示のメニュー", () => {
     });
     // 検証（保存した隠す列が空の表 A は、マーカーで隠した備考も表示する）
     await expect(page.locator("th:visible")).toHaveText(["表 A", "名称", "備考", "表 B", "名称", "備考"]);
-    // 実行（2 つ目の表の `テーブル設定` で備考を隠す）
-    await page.getByRole("button", { name: "テーブル設定" }).nth(1).click();
+    // 実行（2 つ目の表の表のメニューの `テーブル設定` で備考を隠す）
+    await openTableSettings(page, 1);
     await page.getByRole("dialog", { name: "テーブル設定" }).getByRole("button", { name: "「備考」を隠す" }).click();
     // 検証
     await expect.poll(() => api.callsOf("putColumns").length).toBe(1);

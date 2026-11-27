@@ -1,0 +1,28 @@
+docs:
+  - page: docs/screen/SCR-155-1.yaml
+    new: false
+    change: 列の表示のメニューの label を、表のメニューのボタン・メニューのテーブル設定の項目・テーブル設定のパネルの列ごとの表示の切り替え・隠した列の数のバッジに書き換える
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-27T03:51:17.242614+00:00'
+  - page: docs/library/LIB-155-9.yaml
+    new: false
+    change: onColumnsChange の説明の列の出し入れの操作と確認の記録を、mdmark の develop の表のメニューに合わせる
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-27T03:58:15.901150+00:00'
+scope_out:
+  - item: テストの準備の Markdown の表のマーカーを mdmark の JSON の記載へ移す（columns_menu_save_when_tables_mixed の準備を含む）
+    reason: 表のマーカーの記載方法の移行で、表のメニューのボタンの見つけ方とは別の要望
+    plan: '#244'
+use_cases:
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: 文書の表で列を出し入れして文書ごとに記憶する流れは変わらないが、列の出し入れの操作が表のメニューから開くテーブル設定に変わるため、流れが壊れていないかを確かめる
+    depends_on: []
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: none
+    detail: 業務の流れは変わらない
+    depends_on: []
