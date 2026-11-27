@@ -13,4 +13,5 @@ export interface ScreenSearchItem {
   name: string;
   snippets: string[];
   excluded?: boolean;
+  matchCount?: number | null;
 }

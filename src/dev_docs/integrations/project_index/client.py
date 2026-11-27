@@ -65,6 +65,11 @@ def _seg(value: str) -> str:
     return quote(value, safe="")
 
 
+def _match_count(value: Any) -> int | None:
+    """検索の結果の `matchCount` を整数にする（整数でなければ None。真偽値も整数として扱わない）。"""
+    return value if type(value) is int else None
+
+
 def _violations(errors: Any) -> list[Violation]:
     """problem+json の `errors[]` の `{path, reason}` を `Violation` にする。"""
     return [
@@ -355,6 +360,7 @@ class ProjectIndexClient:
                     name=str(item.get("name", "")),
                     snippets=list(item.get("snippets") or []),
                     excluded=item.get("excluded") is True,
+                    match_count=_match_count(item.get("matchCount")),
                 )
                 for item in value.get("items") or []
             ],

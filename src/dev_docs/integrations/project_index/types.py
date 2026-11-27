@@ -145,6 +145,8 @@ class SearchHit:
     name: str
     snippets: list[str]
     excluded: bool = False
+    # 一致した行の数（応答が持たないときは None）
+    match_count: int | None = None
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

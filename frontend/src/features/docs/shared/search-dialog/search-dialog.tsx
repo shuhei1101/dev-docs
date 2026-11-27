@@ -40,10 +40,8 @@ type Props = {
   onResultSelect: (path: string, source: string) => void;
 };
 
-/** 一致した行の数（`matchCount`）を持つ結果。project-index が数を返却しないときは `null` */
-type SearchItem = ScreenSearchItem & { matchCount?: number | null };
-
-type Row = SearchItem & { source: string; matches: number | null };
+/** 結果の行。`matches` は一致した行の数で、project-index が数を返却しないときは `null` */
+type Row = ScreenSearchItem & { source: string; matches: number | null };
 
 type Failure = { source: string; reason: string };
 
@@ -148,7 +146,7 @@ const Segment = <T extends string>({
 );
 
 type SearchState = {
-  data?: { totalCount: number; items: SearchItem[]; excludedCount?: number };
+  data?: { totalCount: number; items: ScreenSearchItem[]; excludedCount?: number };
   error: unknown;
 };
 

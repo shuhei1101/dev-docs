@@ -112,6 +112,8 @@ class ScreenSearchItem(ApiModel):
     name: str
     snippets: list[str]
     excluded: bool = False
+    # project-index が数えた一致した行の数（数を返却しないバージョンでは None）
+    match_count: int | None = None
 
 
 class ScreenSearchResult(ApiModel):
