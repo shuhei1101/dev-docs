@@ -1391,8 +1391,11 @@ test.describe("目次", () => {
       document: ({ path }) => ({ body: documentResponse({ path, markdown: LONG_MARKDOWN }) }),
     });
     await expect(page.getByRole("heading", { level: 2, name: /^セクション 1 / })).toBeVisible();
+    await page.locator("#doc-scroll").hover();
     await page.mouse.wheel(0, 1400);
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThanOrEqual(1400);
+    await expect
+      .poll(() => page.locator("#doc-scroll").evaluate((element) => element.scrollTop))
+      .toBeGreaterThanOrEqual(1400);
   };
 
   /** 種類のタブの下端（画面の上端からの px） */
@@ -1401,7 +1404,7 @@ test.describe("目次", () => {
     return box.y + box.height;
   };
 
-  // スクロールしても、右端の線と目次の枠をトップバーと種類のタブの下に固定する（正常系）
+  // スクロールしても、右端の線と目次の枠を本文の領域の上端（トップバーと種類のタブの下）に固定する（正常系）
   test("toc_below_tabs_when_scrolled", async ({ page }) => {
     // 準備
     await openScrolled(page);
@@ -1437,32 +1440,44 @@ test.describe("目次", () => {
     await expect(page.getByRole("columnheader", { name: "名前" })).toBeVisible();
   };
 
-  /** 表の上端（文書の上端からの px） */
+  /** 本文の領域（スクロールの容器）の上端（画面の上端からの px） */
+  const scrollTop = async (page: Page) => (await boxOf(page.locator("#doc-scroll"))).y;
+
+  /** 表の上端（本文の領域の内容の上端からの px） */
   const tableTop = (page: Page) =>
-    page.locator(".mdmark table").first().evaluate((table) => table.getBoundingClientRect().top + window.scrollY);
+    page.locator(".mdmark table").first().evaluate((table) => {
+      const container = document.getElementById("doc-scroll") as HTMLElement;
+      return table.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+    });
+
+  /** 本文の領域を指定の位置までスクロールする */
+  const scrollBodyTo = (page: Page, y: number) =>
+    page.locator("#doc-scroll").evaluate((element, top) => element.scrollTo(0, top), y);
 
   /** 表の見出し行の上端（画面の上端からの px） */
   const headTop = async (page: Page) => (await boxOf(page.getByRole("columnheader", { name: "名前" }))).y;
 
-  /** mdmark が見出し行を留める位置（画面の上端からの px）。`--mdmark-sticky-top` の計算値 */
+  /** mdmark が見出し行を留める位置（本文の領域の上端からの px）。`--mdmark-sticky-top` の計算値 */
   const stickyTop = (page: Page) =>
     page.locator(".mdmark").first().evaluate((body) => Number.parseFloat(getComputedStyle(body).getPropertyValue("--mdmark-sticky-top")));
 
   for (const withoutTimeline of [false, true]) {
     const suffix = withoutTimeline ? "_without_timeline" : "";
-    // 表の上端がトップバーと種類のタブの下端に達するまでは見出し行を表の中に置き、達した後はその下端に留める（正常系）
+    // 表の上端が本文の領域の上端（トップバーと種類のタブの下）に達するまでは見出し行を表の中に置き、達した後はその上端に留める（正常系）
     test(`table_head_below_tabs_when_scrolled${suffix}`, async ({ page }) => {
       // 準備
       await openLongTable(page, { withoutTimeline });
-      const expected = await stickyTop(page);
+      const sticky = await stickyTop(page);
+      expect(sticky).toBe(0);
+      const expected = (await scrollTop(page)) + sticky;
       expect(expected).toBeGreaterThanOrEqual(await tabsBottom(page));
       const top = await tableTop(page);
       // 実行（表の上端を留める位置より 300px 下に置く）
-      await page.evaluate((y) => window.scrollTo(0, y), top - expected - 300);
+      await scrollBodyTo(page, top - sticky - 300);
       // 検証
       await expect.poll(async () => Math.abs((await headTop(page)) - expected - 300)).toBeLessThanOrEqual(1);
       // 実行（表の上端を留める位置より 400px 上へ過ぎさせる）
-      await page.evaluate((y) => window.scrollTo(0, y), top - expected + 400);
+      await scrollBodyTo(page, top - sticky + 400);
       // 検証
       await expect.poll(async () => Math.abs((await headTop(page)) - expected)).toBeLessThanOrEqual(1);
     });
@@ -1678,7 +1693,8 @@ test.describe("コメントの場所への移動", () => {
     await expect(heading).toHaveText("文書 2");
     const target = page.getByText("中ほどの文").first();
     await target.evaluate((element) => element.scrollIntoView({ block: "start" }));
-    const before = await page.evaluate(() => window.scrollY);
+    const bodyScroll = () => page.locator("#doc-scroll").evaluate((element) => element.scrollTop);
+    const before = await bodyScroll();
     await expect(page.locator("#mdmark-comment-hint")).toBeAttached();
     await target.selectText();
     await page.getByRole("button", { name: "コメント", exact: true }).click();
@@ -1687,7 +1703,7 @@ test.describe("コメントの場所への移動", () => {
     // 検証
     await expect(mark(page, "中ほどの文")).toHaveCount(1);
     await page.waitForTimeout(500);
-    expect(Math.abs((await page.evaluate(() => window.scrollY)) - before)).toBeLessThan(5);
+    expect(Math.abs((await bodyScroll()) - before)).toBeLessThan(5);
   });
 
   // 他の文書のコメントは、その文書を開いた後に本文のマーカーが画面に入るまでスクロールして強調する（正常系）
@@ -2606,5 +2622,136 @@ test.describe("編集中のパネル（文書の画面）", () => {
       edits: [{ kind: "body", docId: "rule-sample", docKind: "rule", expectedVersion: "a1b2c3", docPath: "docs/rule/rule-sample.yaml", values: { description: "修正後の説明" } }],
     });
     await expect.poll(env.documents).toBeGreaterThan(before);
+  });
+});
+
+test.describe("本文のスクロール", () => {
+  /** 画面より長い本文 */
+  const LONG_BODY = `# 文書 1\n\n${Array.from(
+    { length: 30 },
+    (_, index) => `## 節 ${index + 1}\n\n${"本文の段落です。".repeat(40)}\n`,
+  ).join("\n")}`;
+
+  // 画面を表示領域の高さに収め、本文を末尾までスクロールしても画面全体の縦のスクロールバーを出さない（正常系）
+  for (const viewport of [
+    { width: 1280, height: 800 },
+    { width: 390, height: 844 },
+  ]) {
+    test(`body_scroll_without_page_scrollbar_${viewport.width}`, async ({
+      page,
+    }) => {
+      // 準備
+      await page.setViewportSize(viewport);
+      await openDoc(page, "/sample/docs/doc-1", {
+        document: ({ path }) => ({
+          body: documentResponse({ path, markdown: LONG_BODY }),
+        }),
+      });
+      const scroll = page.locator("#doc-scroll");
+      await expect(
+        page.getByRole("heading", { level: 2, name: /^節 1 / }),
+      ).toBeVisible();
+      // 実行
+      await scroll.evaluate((element) =>
+        element.scrollTo(0, element.scrollHeight),
+      );
+      // 検証
+      await expect
+        .poll(() => scroll.evaluate((element) => element.scrollTop))
+        .toBeGreaterThan(0);
+      expect(
+        await page.evaluate(
+          () =>
+            document.documentElement.scrollHeight <=
+            document.documentElement.clientHeight,
+        ),
+      ).toBe(true);
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+      await expect(
+        page.getByRole("navigation", { name: "文書の種類" }),
+      ).toBeInViewport();
+    });
+  }
+});
+
+test.describe("文書の一覧の長い名前", () => {
+  const LONG_GROUP = "設計書のまとまりの名前が長いときの見出し".repeat(3);
+  const LONG_PAGE = "文書の名前が長いときにサイドバーの幅を超える文書".repeat(
+    3,
+  );
+  const LONG_TABS = [
+    {
+      title: "規約",
+      active: true,
+      items: [
+        {
+          kind: "group" as const,
+          title: LONG_GROUP,
+          path: null,
+          change: null,
+          items: [
+            {
+              kind: "page" as const,
+              title: LONG_PAGE,
+              path: "docs/doc-1",
+              items: [],
+              change: null,
+            },
+          ],
+        },
+      ],
+    },
+  ];
+
+  // page の名前と group の見出しを 1 行で出し、収まらない末尾を省略して title に全文を持たせる（正常系）
+  test("sidebar_long_names_truncated", async ({ page }) => {
+    // 準備・実行
+    await openDoc(page, "/sample/docs/doc-1", {
+      document: ({ path }) => ({
+        body: documentResponse({ path, tabs: LONG_TABS }),
+      }),
+    });
+    const sidebar = page.getByRole("navigation", { name: "文書の一覧" });
+    const groupName = sidebar.getByTitle(LONG_GROUP);
+    const pageName = sidebar.getByTitle(LONG_PAGE);
+    // 検証
+    for (const name of [groupName, pageName]) {
+      await expect(name).toBeVisible();
+      const style = await name.evaluate((element) => {
+        const computed = getComputedStyle(element);
+        return {
+          whiteSpace: computed.whiteSpace,
+          textOverflow: computed.textOverflow,
+          clipped: element.scrollWidth > element.clientWidth,
+        };
+      });
+      expect(style).toEqual({
+        whiteSpace: "nowrap",
+        textOverflow: "ellipsis",
+        clipped: true,
+      });
+    }
+    const nav = await boxOf(sidebar);
+    expect(
+      (await boxOf(pageName)).x + (await boxOf(pageName)).width,
+    ).toBeLessThanOrEqual(nav.x + nav.width + 1);
+  });
+});
+
+test.describe("差分の案内の文字色", () => {
+  // 「比較元」「比較先」のラベルが案内の背景とのコントラスト 4.5:1 以上になる（正常系）
+  test("diff_banner_label_contrast", async ({ page }) => {
+    // 準備・実行
+    await openDoc(page, "/sample/docs/doc-1?base=7c0aa11", {
+      document: withDiff,
+    });
+    const banner = page.getByRole("region", { name: "差分" });
+    await expect(banner).toBeVisible();
+    // 検証
+    const result = await new AxeBuilder({ page })
+      .include('[aria-label="差分"]')
+      .withRules(["color-contrast"])
+      .analyze();
+    expect(result.violations).toEqual([]);
   });
 });
