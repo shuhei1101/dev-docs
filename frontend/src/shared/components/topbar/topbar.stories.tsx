@@ -99,6 +99,11 @@ export const DocViewWithPendingEdits: Story = {
   args: { ...docView, commentCount: 2, pendingEditCount: 3 },
 };
 
+export const DocViewWithPendingEditsNarrow: Story = {
+  args: { ...docView, commentCount: 2, pendingEditCount: 3 },
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+};
+
 const metadata = {
   screen: "metadata",
   sources,

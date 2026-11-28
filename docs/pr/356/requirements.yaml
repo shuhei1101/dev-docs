@@ -51,3 +51,6 @@ scope_out:
   - item: 文書の画面のストーリー `EditWholeFileInvalid`（`doc-view-screen.stories.tsx`）の play が、ファイル全体の編集欄を開かず入力のエラー（`role=alert`）を見つけられずに失敗する
     reason: 部品設計の状態 1 つ = 1 つのストーリーが描けること（外部ライブラリ『Storybook』）から外れている。develop でも同じように失敗し、今回の要望に含まれない
     plan: to_file
+  - item: レビュー中のパネル（`CMP-155-4`）の狭い幅で、下から出すパネルの高さが画面の高さの 25% を超える（`detect_screen_issues` の `fixed-area-height`。ストーリー `Narrow`・`MetadataEdits`）
+    reason: '固定の領域の高さの上限（規約『レイアウト』）から外れている。今回はパネルの高さを変えておらず、変えていないストーリーにも同じ検出が出るので、今回の要望に含まれない。`pane.narrow: bottom_sheet` の高さの上限を決めるかも含めて別の Issue で扱う'
+    plan: to_file

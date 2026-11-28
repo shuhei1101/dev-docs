@@ -333,6 +333,7 @@ export const Topbar = (props: Props) => {
           <Button
             variant="ghost"
             size="sm"
+            className="px-1.5 md:px-2.5"
             aria-label={`コメント ${commentCount} 件`}
             onClick={props.onCommentPanelToggle}
           >
