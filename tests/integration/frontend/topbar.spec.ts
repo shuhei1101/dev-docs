@@ -219,7 +219,7 @@ test.describe("DocViewWithPendingEdits", () => {
     await openStory(page, "layout-topbar--doc-view-with-pending-edits");
     const pending = bar(page).getByRole("button", { name: "レビュー中 3 件" });
     await expect(pending).toContainText("3");
-    await expect(bar(page).getByRole("link", { name: "メタデータ" })).toBeVisible();
+    await expect(bar(page).getByLabel("メタデータ", { exact: true })).toBeVisible();
     expect(await axeViolations(page)).toEqual([]);
   });
 });
@@ -242,7 +242,7 @@ test.describe("Metadata", () => {
   // メタデータの画面。メタデータのボタンを今の画面にし、レビュー中の件数を出す（正常系）
   test("metadata", async ({ page }) => {
     await openStory(page, "layout-topbar--metadata");
-    await expect(bar(page).getByRole("link", { name: "メタデータ" })).toHaveAttribute("aria-current", "page");
+    await expect(bar(page).getByLabel("メタデータ", { exact: true })).toHaveAttribute("aria-current", "page");
     await expect(bar(page).getByRole("button", { name: "レビュー中 3 件" })).toBeVisible();
     await expect(bar(page).getByRole("button", { name: "検索 Ctrl K" })).toBeVisible();
     expect(await axeViolations(page)).toEqual([]);
