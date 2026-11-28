@@ -48,3 +48,6 @@ scope_out:
   - item: シナリオ対応の E2E の新規作成
     reason: 利用者の操作の流れは変わらず、既存のテストの実行で確かめる
     plan: none
+  - item: 文書の画面のストーリー `EditWholeFileInvalid`（`doc-view-screen.stories.tsx`）の play が、ファイル全体の編集欄を開かず入力のエラー（`role=alert`）を見つけられずに失敗する
+    reason: 部品設計の状態 1 つ = 1 つのストーリーが描けること（外部ライブラリ『Storybook』）から外れている。develop でも同じように失敗し、今回の要望に含まれない
+    plan: to_file
