@@ -24,12 +24,12 @@ const NAVIGATION: ConfirmRequest = {
 const renderGuard = (active: boolean, navigation?: ConfirmRequest) => {
   const Guarded = () => {
     useLeaveGuard(active, { navigation });
-    return <Link to="/other">別の画面</Link>;
+    return <Link to="/_settings">別の画面</Link>;
   };
   const rootRoute = createRootRoute({ component: () => <Outlet /> });
   const routeTree = rootRoute.addChildren([
     createRoute({ getParentRoute: () => rootRoute, path: "/", component: Guarded }),
-    createRoute({ getParentRoute: () => rootRoute, path: "/other", component: () => <p>別の画面です</p> }),
+    createRoute({ getParentRoute: () => rootRoute, path: "/_settings", component: () => <p>別の画面です</p> }),
   ]);
   const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: ["/"] }) });
   render(
@@ -62,7 +62,7 @@ test("test_use_leave_guard_when_inactive", async () => {
   expect(fireBeforeUnload().defaultPrevented).toBe(false);
   await userEvent.click(screen.getByRole("link", { name: "別の画面" }));
 
-  await waitFor(() => expect(router.state.location.pathname).toBe("/other"));
+  await waitFor(() => expect(router.state.location.pathname).toBe("/_settings"));
   expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
 });
 
@@ -85,5 +85,5 @@ test("test_use_leave_guard_when_navigation_confirmed", async () => {
 
   await userEvent.click(await screen.findByRole("button", { name: "破棄して移動" }));
 
-  await waitFor(() => expect(router.state.location.pathname).toBe("/other"));
+  await waitFor(() => expect(router.state.location.pathname).toBe("/_settings"));
 });
