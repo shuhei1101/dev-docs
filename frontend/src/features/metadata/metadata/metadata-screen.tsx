@@ -161,6 +161,7 @@ export const MetadataScreen = ({ source }: Props) => {
       params: { source },
       search: { ...search, ...next },
       replace: true,
+      resetScroll: false,
     });
 
   useEffect(() => {

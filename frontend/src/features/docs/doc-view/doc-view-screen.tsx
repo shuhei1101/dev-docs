@@ -83,7 +83,7 @@ export const DocViewScreen = () => {
   const setSidePanel = (panel: SidePanel, value: boolean) => {
     const next = value ? panel : search.panel === panel ? undefined : search.panel;
     if (next === search.panel) return;
-    void navigate({ to: ".", search: { ...search, panel: next }, replace: true });
+    void navigate({ to: ".", search: { ...search, panel: next }, replace: true, resetScroll: false });
   };
   // 文書の無いタブを選んだとき（文書が変わったら戻す）
   const [empty, setEmpty] = useState<{ tab: NavTab; path: string } | null>(
