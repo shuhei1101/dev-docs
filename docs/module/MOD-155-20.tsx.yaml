@@ -32,7 +32,7 @@ components:
         type: boolean
         initial: 'URL の `panel` が `comments`'
         description: コメントのパネル
-        notes: 'URL の `panel` から求め、開閉は `panel` を `replace` で書き換える（`edits` とは並べない）'
+        notes: 'URL の `panel` から求め、開閉は `panel` を `replace`・`resetScroll: false` で書き換える（本文の位置を変えない）（`edits` とは並べない）'
       - name: emptyTab
         type: NavTab | null
         initial: 'null'
@@ -52,7 +52,7 @@ components:
         type: boolean
         initial: 'URL の `panel` が `edits`'
         description: レビュー中のパネル
-        notes: 'URL の `panel` から求め、開閉は `panel` を `replace` で書き換える（`comments` とは並べない）'
+        notes: 'URL の `panel` から求め、開閉は `panel` を `replace`・`resetScroll: false` で書き換える（本文の位置を変えない）（`comments` とは並べない）'
     unit_tests:
       - name: test_doc_view_screen
         case: 正常
