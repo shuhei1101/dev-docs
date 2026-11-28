@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 
 import { findActivePage, firstPagePath, pageTitle } from "@/features/docs/doc-view/nav";
+import type { NavItem } from "@/shared/api/generated/model";
 
 const page = (title: string, path: string) => ({
   kind: "page" as const,
@@ -9,7 +10,7 @@ const page = (title: string, path: string) => ({
   items: [],
   change: null,
 });
-const group = (title: string, items: ReturnType<typeof page>[]) => ({
+const group = (title: string, items: NavItem[]): NavItem => ({
   kind: "group" as const,
   title,
   path: null,
@@ -22,14 +23,41 @@ test("test_find_active_page", () => {
 
   const active = findActivePage(tabs, "a.md");
 
-  expect(active.group).toBe("設計");
+  expect(active.groups).toEqual(["設計"]);
+  expect(active.page?.path).toBe("a.md");
+});
+
+test("test_find_active_page_when_nested_group", () => {
+  const tabs = [
+    {
+      title: "設計",
+      active: true,
+      items: [group("設計書", [group("画面", [page("A", "a.md")])])],
+    },
+  ];
+
+  const active = findActivePage(tabs, "a.md");
+
+  expect(active.groups).toEqual(["設計書", "画面"]);
+  expect(active.page?.path).toBe("a.md");
+});
+
+test("test_find_active_page_when_no_group", () => {
+  const tabs = [{ title: "設計", active: true, items: [page("A", "a.md")] }];
+
+  const active = findActivePage(tabs, "a.md");
+
+  expect(active.groups).toEqual([]);
   expect(active.page?.path).toBe("a.md");
 });
 
 test("test_find_active_page_when_empty_tab", () => {
   const tabs = [{ title: "空", active: true, items: [] }];
 
-  expect(findActivePage(tabs, "a.md").page).toBeNull();
+  const active = findActivePage(tabs, "a.md");
+
+  expect(active.page).toBeNull();
+  expect(active.groups).toEqual([]);
 });
 
 test("test_first_page_path", () => {
@@ -45,7 +73,7 @@ test("test_first_page_path_when_empty", () => {
 test("test_page_title", () => {
   const tab = { title: "設計書", active: true, items: [page("A", "a.md")] };
 
-  const title = pageTitle({ tab, group: null, page: page("A", "a.md") }, "s");
+  const title = pageTitle({ tab, groups: [], page: page("A", "a.md") }, "s");
 
   expect(title).toBe("A | s | dev-docs");
 });
