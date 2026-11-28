@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { useSaveSources } from "@/features/settings/settings/queries";
@@ -125,6 +126,7 @@ export const SourceDeleteDialog = ({
               void remove();
             }}
           >
+            {save.isPending && <Loader2 aria-hidden="true" className="animate-spin" />}
             削除
           </AlertDialogAction>
         </AlertDialogFooter>
