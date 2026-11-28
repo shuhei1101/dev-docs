@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { beforeEach, expect, test } from "vitest";
@@ -184,4 +184,57 @@ test("test_metadata_screen_when_not_pending", async () => {
 
   await screen.findByRole("tablist");
   expect(refs[0]).toBeNull();
+});
+
+const fireBeforeUnload = () => {
+  const event = new Event("beforeunload", { cancelable: true });
+  act(() => {
+    window.dispatchEvent(event);
+  });
+  return event;
+};
+
+test("test_metadata_screen_when_query_in_url", async () => {
+  useMetadata(() => HttpResponse.json(metadataResponse()));
+  const { router } = renderApp("/sample/_metadata?q=%E9%85%8D%E4%BF%A1");
+  const input = await screen.findByLabelText("絞り込み");
+
+  expect(input).toHaveValue("配信");
+  expect(await screen.findByText("配信元")).toBeInTheDocument();
+  const length = window.history.length;
+  await userEvent.clear(input);
+  await userEvent.type(input, "term");
+
+  await waitFor(() => expect(router.state.location.search).toMatchObject({ q: "term" }));
+  expect(window.history.length).toBe(length);
+});
+
+test("test_metadata_screen_when_search", async () => {
+  useMetadata(() => HttpResponse.json(metadataResponse()));
+  renderApp("/sample/_metadata");
+  await screen.findByRole("tablist");
+
+  await userEvent.click(screen.getByRole("button", { name: "検索 Ctrl K" }));
+  expect(await screen.findByPlaceholderText("文書を検索")).toBeInTheDocument();
+  await userEvent.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByPlaceholderText("文書を検索")).not.toBeInTheDocument());
+
+  await userEvent.keyboard("{Control>}k{/Control}");
+  expect(await screen.findByPlaceholderText("文書を検索")).toBeInTheDocument();
+  await userEvent.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByPlaceholderText("文書を検索")).not.toBeInTheDocument());
+
+  await userEvent.keyboard("?");
+  expect(await screen.findByRole("heading", { name: "キーボードのショートカット" })).toBeInTheDocument();
+});
+
+test("test_metadata_screen_when_leave_guard", async () => {
+  useMetadata(() => HttpResponse.json(metadataResponse()));
+  renderApp("/sample/_metadata");
+  await screen.findByText("配信元");
+
+  expect(fireBeforeUnload().defaultPrevented).toBe(false);
+  await userEvent.click(screen.getByRole("button", { name: /を削除$/ }));
+
+  expect(fireBeforeUnload().defaultPrevented).toBe(true);
 });

@@ -1,8 +1,9 @@
-import { screen } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test, vi } from "vitest";
 
 import { SourceTable } from "@/features/settings/settings/components/source-table";
+import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { settingsSource } from "@tests/helpers/fixtures";
 import { renderInRouter } from "@tests/helpers/render";
 
@@ -33,4 +34,21 @@ test("test_source_table_when_outside_read_disabled", async () => {
 
   expect(notes).toHaveLength(1);
   expect(notes[0].closest("tr")).toHaveTextContent("a");
+});
+
+test("test_source_table_when_tooltip", async () => {
+  renderInRouter(
+    <TooltipProvider>
+      <SourceTable sources={sources as never} onEdit={vi.fn()} onRemove={vi.fn()} />
+    </TooltipProvider>,
+    "/_settings",
+  );
+  await screen.findByRole("link", { name: "a" });
+
+  act(() => screen.getByRole("button", { name: "a を編集" }).focus());
+
+  // Base UI の Tooltip の中身は role を持たないので、shadcn/ui の data-slot で探す
+  await waitFor(() =>
+    expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveTextContent("a を編集"),
+  );
 });

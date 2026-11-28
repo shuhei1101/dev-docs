@@ -1,23 +1,25 @@
-import { QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { expect, test, vi } from "vitest";
 
+import { ConfirmDialogProvider } from "@/app/confirm-dialog";
 import { SourceEditDialog } from "@/features/settings/settings/components/source-edit-dialog";
 import { PROBLEM_HEADERS, problem, settingsSource } from "@tests/helpers/fixtures";
 import { server } from "@tests/helpers/msw-server";
-import { createTestQueryClient } from "@tests/helpers/render";
+import { renderInRouter } from "@tests/helpers/render";
 
 const sources = [settingsSource("a")];
 
-const renderDialog = (index: number | null, onOpenChange = vi.fn()) => {
-  render(
-    <QueryClientProvider client={createTestQueryClient()}>
-      <SourceEditDialog open onOpenChange={onOpenChange} sources={sources as never} index={index} />
-    </QueryClientProvider>,
+const renderDialog = async (index: number | null, onOpenChange = vi.fn(), rows: unknown[] = sources) => {
+  const view = renderInRouter(
+    <ConfirmDialogProvider>
+      <SourceEditDialog open onOpenChange={onOpenChange} sources={rows as never} index={index} />
+    </ConfirmDialogProvider>,
+    "/_settings",
   );
-  return onOpenChange;
+  await screen.findByRole("dialog");
+  return { onOpenChange, ...view };
 };
 
 test("test_source_edit_dialog", async () => {
@@ -28,7 +30,7 @@ test("test_source_edit_dialog", async () => {
       return HttpResponse.json({ sources: [{ id: "extra", status: "serving", errors: [] }] });
     }),
   );
-  const onOpenChange = renderDialog(null);
+  const { onOpenChange } = await renderDialog(null);
 
   await userEvent.type(screen.getByLabelText(/配信元の ID/), "extra");
   await userEvent.type(screen.getByLabelText(/設定ファイル/), "/x/dev-docs.yaml");
@@ -39,8 +41,8 @@ test("test_source_edit_dialog", async () => {
   await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
 });
 
-test("test_source_edit_dialog_when_edit", () => {
-  renderDialog(0);
+test("test_source_edit_dialog_when_edit", async () => {
+  await renderDialog(0);
 
   expect(screen.queryByLabelText(/配信元の ID/)).toBeNull();
   expect(screen.getByText("配信元 a")).toBeInTheDocument();
@@ -49,7 +51,7 @@ test("test_source_edit_dialog_when_edit", () => {
 test("test_source_edit_dialog_when_invalid", async () => {
   const save = vi.fn(() => HttpResponse.json({ sources: [] }));
   server.use(http.put("/_api/settings/sources", save));
-  renderDialog(null);
+  await renderDialog(null);
 
   await userEvent.click(screen.getByRole("button", { name: "追加" }));
 
@@ -67,7 +69,7 @@ test("test_source_edit_dialog_when_outside_read", async () => {
       return HttpResponse.json({ sources: [{ id: "a", status: "serving", errors: [] }] });
     }),
   );
-  renderDialog(0);
+  await renderDialog(0);
   const toggle = screen.getByRole("switch", { name: "範囲の外から参照できるようにする" });
 
   expect(toggle).toBeChecked();
@@ -83,7 +85,7 @@ test("test_source_edit_dialog_when_conflict", async () => {
       HttpResponse.json(problem(409, { current: "v2" }), { status: 409, headers: PROBLEM_HEADERS }),
     ),
   );
-  const onOpenChange = renderDialog(0);
+  const { onOpenChange } = await renderDialog(0);
 
   await userEvent.click(screen.getByRole("button", { name: "保存" }));
 
@@ -100,7 +102,7 @@ test("test_source_edit_dialog_when_storage", async () => {
       return HttpResponse.json({ sources: [{ id: "a", status: "serving", errors: [] }] });
     }),
   );
-  renderDialog(0);
+  await renderDialog(0);
   const storage = screen.getByRole("combobox", { name: /読み書きの方法/ });
 
   expect(storage).toHaveTextContent("自動");
@@ -113,11 +115,7 @@ test("test_source_edit_dialog_when_storage", async () => {
 
 test("test_storage_field", async () => {
   const stored = [{ ...settingsSource("local"), storage: { type: "disk" } }];
-  render(
-    <QueryClientProvider client={createTestQueryClient()}>
-      <SourceEditDialog open onOpenChange={vi.fn()} sources={stored as never} index={0} />
-    </QueryClientProvider>,
-  );
+  await renderDialog(0, vi.fn(), stored);
   const storage = screen.getByRole("combobox", { name: /読み書きの方法/ });
 
   expect(storage).toHaveTextContent("ディスク");
@@ -132,7 +130,7 @@ test("test_storage_field", async () => {
 });
 
 test("test_storage_field_when_not_stored", async () => {
-  renderDialog(null);
+  await renderDialog(null);
   const storage = screen.getByRole("combobox", { name: /読み書きの方法/ });
 
   expect(
@@ -144,4 +142,73 @@ test("test_storage_field_when_not_stored", async () => {
   expect(await screen.findByRole("option", { name: "自動" })).toBeInTheDocument();
   expect(screen.getByRole("option", { name: "Git" })).toBeInTheDocument();
   expect(screen.getByRole("option", { name: "ディスク" })).toBeInTheDocument();
+});
+
+const pendingSave = () => {
+  server.use(http.put("/_api/settings/sources", () => new Promise<never>(() => {})));
+};
+
+const fireBeforeUnload = () => {
+  const event = new Event("beforeunload", { cancelable: true });
+  act(() => {
+    window.dispatchEvent(event);
+  });
+  return event;
+};
+
+test("test_source_edit_dialog_when_outside_click", async () => {
+  const { onOpenChange } = await renderDialog(null);
+  await userEvent.type(await screen.findByLabelText(/配信元の ID/), "extra");
+
+  await userEvent.click(document.querySelector('[data-slot="dialog-overlay"]') as Element);
+
+  // Base UI は閉じる理由を 2 つ目の引数に渡すので、1 つ目の引数だけを比べる
+  expect(onOpenChange.mock.calls.map(([open]) => open)).not.toContain(false);
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+  expect(screen.getByLabelText(/配信元の ID/)).toHaveValue("extra");
+});
+
+test("test_source_edit_dialog_when_saving", async () => {
+  pendingSave();
+  await renderDialog(null);
+  await userEvent.type(await screen.findByLabelText(/配信元の ID/), "extra");
+  await userEvent.type(screen.getByLabelText(/設定ファイル/), "/x/dev-docs.yaml");
+  await userEvent.type(screen.getByLabelText(/読み取りの範囲/), "/x/**");
+
+  await userEvent.click(screen.getByRole("button", { name: "追加" }));
+
+  const button = await screen.findByRole("button", { name: "追加" });
+  await waitFor(() => expect(button).toBeDisabled());
+  expect(button.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+});
+
+test("test_source_edit_dialog_when_leave_guard", async () => {
+  await renderDialog(null);
+  const input = await screen.findByLabelText(/配信元の ID/);
+
+  expect(fireBeforeUnload().defaultPrevented).toBe(false);
+  await userEvent.type(input, "extra");
+
+  expect(fireBeforeUnload().defaultPrevented).toBe(true);
+});
+
+test("test_source_edit_dialog_when_navigation_blocked", async () => {
+  const { router } = renderInRouter(
+    <ConfirmDialogProvider>
+      <SourceEditDialog open onOpenChange={vi.fn()} sources={sources as never} index={null} />
+    </ConfirmDialogProvider>,
+    "/s/a.md",
+  );
+  await act(() => router.navigate({ to: "/_settings" }));
+  await userEvent.type(await screen.findByLabelText(/配信元の ID/), "extra");
+
+  act(() => router.history.back());
+
+  const confirm = await screen.findByRole("alertdialog");
+  expect(confirm).toHaveTextContent("入力した内容を破棄して移動しますか?");
+  await userEvent.click(screen.getByRole("button", { name: "キャンセル" }));
+
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+  expect(router.state.location.pathname).toBe("/_settings");
+  expect(screen.getByLabelText(/配信元の ID/)).toHaveValue("extra");
 });

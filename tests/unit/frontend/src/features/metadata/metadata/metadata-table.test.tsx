@@ -1,8 +1,9 @@
-import { screen } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { MetadataTable } from "@/features/metadata/metadata/metadata-table";
+import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { usePendingEditsStore } from "@/shared/stores/pending-edits-store";
 import { metadataResponse, metadataRow } from "@tests/helpers/fixtures";
 import { renderInRouter } from "@tests/helpers/render";
@@ -126,4 +127,20 @@ test("test_metadata_table_when_caret_keyboard", async () => {
   await userEvent.keyboard("{Enter}");
 
   expect(screen.getByRole<HTMLInputElement>("textbox").selectionStart).toBe("project-index".length);
+});
+
+test("test_metadata_table_when_tooltip", async () => {
+  renderInRouter(
+    <TooltipProvider>
+      <MetadataTable source="sample" kind={kindOf("terms")} query="" baseCommit="aaa1111" />
+    </TooltipProvider>,
+  );
+  const button = await screen.findByRole("button", { name: /を削除$/ });
+
+  act(() => button.focus());
+
+  // Base UI の Tooltip の中身は role を持たないので、shadcn/ui の data-slot で探す
+  await waitFor(() =>
+    expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveTextContent(button.getAttribute("aria-label") ?? ""),
+  );
 });
