@@ -86,16 +86,16 @@ components:
         case: 正常
         summary: 入力したまま離れるときに警告する
         condition: 配信元の ID を入力して `beforeunload` を発火させる
-        mock: なし
+        mock: ブラウザの履歴のルーター（`beforeunload` はブラウザの履歴だけが受ける）
         expected: イベントの `defaultPrevented` が `true`。入力する前は `false`
       - name: test_source_edit_dialog_when_navigation_blocked
         case: 正常
         summary: 入力したまま画面の中で移るときに確認する
         condition: 配信元の ID を入力してブラウザの戻るを押し、確認のダイアログのキャンセルを押す
-        mock: メモリの履歴のルーター
+        mock: ブラウザの履歴のルーター（戻る・進むを止めるのはブラウザの履歴だけ）
         expected: 確認のダイアログが出て、キャンセルの後も設定画面のままで入力が残る
     notes:
-      閉じ方: '`DialogContent` の `onInteractOutside` で `preventDefault` を呼び、外側のクリックで閉じない（Esc・キャンセルは閉じる）'
+      閉じ方: 'Base UI の `Dialog` の `disablePointerDismissal` で、外側のクリックで閉じない（Esc・キャンセルは閉じる）'
       保存を待つ間: 追加・保存のボタンは応答を待つ間、文字の前に `Loader2` の回る表示を出して押せなくする（ボタンの幅は変えない）
       離脱の警告: '`useLeaveGuard` に、ダイアログを開いていてフォームが `isDirty` かを指定し、`navigation` に画面設計の『移動の確認のダイアログ』の文面（`destructive: true`）を指定する。入力はどこにも残らないので、画面の中の移動も止める'
   - name: StorageField

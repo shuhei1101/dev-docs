@@ -32,25 +32,25 @@ functions:
         case: 正常
         summary: タブを閉じる前に警告する
         condition: '`active` が `true` で `beforeunload` を発火させる'
-        mock: メモリの履歴のルーター
+        mock: ブラウザの履歴のルーター（`beforeunload` はブラウザの履歴だけが受ける）
         expected: イベントの `defaultPrevented` が `true`
       - name: test_use_leave_guard_when_inactive
         case: 正常
         summary: 警告しない
         condition: '`active` を `false` にして `beforeunload` を発火させ、画面の中で移る'
-        mock: メモリの履歴のルーター
+        mock: ブラウザの履歴のルーター
         expected: '`defaultPrevented` が `false` で、確認のダイアログを出さずに移る'
       - name: test_use_leave_guard_when_navigation_cancelled
         case: 正常
         summary: 画面の中の移動を止める
         condition: '`active` が `true`で `navigation` を指定し、別のルートへ移って確認のダイアログのキャンセルを押す'
-        mock: メモリの履歴のルーター
+        mock: ブラウザの履歴のルーター
         expected: 確認のダイアログが `navigation` の文面で出て、キャンセルの後も元のルートのまま
       - name: test_use_leave_guard_when_navigation_confirmed
         case: 正常
         summary: 確定したら移る
         condition: 同じ状態で確認のダイアログの確定を押す
-        mock: メモリの履歴のルーター
+        mock: ブラウザの履歴のルーター
         expected: 別のルートへ移る
 tags:
   - name: topic:画面
