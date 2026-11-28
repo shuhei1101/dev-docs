@@ -54,6 +54,21 @@ components:
         condition: '`writeText` が失敗する'
         mock: '`navigator.clipboard`（例外を送信する偽物）・sonner の `toast`'
         expected: 通知が `クリップボードにコピーできませんでした。`
+      - name: test_comment_panel_when_deleted
+        case: 正常
+        summary: 削除を取り消す
+        condition: 3 件のうち 2 件目の削除のボタンを押し、通知の `元に戻す` を押す
+        mock: sonner の `toast`（`vi.mock`、操作を記録する偽物）
+        expected: 押した後は一覧が 2 件で通知が `コメントを削除しました。`、`元に戻す` の後は 3 件が削除する前と同じ並び
+      - name: test_comment_panel_when_accessible_name
+        case: 正常
+        summary: アイコンだけのボタンの読み上げ名
+        condition: 2 件のコメントを並べる
+        mock: なし
+        expected: 2 件目のボタンの読み上げ名が `2 件目のコメントを修正`・`2 件目のコメントを削除`
+    notes:
+      削除の取り消し: 削除のボタンで `useCommentStore` の `remove` を呼び、戻り値があれば sonner の `toast` で `コメントを削除しました。` と操作 `元に戻す` を出す。`元に戻す` で `restore` を呼び、mdmark の `reloadComments` で本文のマーカーを描き直す
+      読み上げ名: 修正・削除のアイコンだけのボタンは `{順番} 件目のコメントを修正`・`{順番} 件目のコメントを削除` を `aria-label` に持ち、shadcn/ui の `Tooltip` で `修正`・`削除` を出す
 tags:
   - name: topic:文書
     main: true

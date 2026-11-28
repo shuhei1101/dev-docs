@@ -1,4 +1,8 @@
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import {
+  useElementScrollRestoration,
+  useNavigate,
+  useSearch,
+} from "@tanstack/react-router";
 import { type MouseEvent, useEffect, useRef } from "react";
 
 import { useColumnPersistence } from "@/features/docs/doc-view/hooks/use-column-persistence";
@@ -157,6 +161,19 @@ export const DocBody = ({
     shown.current = { docId, signature: commentSignature };
     void handle.reloadComments();
   }, [ready, handle, docId, commentSignature]);
+
+  // ルーターは描いた直後に本文の位置を戻すが、本文は mdmark が描き終えるまで高さが無いので、描き終えたら戻し直す
+  const savedScroll = useElementScrollRestoration({ id: "doc-body" });
+  const restoredDoc = useRef<string | null>(null);
+  useEffect(() => {
+    if (!ready || restoredDoc.current === docId) return;
+    restoredDoc.current = docId;
+    const area = ref.current?.closest<HTMLElement>(
+      '[data-scroll-restoration-id="doc-body"]',
+    );
+    if (area && savedScroll && area.scrollTop < savedScroll.scrollY)
+      area.scrollTop = savedScroll.scrollY;
+  }, [ready, docId, savedScroll]);
 
   // 場所を選ばれたコメントへ移る（コメントを再取得してから、その箇所を画面に入れて強調する）
   useEffect(() => {

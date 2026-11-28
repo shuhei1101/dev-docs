@@ -77,6 +77,14 @@ components:
         condition: 列のボタンにフォーカスして Enter
         mock: なし
         expected: 入力欄の `selectionStart` が値の文字数（末尾）
+      - name: test_metadata_table_when_tooltip
+        case: 正常
+        summary: アイコンだけのボタンのツールチップ
+        condition: 行の削除のボタンにフォーカスする
+        mock: なし
+        expected: '`{行の名前} を削除` のツールチップが出る'
+    notes:
+      ツールチップ: 行の削除・元に戻すのアイコンだけのボタンは、shadcn/ui の `Tooltip` で読み上げ名と同じ文言を出す
 refs:
   - to: SCR-155-4
     type: requires

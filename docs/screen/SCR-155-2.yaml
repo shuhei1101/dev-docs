@@ -16,7 +16,7 @@ elements:
     tab_order: 1
     action: クリックで本文の領域へフォーカスを移す
   - name: トップバー
-    kind: header
+    kind: nav
     component: CMP-155-2#
     args:
       - name: screen
@@ -37,12 +37,16 @@ elements:
     action: '`sourceSelect` でその配信元のトップ、`refSelect` でそのリビジョンの配信元のトップを開く。`searchOpen` で検索のダイアログを開く。`colorSchemeToggle` で明暗を切り替え、ブラウザに保存する'
     action_ref: SCR-155-1#
   - name: 見出し
-    kind: label
+    kind: heading
     position: 本文
     description: 見つからなかったもの
     label: 無い文書は `文書が見つかりません`、無いリビジョンは `リビジョンが見つかりません`、配信していない配信元は `配信元 {ID} を配信していません`、無い配信元は `配信元 {ID} はありません`
     visible_when: 常時
     source: 文書の取得（404 の `missing`）
+    io: output
+    overflow:
+      type: wrap
+      unbounded: true
   - name: 説明
     kind: label
     position: 本文 > 見出しの下
@@ -50,6 +54,10 @@ elements:
     label: 無い文書は `配信元 {ID} のリビジョン {ref} に、この文書はありません。`（Git 管理外の配信元は `配信元 {ID} に、この文書はありません。`）、無いリビジョンは `配信元 {ID} に、リビジョン {ref} はありません。`、配信していない配信元は `project-index が起動時の検証で、配信から除外しました。`、無い配信元は `端末の設定に、この ID の配信元はありません。`
     visible_when: 常時
     source: 文書の取得（404 の `missing` と値）
+    io: output
+    overflow:
+      type: wrap
+      unbounded: true
   - name: 見つからなかったものの詳細
     kind: list
     position: 本文 > 説明の下
@@ -57,6 +65,14 @@ elements:
     label: 無い文書は `開こうとしたパス`。無いリビジョンは `開こうとしたリビジョン` と `既定のリビジョン`。配信していない配信元は `除外した理由`（`errors[]` ごとの `{path} {reason}`）と `設定ファイル`。値は等幅で出す
     visible_when: 無い配信元のときを除く
     source: 文書の取得（404 の `missing` と値・`errors[]`）・リビジョンの一覧.defaultRef・端末の設定の取得.sources[].config
+    io: output
+    overflow:
+      type: wrap
+      unbounded: true
+    retained_state:
+      - what: 詳細の並び
+        store: none
+        reason: 開こうとした URL と文書の取得の応答から毎回作る
   - name: 配信元のトップを開く
     kind: link
     position: 本文 > 次のリンク
@@ -80,10 +96,20 @@ elements:
     label: 配信中の配信元の ID（等幅）
     visible_when: 配信していない・無い配信元のときで、配信中の配信元があるとき
     source: 端末の設定の取得.sources[].id（`status` が `serving` の行）
+    io: output
+    overflow:
+      type: wrap
+      unbounded: true
+    count_limit:
+      max_count: 3
+      type: wrap
+    accessible_name: '`配信中の配信元`'
     action: クリックでその配信元のトップを開く
     action_ref: SCR-155-1#
-    notes:
-      読み上げ名: '`配信中の配信元`'
+    retained_state:
+      - what: 配信元の並び
+        store: none
+        reason: 端末の設定の取得の応答から毎回作る
   - name: 検索のダイアログ
     kind: dialog
     component: CMP-155-3#
@@ -101,6 +127,12 @@ elements:
     position: 画面の上寄り（上端から 3rem、幅は最大 48rem、高さは最大で画面の 5/6）。画面幅が 48rem 未満では画面いっぱい
     description: 開こうとした配信元の文書か、配信中の全ての配信元の文書を単語で探す
     visible_when: 配信元が配信中で、検索を開いたとき
+    modal: true
+    close:
+      outside_click: true
+      escape: close
+    initial_focus: 検索欄
+    return_focus: 開いた要素（トップバーの検索のボタン。キーで開いたときは開く前にフォーカスしていた要素）
     action: '`resultSelect` で、開こうとした配信元の結果は `rev` を保ったその文書、ほかの配信元の結果は `rev` を付けずにその配信元のその文書を開く'
     action_ref: IF-155-16#
   - name: ショートカットの一覧
@@ -116,6 +148,28 @@ elements:
     position: 画面の中央
     description: この画面で使用できるキー
     visible_when: '`?` を押したとき'
+    modal: true
+    close:
+      outside_click: true
+      escape: close
+    initial_focus: 閉じるボタン
+    return_focus: 開く前にフォーカスしていた要素
+  - name: 検索を開くキー
+    kind: shortcut
+    description: 検索のダイアログを開く
+    shortcut:
+      key: Control+K /
+      scope: screen
+    visible_when: 配信元が配信中のとき。`/` は 1 文字のショートカットが有効で、入力欄にフォーカスが無いとき
+    action: 検索のダイアログを開く
+  - name: ショートカットの一覧を開くキー
+    kind: shortcut
+    description: ショートカットの一覧を開く
+    shortcut:
+      key: Shift+?
+      scope: screen
+    visible_when: 1 文字のショートカットが有効で、入力欄にフォーカスが無いとき
+    action: ショートカットの一覧を開く
 screen: frontend/src/features/docs/not-found/not-found-screen.tsx
 mock: docs/mock/pages/not-found/36/default/
 lead: 見つからなかったものと理由を出し、配信元のトップと設定画面へ案内する見つからない画面の要素と振る舞いを定め、見つからない画面を修正するときに参照する。
@@ -135,3 +189,5 @@ tags:
   - name: topic:画面
   - name: topic:エラー
   - name: topic:配信元
+screen_type: other
+leave_guard: none

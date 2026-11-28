@@ -58,6 +58,14 @@ components:
         condition: '`b` を開いた後に `sources` を `a` だけにする'
         mock: MSW
         expected: 「配信元が削除されたため削除できませんでした」が出て、削除ボタンが無効。見出しは `b` のまま
+      - name: test_source_delete_dialog_when_saving
+        case: 正常
+        summary: 削除を待つ間の表示
+        condition: 端末の設定の保存の応答を止めて削除を押す
+        mock: MSW のハンドラ（応答を待たせる）
+        expected: 削除のボタンが押せず、回る表示（`aria-hidden` のアイコン）を持つ
+    notes:
+      削除を待つ間: 削除の確定のボタンは応答を待つ間、文字の前に `Loader2` の回る表示を出して押せなくする（ボタンの幅は変えない）
 tags:
   - name: topic:設定画面
     main: true

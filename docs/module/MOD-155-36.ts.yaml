@@ -105,7 +105,7 @@ stores:
     container: features/docs/shared/comments/comment-store.ts
     usecase: コメントを溜める
     role: ストア
-    summary: Zustand の `persist`（`sessionStorage`、キー `dev-docs:comments`、`version` 1）で保存するコメントの一覧
+    summary: Zustand の `persist`（`sessionStorage`、キー `dev-docs:v1:doc-view:comments`、`version` 1。旧キー `dev-docs:comments` は `legacyKeyStorage` で移し替える）で保存するコメントの一覧
     state:
       - name: comments
         type: DocComment[]
@@ -150,7 +150,7 @@ stores:
       - name: remove
         title: コメントの削除
         kind: 関数
-        summary: コメントを削除する
+        summary: コメントを削除し、削除したコメントと一覧の中の位置を返却する（通知の `元に戻す` で `restore` に指定する）
         scope: public
         args:
           - name: id
@@ -159,9 +159,24 @@ stores:
             passing: positional
             description: コメント
         returns:
-          type: void
-          description: 何も返却しない
-        process: 1. `id` のコメントを除く
+          type: '{comment: DocComment; index: number} | null'
+          description: 削除したコメントと削除する前の位置。`id` が無ければ `null`
+        process: |-
+          1. `id` のコメントと位置を探し、無ければ `null` を返却する
+          2. そのコメントを除き、コメントと位置を返却する
+        unit_tests:
+          - name: test_remove
+            case: 正常
+            summary: 削除したコメントと位置を返却する
+            condition: 3 件のうち 2 件目を削除する
+            mock: なし
+            expected: 一覧が 2 件で、戻り値が 2 件目のコメントと `index` 1
+          - name: test_remove_when_missing
+            case: 異常
+            summary: 無いコメント
+            condition: 一覧に無い `id` を削除する
+            mock: なし
+            expected: 一覧が変わらず、戻り値が `null`
       - name: setSelected
         title: 選択の切り替え
         kind: 関数
@@ -182,6 +197,41 @@ stores:
           type: void
           description: 何も返却しない
         process: 1. 対象の `selected` を書き換える
+      - name: restore
+        title: 削除の取り消し
+        kind: 関数
+        summary: 削除したコメントを削除する前の位置に戻す（通知の `元に戻す`）
+        scope: public
+        args:
+          - name: comment
+            type: DocComment
+            required: true
+            passing: positional
+            description: '`remove` が返却したコメント'
+          - name: index
+            type: number
+            required: true
+            passing: positional
+            description: '`remove` が返却した位置'
+        returns:
+          type: void
+          description: 何も返却しない
+        process: |-
+          1. 同じ `id` のコメントがあれば何もしない
+          2. `index` を一覧の長さに収めた位置にコメントを差し込む
+        unit_tests:
+          - name: test_restore
+            case: 正常
+            summary: 削除した位置に戻す
+            condition: 3 件の 2 件目を `remove` し、戻り値で `restore` する
+            mock: なし
+            expected: 一覧が削除する前と同じ並び
+          - name: test_restore_when_exists
+            case: 正常
+            summary: 二重に戻さない
+            condition: 同じコメントを 2 回 `restore` する
+            mock: なし
+            expected: 一覧に 1 件だけある
 tags:
   - name: topic:文書
     main: true

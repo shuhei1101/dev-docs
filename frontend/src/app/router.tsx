@@ -29,6 +29,8 @@ export const createAppRouter = (context: RouterContext) =>
     defaultPreload: "intent",
     defaultPreloadStaleTime: 0,
     scrollRestoration: true,
+    // リンクで新規に開いたときは、文書の画面の本文を一番上から表示する
+    scrollToTopSelectors: ['[data-scroll-restoration-id="doc-body"]'],
     parseSearch,
     stringifySearch,
     defaultErrorComponent: ({ error }) => <ErrorFallback error={error} />,

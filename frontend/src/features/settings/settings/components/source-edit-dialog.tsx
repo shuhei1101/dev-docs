@@ -1,5 +1,8 @@
+import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { type Control, Controller } from "react-hook-form";
+
+import type { ConfirmRequest } from "@/shared/components/confirm-dialog";
 
 import { useSourceForm } from "@/features/settings/settings/hooks/use-source-form";
 import { fieldOf } from "@/features/settings/settings/problem-errors";
@@ -35,6 +38,7 @@ import {
 } from "@/shared/components/ui/select";
 import { Switch } from "@/shared/components/ui/switch";
 import { Textarea } from "@/shared/components/ui/textarea";
+import { useLeaveGuard } from "@/shared/hooks/use-leave-guard";
 
 type Props = {
   open: boolean;
@@ -185,6 +189,34 @@ const StorageField = ({ control, stored }: StorageFieldProps) => {
   );
 };
 
+type FooterProps = {
+  editing: boolean;
+  saving: boolean;
+  disabled: boolean;
+  onCancel: () => void;
+};
+
+/** キャンセルと、保存を待つ間は回る表示を出す追加・保存のボタン */
+const EditDialogFooter = ({ editing, saving, disabled, onCancel }: FooterProps) => (
+  <DialogFooter>
+    <Button type="button" variant="outline" onClick={onCancel}>
+      キャンセル
+    </Button>
+    <Button type="submit" disabled={disabled}>
+      {saving && <Loader2 aria-hidden="true" className="animate-spin" />}
+      {editing ? "保存" : "追加"}
+    </Button>
+  </DialogFooter>
+);
+
+/** 入力したまま画面の中で移る前に出す確認のダイアログの文面 */
+const LEAVE_CONFIRM: ConfirmRequest = {
+  title: "入力した内容を破棄して移動しますか?",
+  description: "配信元のダイアログに入力した内容は保存されていません。",
+  confirmLabel: "破棄して移動",
+  destructive: true,
+};
+
 /** 配信元の追加・編集のダイアログ */
 export const SourceEditDialog = ({
   open,
@@ -201,6 +233,8 @@ export const SourceEditDialog = ({
       version,
     });
   const editing = index !== null;
+  // 入力はどこにも残らないので、タブを閉じる・再読み込みに加えて画面の中の移動も止める
+  useLeaveGuard(open && form.formState.isDirty, { navigation: LEAVE_CONFIRM });
   // 一覧を取得し直しても見出しの配信元が変わらないよう、開いたときの名前を持つ
   const [name] = useState(() =>
     index === null ? "" : (sources[index].id ?? ""),
@@ -216,7 +250,8 @@ export const SourceEditDialog = ({
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    // 外側のクリックで入力を失わないよう、Esc とキャンセルでだけ閉じる
+    <Dialog open={open} onOpenChange={onOpenChange} disablePointerDismissal>
       <DialogContent
         initialFocus={editing ? configRef : idRef}
         className="max-h-screen overflow-y-auto sm:max-w-lg"
@@ -374,18 +409,12 @@ export const SourceEditDialog = ({
               {...form.register("write")}
             />
           </Field>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              キャンセル
-            </Button>
-            <Button type="submit" disabled={saving || gone}>
-              {editing ? "保存" : "追加"}
-            </Button>
-          </DialogFooter>
+          <EditDialogFooter
+            editing={editing}
+            saving={saving}
+            disabled={saving || gone}
+            onCancel={() => onOpenChange(false)}
+          />
         </form>
       </DialogContent>
     </Dialog>

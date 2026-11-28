@@ -17,14 +17,24 @@ components:
     state:
       - name: query
         type: string
-        initial: '""'
+        initial: 'URL の `q`（無ければ `""`）'
         description: 絞り込み
-        notes: '`useState`'
+        notes: 'URL の `q` から求め、入力のたびに `q` を `replace`・`resetScroll: false` で書き換える（空なら `q` を除く）。変更の行へ移動したときは `q` を除く'
       - name: panelOpen
         type: boolean
         initial: URL の `panel` が `edits`
         description: レビュー中のパネル
         notes: URL の検索条件（文書の画面から開いてパネルを開くため）
+      - name: searchOpen
+        description: 検索のダイアログ
+        type: boolean
+        initial: 'false'
+        notes: '`useState`'
+      - name: helpOpen
+        description: ショートカットの一覧
+        type: boolean
+        initial: 'false'
+        notes: '`useState`'
     description: 種類のタブは URL の `tab` に保つ。読み込み中の表示は取得の待ちが 1 秒を超えたときだけ出す。種類の表には取得の `baseCommit` を指定する。取得が 404 なら見つからない画面、503 なら project-index から受け取れないときの表示（文書の画面と同じ部品）、それ以外の失敗は取得の失敗の表示を出す。変更の行へ移動は、タブを切り替え、絞り込みを空にし、描いた後に `metadata-row-{kind}-{id}` へスクロールしてフォーカスする。文書の本文の変更（`kind` が `body`）は、変更の `docPath` の文書の画面を、`edit` を（`values` に `@file` があれば `file`、無ければ `fields`）にし、`panel` を `edits` にして開く（文書の画面でもレビュー中のパネルを開いたままにする）。ページのタイトルは `メタデータ | {source} | dev-docs`。本文（`<main>`）は幅の上限を持たず、画面の横幅から左右の余白を除いた幅にする（絞り込みの入力欄だけ `max-w-sm`）
     unit_tests:
       - name: test_metadata_screen
@@ -65,6 +75,28 @@ components:
         condition: '`docs/rule/a.yaml` の `summary` の変更と `@file` の変更（それぞれ 1 件で確認する）を持ち、パネルの変更の行へ移動を押す'
         mock: MSW のハンドラ
         expected: '`/{source}/docs/rule/a.yaml` へ移り、`edit` がそれぞれ `fields`・`file`'
+      - name: test_metadata_screen_when_query_in_url
+        case: 正常
+        summary: 絞り込みを URL に保つ
+        condition: '`?q=alias` で開き、絞り込みの入力欄を `term` に書き換える'
+        mock: MSW のハンドラ
+        expected: 開いたときの入力欄が `alias` で行が絞られ、書き換えた後の URL の `q` が `term`。履歴の件数は増えない
+      - name: test_metadata_screen_when_search
+        case: 正常
+        summary: 検索とショートカットの一覧を開く
+        condition: トップバーの検索のボタンを押して閉じ、`Control+K`・`?` を押す
+        mock: MSW のハンドラ
+        expected: ボタンと `Control+K` で検索のダイアログ、`?` でショートカットの一覧が開く
+      - name: test_metadata_screen_when_leave_guard
+        case: 正常
+        summary: 編集中の変更があるときに離脱を警告する
+        condition: 行の値を 1 件編集し、`beforeunload` を発火させる
+        mock: MSW のハンドラ
+        expected: イベントの `defaultPrevented` が `true`
+    notes:
+      検索とショートカット: 検索のダイアログ（`SearchDialog`。`source` は URL の配信元、`ref` は指定しない）とショートカットの一覧（`ShortcutDialog` の `screen` が `metadata`）を配置し、トップバーの `onSearchOpen` と `useShortcut("search")`・`useShortcut("help")` で開く。結果を選んだらその文書を文書の画面で開く
+      離脱の警告: '`useLeaveGuard` に、配信元の編集中の変更が 1 件以上あるかを指定する。編集中の変更は `sessionStorage` に残るので、`navigation` は指定しない（タブを閉じる・再読み込みだけ警告する）'
+      再利用と新規作成の判定: 「検索のダイアログ」「ショートカットの一覧」「useShortcut」で `frontend/src` を探した。文書の画面（`doc-view-screen.tsx`）は画面の中で直接配置していて、再利用できる部品は無い。複雑さの上限（ESLint の `complexity` 15）に収めるため、同じファイルに `MetadataDialogs`（検索のダイアログ・ショートカットの一覧とそれらを開くキー。`helpOpen` を持ち、`searchOpen` はトップバーと共有するので画面から受け取る）と `queryOf`（URL の `q` を無ければ空にする）を新規作成する
 refs:
   - to: SCR-155-4
     type: requires

@@ -78,7 +78,7 @@ const openRendered = async (
 
 const seed = async (page: Page, rows: SeedComment[]) => {
   await page.addInitScript((value) => {
-    sessionStorage.setItem("dev-docs:comments", value);
+    sessionStorage.setItem("dev-docs:v1:doc-view:comments", value);
   }, seededComments(rows));
 };
 
@@ -229,7 +229,7 @@ test.describe("トップバー", () => {
     const toggle = page.getByRole("button", { name: "明暗を固定する" });
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-pressed", "true");
-    const stored = await page.evaluate(() => localStorage.getItem("dev-docs:preferences"));
+    const stored = await page.evaluate(() => localStorage.getItem("dev-docs:v1:shared:preferences"));
     expect(stored).toContain('"colorScheme":"dark"');
   });
 
@@ -2079,7 +2079,7 @@ test.describe("キーボードのショートカット", () => {
     // 準備
     await page.addInitScript(() => {
       localStorage.setItem(
-        "dev-docs:preferences",
+        "dev-docs:v1:shared:preferences",
         JSON.stringify({ state: { colorScheme: "system", singleKeyShortcuts: false }, version: 1 }),
       );
     });
@@ -2256,7 +2256,8 @@ test.describe("レビュー中のボタン", () => {
     await openDoc(page);
     const button = page.getByRole("button", { name: /^レビュー中( \d+ 件)?$/ });
     await button.click();
-    await expect(page).toHaveURL(/\/sample\/docs\/doc-1$/);
+    // レビュー中のパネルの開閉は URL の `panel` に保つ
+    await expect(page).toHaveURL(/\/sample\/docs\/doc-1\?panel=edits$/);
     const panel = page.getByRole("dialog", { name: "レビュー中" }).or(page.getByRole("complementary", { name: "レビュー中" }));
     await expect(panel).toBeVisible();
     await page.keyboard.press("Escape");
@@ -2630,7 +2631,7 @@ test.describe("レビュー中のパネル（文書の画面）", () => {
     await pendingButton(page, 1).click();
     const panel = page.getByRole("dialog", { name: "レビュー中" }).or(page.getByRole("complementary", { name: "レビュー中" }));
     await expect(panel).toBeVisible();
-    await expect(page).toHaveURL(new RegExp(`${RULE_URL}$`));
+    await expect(page).toHaveURL(new RegExp(`${RULE_URL}\\?panel=edits$`));
     await panel.getByRole("button", { name: "説明（docs/rule/rule-sample.yaml） の行へ移動" }).click();
     await expect(page).toHaveURL(/edit=fields/);
     await expect(panel).toBeVisible();
@@ -2783,5 +2784,90 @@ test.describe("差分の案内の文字色", () => {
       .withRules(["color-contrast"])
       .analyze();
     expect(result.violations).toEqual([]);
+  });
+});
+
+test.describe("コメントのパネルの URL", () => {
+  // コメントのパネルの開閉を URL の `panel` に保ち、再読み込みしても開いたまま始める（正常系）
+  test("comment_panel_in_url", async ({ page }) => {
+    await seed(page, TWO_COMMENTS);
+    await openDoc(page);
+
+    await page.getByRole("button", { name: /^コメント \d+ 件$/ }).click();
+
+    await expect(page).toHaveURL(/[?&]panel=comments/);
+    await page.reload();
+    await expect(panel(page)).toBeVisible();
+  });
+});
+
+test.describe("コメントの削除の取り消し", () => {
+  // 削除した後の通知の「元に戻す」で、削除する前の位置にコメントを戻す（正常系）
+  test("delete_undo", async ({ page }) => {
+    await seed(page, TWO_COMMENTS);
+    await openDoc(page);
+    await page.getByRole("button", { name: /^コメント \d+ 件$/ }).click();
+    const items = panel(page).getByRole("listitem");
+    const first = (await items.first().textContent()) ?? "";
+
+    await panel(page).getByRole("button", { name: "1 件目のコメントを削除" }).click();
+    await expect(page.getByText("コメントを削除しました。")).toBeVisible();
+    await page.getByRole("button", { name: "元に戻す" }).click();
+
+    await expect(items).toHaveCount(2);
+    await expect(items.first()).toHaveText(first);
+  });
+});
+
+test.describe("本文のスクロール位置", () => {
+  // 別の文書へ移ってから戻ると、本文の領域のスクロール位置を戻す（正常系）
+  test("body_scroll_restored_on_back", async ({ page }) => {
+    const long = `# 文書 1\n\n## 概要\n\n${"段落の本文。\n\n".repeat(200)}`;
+    await openRendered(page, "/sample/docs/doc-1", {
+      document: ({ path }) => ({ body: documentResponse({ path, tabs: TABS_WITH_DOCS, markdown: long }) }),
+    });
+    const body = page.locator('[data-scroll-restoration-id="doc-body"]');
+    await body.evaluate((element) => element.scrollTo({ top: 600 }));
+    await page.waitForTimeout(300);
+
+    await page.getByRole("link", { name: "文書 2" }).first().click();
+    await expect(page).toHaveURL(/\/sample\/docs\/doc-2$/);
+    await expect.poll(() => body.evaluate((element) => element.scrollTop)).toBe(0);
+    await page.goBack();
+
+    await expect(page).toHaveURL(/\/sample\/docs\/doc-1$/);
+    await expect.poll(() => body.evaluate((element) => element.scrollTop)).toBe(600);
+  });
+});
+
+test.describe("離脱の警告", () => {
+  // 開いている配信元に編集中の変更があるときは、タブを閉じる前にブラウザの確認を出す（正常系）
+  test("leave_guard_on_unload", async ({ page }) => {
+    const edit = {
+      key: "body:docs/doc-1:@file",
+      kind: "body",
+      op: "update",
+      docId: "docs/doc-1",
+      docKind: "rule",
+      expectedVersion: "v1",
+      docPath: "docs/doc-1.yaml",
+      values: { "@file": "title: 修正後\n" },
+      before: { "@file": "title: 文書 1\n" },
+      label: "ファイル全体（docs/doc-1.yaml）",
+    };
+    await page.addInitScript((stored) => {
+      sessionStorage.setItem("dev-docs:v2:shared:pending-edits", stored);
+    }, JSON.stringify({ state: { bySource: { sample: [edit] }, baseCommitBySource: { sample: "8b1d4e0" } }, version: 2 }));
+    await openDoc(page);
+    await page.getByRole("main").getByRole("heading", { level: 1 }).click();
+    const dialogs: string[] = [];
+    page.on("dialog", (dialog) => {
+      dialogs.push(dialog.type());
+      void dialog.dismiss();
+    });
+
+    await page.close({ runBeforeUnload: true });
+
+    await expect.poll(() => dialogs).toContain("beforeunload");
   });
 });

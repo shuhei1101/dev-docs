@@ -107,7 +107,7 @@ test.describe("トップバー", () => {
     // 検証
     await expect(toggle).toHaveAttribute("aria-pressed", "true");
     const stored = await page.evaluate(() =>
-      localStorage.getItem("dev-docs:preferences"),
+      localStorage.getItem("dev-docs:v1:shared:preferences"),
     );
     expect(stored).toContain('"colorScheme":"dark"');
   });

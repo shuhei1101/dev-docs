@@ -35,6 +35,7 @@ functions:
     process: |-
       1. 指定した文脈でルーターを作る（`defaultPreloadStaleTime` 0 で読み込みの鮮度は TanStack Query に任せる）
       2. `defaultErrorComponent` に画面の例外の表示（`react-error-boundary` と同じ `ErrorFallback`）を指定する
+      3. `scrollRestoration: true` で履歴の項目ごとにスクロール位置を戻し、`scrollToTopSelectors` に文書の画面の本文の領域（`[data-scroll-restoration-id="doc-body"]`）を指定して、リンクで新規に開いたときは本文を一番上から表示する
     unit_tests:
       - name: test_create_app_router
         case: 正常

@@ -42,6 +42,7 @@ const meta = {
     onCompareStart: fn(),
     onSearchOpen: fn(),
     onCommentPanelToggle: fn(),
+    onPendingPanelToggle: fn(),
     onSidebarOpen: fn(),
     onColorSchemeToggle: fn(),
   },
@@ -62,7 +63,7 @@ export const DocView: Story = { args: { ...docView, commentCount: 2 } };
 
 export const DocViewNarrow: Story = {
   args: { ...docView, commentCount: 2 },
-  parameters: { viewport: { defaultViewport: "mobile1" } },
+  globals: { viewport: { value: "mobile1", isRotated: false } },
 };
 
 export const DocViewNoComments: Story = {
@@ -85,7 +86,7 @@ export const NotFound: Story = {
 
 export const NotFoundNarrow: Story = {
   args: { screen: "not-found", sources, currentSource: "sample", refs },
-  parameters: { viewport: { defaultViewport: "mobile1" } },
+  globals: { viewport: { value: "mobile1", isRotated: false } },
 };
 
 export const NotFoundWithoutSource: Story = {
@@ -93,6 +94,29 @@ export const NotFoundWithoutSource: Story = {
 };
 
 export const DarkScheme: Story = { args: { ...docView, colorScheme: "dark" } };
+
+export const DocViewWithPendingEdits: Story = {
+  args: { ...docView, commentCount: 2, pendingEditCount: 3 },
+};
+
+export const DocViewWithPendingEditsNarrow: Story = {
+  args: { ...docView, commentCount: 2, pendingEditCount: 3 },
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+};
+
+const metadata = {
+  screen: "metadata",
+  sources,
+  currentSource: "sample",
+  pendingEditCount: 3,
+} as const;
+
+export const Metadata: Story = { args: metadata };
+
+export const MetadataNarrow: Story = {
+  args: metadata,
+  globals: { viewport: { value: "mobile1", isRotated: false } },
+};
 
 const longItems = {
   screen: "doc-view" as const,
@@ -127,5 +151,5 @@ export const LongItems: Story = { args: longItems };
 
 export const LongItemsNarrow: Story = {
   args: longItems,
-  parameters: { viewport: { defaultViewport: "mobile1" } },
+  globals: { viewport: { value: "mobile1", isRotated: false } },
 };

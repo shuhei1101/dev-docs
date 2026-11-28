@@ -91,3 +91,14 @@ test("test_source_delete_dialog_when_gone", () => {
   expect(screen.getByRole("button", { name: "削除" })).toBeDisabled();
   expect(screen.getByText("b を削除しますか?")).toBeInTheDocument();
 });
+
+test("test_source_delete_dialog_when_saving", async () => {
+  server.use(http.put("/_api/settings/sources", () => new Promise<never>(() => {})));
+  renderDialog();
+
+  await userEvent.click(screen.getByRole("button", { name: "削除" }));
+
+  const button = screen.getByRole("button", { name: "削除" });
+  await waitFor(() => expect(button).toBeDisabled());
+  expect(button.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+});

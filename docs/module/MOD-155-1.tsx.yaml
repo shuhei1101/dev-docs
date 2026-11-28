@@ -1,12 +1,12 @@
 id: MOD-155-1
-title: 画面 / アプリとルート / confirm-dialog.tsx
-lead: 画面共通の確認のダイアログと、それを開くフックを受け持ち、アプリとルートの confirm-dialog.tsx を修正するときに参照する。
+title: 画面 / 共通 / confirm-dialog.tsx
+lead: 画面共通の確認のダイアログと、それを開くフックを受け持ち、共通の confirm-dialog.tsx を修正するときに参照する。
 test_files:
-  - tests/unit/frontend/src/app/confirm-dialog.test.tsx
+  - tests/unit/frontend/src/shared/components/confirm-dialog.test.tsx
 data_models:
   - name: ConfirmRequest
     title: 確認の依頼
-    container: app/confirm-dialog.tsx
+    container: shared/components/confirm-dialog.tsx
     usecase: 共通
     role: DTO
     summary: 開く確認の中身
@@ -27,7 +27,7 @@ functions:
   - name: useConfirmDialog
     title: 確認のダイアログ
     kind: フック
-    container: app/confirm-dialog.tsx
+    container: shared/components/confirm-dialog.tsx
     usecase: 共通
     role: フック
     summary: 確認のダイアログを開き、確定なら true を返却する関数を返却する
@@ -55,7 +55,7 @@ components:
   - name: ConfirmDialogProvider
     title: 確認のダイアログの Provider
     kind: コンポーネント
-    container: app/confirm-dialog.tsx
+    container: shared/components/confirm-dialog.tsx
     usecase: 共通
     role: Provider
     summary: '`useConfirmDialog` から開く shadcn/ui の `AlertDialog` を 1 つだけ持つ'
@@ -75,3 +75,5 @@ tags:
     main: true
   - name: tool:react
   - name: topic:ダイアログ
+notes:
+  配置先: 離脱の警告（`shared/hooks/use-leave-guard.ts`）と画面の部品が `useConfirmDialog` を呼ぶので、`app/` でなく `shared/` に配置する（`shared/`・`features/` は `app/` を import しない）。Provider は `app/providers.tsx` が配置する

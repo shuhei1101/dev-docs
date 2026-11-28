@@ -19,6 +19,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/shared/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/shared/components/ui/tooltip";
 
 type CellValue = string | string[];
 type EditKind = PendingEdit["kind"];
@@ -398,14 +403,23 @@ export const MetadataTable = ({ source, kind, query, baseCommit }: Props) => {
                     })}
                     <TableCell>
                       {kind.canDelete && row.editable && (
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={deleted ? `${label} を元に戻す` : `${label} を削除`}
-                          onClick={() => toggleDelete(row, label)}
-                        >
-                          {deleted ? <Undo2 /> : <Trash2 />}
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={deleted ? `${label} を元に戻す` : `${label} を削除`}
+                                onClick={() => toggleDelete(row, label)}
+                              />
+                            }
+                          >
+                            {deleted ? <Undo2 /> : <Trash2 />}
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {deleted ? `${label} を元に戻す` : `${label} を削除`}
+                          </TooltipContent>
+                        </Tooltip>
                       )}
                     </TableCell>
                   </TableRow>

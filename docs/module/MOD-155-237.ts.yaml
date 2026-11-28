@@ -1,0 +1,61 @@
+id: MOD-155-237
+title: 画面 / 共通 / use-leave-guard.ts
+lead: 未保存の入力や編集中の変更があるまま画面を離れる（ブラウザのタブを閉じる・再読み込みする・画面の中で移る）ときの警告を受け持ち、共通の use-leave-guard.ts を修正するときに参照する。
+functions:
+  - name: useLeaveGuard
+    title: 離脱の警告
+    kind: 関数
+    container: shared/hooks/use-leave-guard.ts
+    usecase: 共通
+    role: フック
+    summary: TanStack Router の `useBlocker` で、`active` の間はタブを閉じる・再読み込みを警告し、`navigation` を指定したときは画面の中の移動も確認のダイアログで止める
+    scope: public
+    args:
+      - name: active
+        type: boolean
+        required: true
+        passing: positional
+        description: 警告するか（画面設計の `leave_guard` が `unsaved` の条件を満たしているか）
+      - name: navigation
+        type: ConfirmRequest | undefined
+        required: false
+        passing: keyword
+        description: 画面の中の移動（リンク・ブラウザの戻る・進む）も止めるときの確認のダイアログの文面（`useConfirmDialog` の引数）。省くとタブを閉じる・再読み込みだけを警告する
+    returns:
+      type: void
+      description: 何も返却しない
+    process: |-
+      1. `useBlocker` の `enableBeforeUnload` に `() => active` を指定し、タブを閉じる・再読み込みの前にブラウザの確認を出させる（`window` の `beforeunload` は自分で登録しない）
+      2. `shouldBlockFn` は、`active` で `navigation` があれば `useConfirmDialog` を `navigation` で開き、確定されなければ `true`（移動を止める）を返却する。それ以外は `false`
+    unit_tests:
+      - name: test_use_leave_guard_when_active
+        case: 正常
+        summary: タブを閉じる前に警告する
+        condition: '`active` が `true` で `beforeunload` を発火させる'
+        mock: ブラウザの履歴のルーター（`beforeunload` はブラウザの履歴だけが受ける）
+        expected: イベントの `defaultPrevented` が `true`
+      - name: test_use_leave_guard_when_inactive
+        case: 正常
+        summary: 警告しない
+        condition: '`active` を `false` にして `beforeunload` を発火させ、画面の中で移る'
+        mock: ブラウザの履歴のルーター
+        expected: '`defaultPrevented` が `false` で、確認のダイアログを出さずに移る'
+      - name: test_use_leave_guard_when_navigation_cancelled
+        case: 正常
+        summary: 画面の中の移動を止める
+        condition: '`active` が `true`で `navigation` を指定し、別のルートへ移って確認のダイアログのキャンセルを押す'
+        mock: ブラウザの履歴のルーター
+        expected: 確認のダイアログが `navigation` の文面で出て、キャンセルの後も元のルートのまま
+      - name: test_use_leave_guard_when_navigation_confirmed
+        case: 正常
+        summary: 確定したら移る
+        condition: 同じ状態で確認のダイアログの確定を押す
+        mock: ブラウザの履歴のルーター
+        expected: 別のルートへ移る
+tags:
+  - name: topic:画面
+    main: true
+  - name: topic:警告
+  - name: topic:編集
+test_files:
+  - tests/unit/frontend/src/shared/hooks/use-leave-guard.test.tsx

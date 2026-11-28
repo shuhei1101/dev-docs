@@ -154,27 +154,27 @@ lead: 配信元の文書を単語で探し、件数と一致した箇所を並�
 status: planned
 args:
   - name: open
-    type: 真偽値
+    type: boolean
     required: true
     description: 開いているか
   - name: source
-    type: 文字列
+    type: string
     required: true
     description: 検索する配信元の ID。画面の検索の `source` に指定する
   - name: ref
-    type: 文字列
+    type: string
     default: なし（配信元の `defaultRef` を検索する。件数の文言にリビジョンを出さない）
     description: 検索するリビジョン。画面の検索の `ref` に指定し、件数の文言にも出す
   - name: sources
-    type: 配列
+    type: array
     default: なし（`source` だけ。検索の範囲の切り替えを出さない）
     description: 配信中の配信元の ID。検索の範囲が「全ての配信元」のとき、配信元ごとに画面の検索を呼ぶ
   - name: unavailable[].source
-    type: 文字列
+    type: string
     default: なし（`unavailable` を省くと空の配列）
     description: 配信していない配信元の ID。検索の範囲が「全ての配信元」のとき、「検索できなかった配信元」に並べる
   - name: unavailable[].reason
-    type: 文字列
+    type: string
     description: 配信していない理由
 events:
   - name: openChange
@@ -185,13 +185,6 @@ events:
     when: 結果をクリックするか、結果を選んで Enter を押した
     value: 画面の検索の `items[].path` と、その結果の配信元の ID
     description: 開いている配信元の結果は同じリビジョン、ほかの配信元の結果はその配信元の `defaultRef` で、その文書を文書の画面で開く
-accessibility:
-  - 検索欄は `role="combobox"` で、`aria-controls` に結果の一覧、`aria-activedescendant` に選んでいる結果を持つ
-  - ↑・↓ で結果を選び、Enter で開き、Esc 1 回で閉じる
-  - 件数の文言は `role="status"` で、変わるたびに読み上げる
-  - 一致した単語の強調は色だけにせず `mark` 要素で表す
-  - 「配信元の設定で検索から除外した文書も含める」は `role="switch"` で、ラベルを `for` と `id` で関連付ける。Tab で移り、Space で切り替える
-  - 検索から除外される文書は、色ではなく `検索から除外` のバッジの文字で示す
 refs:
   - to: IF-155-16
     type: requires
@@ -206,3 +199,16 @@ tags:
   - name: topic:ダイアログ
   - name: topic:モーダル
   - name: topic:部品
+persisted_state:
+  - what: 入力した単語・検索の範囲・並び順・「配信元の設定で検索から除外した文書も含める」のスイッチ
+    store: memory
+    restore_on: ダイアログを閉じて、同じ画面で開き直したとき
+    reset_when: ダイアログを配置した画面を離れたとき
+accessibility:
+  keyboard: ↑・↓ で結果を選び、Enter で開き、Esc 1 回で閉じる。「配信元の設定で検索から除外した文書も含める」のスイッチは Tab で移り、Space で切り替える
+  rules:
+    - 検索欄は `role="combobox"` で、`aria-controls` に結果の一覧、`aria-activedescendant` に選んでいる結果を持つ
+    - 件数の文言は `role="status"` で、変わるたびに読み上げる
+    - 一致した単語の強調は色だけにせず `mark` 要素で表す
+    - 「配信元の設定で検索から除外した文書も含める」は `role="switch"` で、ラベルを `for` と `id` で関連付ける
+    - 検索から除外される文書は、色ではなく `検索から除外` のバッジの文字で示す

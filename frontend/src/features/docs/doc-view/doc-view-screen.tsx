@@ -1,6 +1,6 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { DocMain } from "@/features/docs/doc-view/components/doc-main";
 import { DocSidebar } from "@/features/docs/doc-view/components/doc-sidebar";
@@ -37,6 +37,8 @@ import { useViewListRefs } from "@/shared/api/generated/view/view";
 import { ShortcutDialog } from "@/shared/components/shortcut-dialog/shortcut-dialog";
 import { SkipLink } from "@/shared/components/skip-link";
 import { Topbar } from "@/shared/components/topbar/topbar";
+import { useLeaveGuard } from "@/shared/hooks/use-leave-guard";
+import { useScrollRestoration } from "@/shared/hooks/use-scroll-restoration";
 import { useShortcut } from "@/shared/hooks/use-shortcut";
 import { usePreferencesStore } from "@/shared/stores/preferences";
 
@@ -54,9 +56,10 @@ type Panels = {
   search: boolean;
   help: boolean;
   drawer: boolean;
-  comments: boolean;
-  pending: boolean;
 };
+
+/** URL の `panel` で開く右のパネル */
+type SidePanel = NonNullable<DocViewSearch["panel"]>;
 
 /** 文書の画面。トップバー・種類のタブ・サイドバー・本文・コメントのパネルを並べる */
 export const DocViewScreen = () => {
@@ -71,14 +74,17 @@ export const DocViewScreen = () => {
     search: false,
     help: false,
     drawer: false,
-    comments: false,
-    // メタデータの画面から本文の変更へ移ったときは、レビュー中のパネルを開いたままにする
-    pending: search.panel === "edits",
   });
   // 画面の横のパネルで編集する Markdown の文字列の項目
   const [markdownField, setMarkdownField] = useState<EditBlock | null>(null);
   const open = (name: keyof Panels, value = true) =>
     setPanels((prev) => ({ ...prev, [name]: value }));
+  // コメントのパネルとレビュー中のパネルは URL の `panel` に保ち、並べずにどちらか 1 つを開く
+  const setSidePanel = (panel: SidePanel, value: boolean) => {
+    const next = value ? panel : search.panel === panel ? undefined : search.panel;
+    if (next === search.panel) return;
+    void navigate({ to: ".", search: { ...search, panel: next }, replace: true, resetScroll: false });
+  };
   // 文書の無いタブを選んだとき（文書が変わったら戻す）
   const [empty, setEmpty] = useState<{ tab: NavTab; path: string } | null>(
     null,
@@ -96,6 +102,8 @@ export const DocViewScreen = () => {
   const commentCount = useCommentStore((state) => state.comments.length);
   const pendingEditCount = usePendingEdits(source).length;
   const navigate = useNavigate();
+  // 編集中の変更は sessionStorage に残るので、タブを閉じる・再読み込みだけ警告する
+  useLeaveGuard(pendingEditCount > 0);
 
   const query = useSuspenseQuery(
     documentQueryOptions(source, params._splat ?? "", search),
@@ -129,8 +137,16 @@ export const DocViewScreen = () => {
       return;
     }
     const mode: DocEditMode = Object.keys(edit.values).includes("@file") ? "file" : "fields";
-    void navigate({ to: "/$source/$", params: { source, _splat: edit.docPath }, search: { edit: mode } });
+    void navigate({ to: "/$source/$", params: { source, _splat: edit.docPath }, search: { edit: mode, panel: search.panel } });
   };
+
+  // 種類のタブを移って戻ったときに、そのタブのサイドバーの位置へ戻す（同じタブの中はルーターが戻す）
+  const sidebarRef = useRef<HTMLDivElement | null>(null);
+  const tabIndex = Math.max(0, doc.tabs.indexOf(emptyTab ?? active.tab));
+  useScrollRestoration(
+    sidebarRef,
+    `dev-docs:v1:doc-view:sidebar:${source}:${tabIndex}:scroll`,
+  );
 
   const sidebar = (onNavigate?: () => void) => (
     <DocSidebar
@@ -158,8 +174,8 @@ export const DocViewScreen = () => {
         onRefSelect={nav.selectRef}
         onCompareStart={nav.startCompare}
         onSearchOpen={() => open("search")}
-        onCommentPanelToggle={() => open("comments", !panels.comments)}
-        onPendingPanelToggle={() => open("pending", !panels.pending)}
+        onCommentPanelToggle={() => setSidePanel("comments", search.panel !== "comments")}
+        onPendingPanelToggle={() => setSidePanel("edits", search.panel !== "edits")}
         onSidebarOpen={() => open("drawer")}
         onColorSchemeToggle={() => setColorScheme(NEXT_SCHEME[colorScheme])}
       />
@@ -177,6 +193,8 @@ export const DocViewScreen = () => {
           <>
             <div
               id="doc-sidebar"
+              ref={sidebarRef}
+              data-scroll-restoration-id="doc-sidebar"
               style={{ width: sidebarWidth }}
               className="hidden shrink-0 overflow-y-auto py-2 md:block"
             >
@@ -197,7 +215,11 @@ export const DocViewScreen = () => {
             <SidebarToggle open={false} onOpenChange={setSidebarOpen} />
           </div>
         )}
-        <div id="doc-scroll" className="min-w-0 flex-1 overflow-y-auto">
+        <div
+          id="doc-scroll"
+          data-scroll-restoration-id="doc-body"
+          className="min-w-0 flex-1 overflow-y-auto"
+        >
           <DocMain
             doc={doc}
             active={active}
@@ -205,7 +227,7 @@ export const DocViewScreen = () => {
             refs={refs}
             emptyTab={emptyTab}
             busy={query.isFetching}
-            onCommentSaved={() => open("comments")}
+            onCommentSaved={() => setSidePanel("comments", true)}
             locating={place.locating}
             baseMarkdown={base}
             onLocated={place.onLocated}
@@ -241,8 +263,8 @@ export const DocViewScreen = () => {
       <PendingPanel
         source={source}
         branch={null}
-        open={panels.pending}
-        onOpenChange={(value) => open("pending", value)}
+        open={search.panel === "edits"}
+        onOpenChange={(value) => setSidePanel("edits", value)}
         onLocate={locateEdit}
       />
       {edit !== null && (
@@ -255,8 +277,8 @@ export const DocViewScreen = () => {
         />
       )}
       <CommentPanel
-        open={panels.comments}
-        onOpenChange={(value) => open("comments", value)}
+        open={search.panel === "comments"}
+        onOpenChange={(value) => setSidePanel("comments", value)}
         github={doc.github ?? null}
         onLocate={place.locate}
       />

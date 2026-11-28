@@ -196,5 +196,5 @@ export const LongLabels: Story = {
 /** 幅 48rem 未満の場所で、下から出す */
 export const Narrow: Story = {
   beforeEach: withEdits([tagEdit, summaryEdit]),
-  parameters: { viewport: { defaultViewport: "mobile1" } },
+  globals: { viewport: { value: "mobile1", isRotated: false } },
 };

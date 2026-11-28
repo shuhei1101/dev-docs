@@ -6,7 +6,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { CommentPanel } from "@/features/docs/shared/comments/comment-panel";
 import { useCommentStore } from "@/features/docs/shared/comments/comment-store";
 
-vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
 
 const writeText = vi.fn();
 
@@ -75,4 +75,32 @@ test("test_comment_panel_when_clipboard_failed", async () => {
   await waitFor(() =>
     expect(toast.error).toHaveBeenCalledWith("クリップボードにコピーできませんでした。"),
   );
+});
+
+test("test_comment_panel_when_deleted", async () => {
+  const before = useCommentStore.getState().comments;
+  renderPanel();
+
+  await userEvent.click(screen.getByRole("button", { name: "2 件目のコメントを削除" }));
+
+  expect(useCommentStore.getState().comments).toHaveLength(2);
+  expect(toast).toHaveBeenCalledTimes(1);
+  const [message, options] = vi.mocked(toast).mock.calls[0] as unknown as [
+    string,
+    { action: { label: string; onClick: () => void } },
+  ];
+  expect(message).toBe("コメントを削除しました。");
+  expect(options.action.label).toBe("元に戻す");
+
+  act(() => options.action.onClick());
+
+  expect(useCommentStore.getState().comments).toEqual(before);
+});
+
+test("test_comment_panel_when_accessible_name", () => {
+  useCommentStore.setState({ comments: useCommentStore.getState().comments.slice(0, 2) });
+  renderPanel();
+
+  expect(screen.getByRole("button", { name: "2 件目のコメントを修正" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "2 件目のコメントを削除" })).toBeInTheDocument();
 });

@@ -59,9 +59,9 @@ files:
   related:
   - to: IF-155-3
     type: see_also
-- path: src/app/confirm-dialog.tsx
+- path: src/shared/components/confirm-dialog.tsx
   name: 画面共通の確認のダイアログと、それを開くフック
-  description: 画面共通の確認のダイアログと、それを開くフックを受け持ち、アプリとルートの confirm-dialog.tsx を修正するときに参照する。
+  description: 画面共通の確認のダイアログと、それを開くフックを受け持ち、共通の confirm-dialog.tsx を修正するときに参照する。
   tags:
   - topic:ルート
   - tool:react
@@ -1342,6 +1342,36 @@ files:
   - action:編集
   related:
   - to: MOD-155-235
+    type: implements
+- path: src/shared/hooks/use-leave-guard.ts
+  name: 未保存のまま画面を離れるときの警告のフック
+  description: 未保存の入力や編集中の変更があるまま画面を離れる（タブを閉じる・再読み込み・画面の中の移動）ときの警告を受け持ち、共通の use-leave-guard.ts を修正するときに参照する。
+  tags:
+  - topic:画面
+  - topic:警告
+  - topic:編集
+  related:
+  - to: MOD-155-237
+    type: implements
+- path: src/shared/hooks/use-scroll-restoration.ts
+  name: スクロール位置をキーごとに戻すフック
+  description: 文書の画面のサイドバーのスクロール位置を種類のタブごとに sessionStorage に保存して戻すフックを受け持ち、共通の use-scroll-restoration.ts を修正するときに参照する。
+  tags:
+  - topic:スクロール
+  - action:保存
+  - topic:画面
+  related:
+  - to: MOD-155-238
+    type: implements
+- path: src/shared/stores/legacy-key-storage.ts
+  name: 旧キーの値を新キーへ移し替える保存先
+  description: Web Storage の旧キーの値を新キーへ移し替える Zustand の persist の保存先を受け持ち、共通の legacy-key-storage.ts を修正するときに参照する。
+  tags:
+  - topic:ストア
+  - action:保存
+  - topic:画面
+  related:
+  - to: MOD-155-236
     type: implements
 checkpoint:
   commit: 05915628138ff51e7b1be495775c9f556a2a0825

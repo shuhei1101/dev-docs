@@ -98,7 +98,7 @@ test.describe("トップバー", () => {
     // 検証
     await expect(toggle).toHaveAttribute("aria-pressed", "true");
     const stored = await page.evaluate(() =>
-      localStorage.getItem("dev-docs:preferences"),
+      localStorage.getItem("dev-docs:v1:shared:preferences"),
     );
     expect(stored).toContain('"colorScheme":"dark"');
   });
@@ -424,7 +424,7 @@ test.describe("1 文字のショートカットのスイッチ", () => {
     // 検証
     await expect(toggle).not.toBeChecked();
     const stored = await page.evaluate(() =>
-      localStorage.getItem("dev-docs:preferences"),
+      localStorage.getItem("dev-docs:v1:shared:preferences"),
     );
     expect(stored).toContain('"singleKeyShortcuts":false');
     await expect(page.getByRole("dialog", { name: "キーボードのショートカット" })).toHaveCount(0);
@@ -1245,5 +1245,84 @@ test.describe("読み書きの方法のセレクト", () => {
       ["local", { type: "disk" }],
       ["knowledge", { type: "disk" }],
     ]);
+  });
+});
+
+test.describe("配信元のダイアログの閉じ方", () => {
+  // 入力したままダイアログの外側を押しても閉じず、入力が残る（正常系）
+  test("dialog_outside_click_keeps_input", async ({ page }) => {
+    await open(page);
+    await openAdd(page);
+    await page.getByLabel("配信元の ID").fill("extra");
+
+    await page.mouse.click(5, 5);
+
+    await expect(dialog(page)).toBeVisible();
+    await expect(page.getByLabel("配信元の ID")).toHaveValue("extra");
+  });
+});
+
+test.describe("保存を待つ間の表示", () => {
+  // 追加のボタンは保存の応答を待つ間、回る表示を出して押せなくする（正常系）
+  test("submit_spinner_while_saving", async ({ page }) => {
+    await open(page, {
+      putSettings: () => ({ body: { sources: [] }, delayMs: 1500 }),
+    });
+    await openAdd(page);
+    await fillValid(page);
+    const submit = dialog(page).getByRole("button", { name: "追加", exact: true });
+
+    await submit.click();
+
+    await expect(submit).toBeDisabled();
+    await expect(submit.locator("svg.animate-spin")).toBeVisible();
+  });
+});
+
+test.describe("移動の確認のダイアログ", () => {
+  // 配信元のダイアログに入力したままブラウザの戻るを押すと確認のダイアログを出し、キャンセルで設定画面に残る（正常系）
+  test("navigation_confirm_cancel", async ({ page }) => {
+    await mockApi(page);
+    await page.goto("/sample/docs/doc-1");
+    await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toBeVisible();
+    await page.getByLabel("設定", { exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("設定");
+    await openAdd(page);
+    await page.getByLabel("配信元の ID").fill("extra");
+
+    await page.goBack();
+
+    const confirm = page.getByRole("alertdialog");
+    await expect(confirm).toContainText("入力した内容を破棄して移動しますか?");
+    await expect(confirm).toContainText("配信元のダイアログに入力した内容は保存されていません。");
+    await confirm.getByRole("button", { name: "キャンセル" }).click();
+    await expect(page).toHaveURL(/\/_settings$/);
+    await expect(page.getByLabel("配信元の ID")).toHaveValue("extra");
+  });
+
+  // 「破棄して移動」を押すと前の画面へ移る（正常系）
+  test("navigation_confirm_discard", async ({ page }) => {
+    await mockApi(page);
+    await page.goto("/sample/docs/doc-1");
+    await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toBeVisible();
+    await page.getByLabel("設定", { exact: true }).click();
+    await openAdd(page);
+    await page.getByLabel("配信元の ID").fill("extra");
+
+    await page.goBack();
+    await page.getByRole("alertdialog").getByRole("button", { name: "破棄して移動" }).click();
+
+    await expect(page).toHaveURL(/\/sample\/docs\/doc-1$/);
+  });
+});
+
+test.describe("操作のボタンのツールチップ", () => {
+  // 編集のアイコンだけのボタンにポインタを合わせると `{配信元の ID} を編集` のツールチップを出す（正常系）
+  test("edit_button_tooltip", async ({ page }) => {
+    await open(page, { settings: withSources(settingsSource("alpha")) });
+
+    await page.getByRole("button", { name: "alpha を編集" }).hover();
+
+    await expect(page.getByText("alpha を編集", { exact: true })).toBeVisible();
   });
 });

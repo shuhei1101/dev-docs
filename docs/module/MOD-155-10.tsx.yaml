@@ -38,6 +38,7 @@ components:
       - 列の出し入れは `useColumnPersistence` が返却する関数を `onColumnsChange` に指定して保存する
       - コメントの配置先のこの文書のコメント（`id`・`body` の並び）が変わったら、描き終えた本文で `reloadComments()` を呼んでマーカーを再描画する（パネルの修正・削除と、mdmark の追加・修正・削除のどれも同じ経路）
       - 本文のクリックを取得し、同じ配信元の文書への相対リンクは、`document.bodyPath` があればそれを、無ければ `document.path` を基準に解決して `navigate`（`rev` を保つ）、外の URL は `target="_blank" rel="noopener"` で開く
+      - 描き終えたら、ルーターが持つ本文の領域（`data-scroll-restoration-id="doc-body"`）の位置（`useElementScrollRestoration`）が今の位置より下なら、その位置へもう一度戻す。ルーターは描いた直後に戻すが、本文は mdmark が描き終えるまで高さが無いので、戻る・進むで位置が 0 になる。文書ごとに 1 回だけ戻す
       - mdmark の `commentStore` はコメントのストアへつなぐ（`docId` は `{source}@{ref}:{path}`。`update`・`remove` はストアの `update(id, body)`・`remove(id)`）
     unit_tests:
       - name: test_doc_body
@@ -76,6 +77,12 @@ components:
         condition: 描き終えた後に、同じ `docId` のコメントを `locating` に指定する
         mock: mdmark（`reloadComments`・`focusComment` を記録する偽物）
         expected: '`reloadComments` の後に `focusComment` がそのコメントの `id` で 1 回、`onLocated` が 1 回'
+      - name: test_doc_body_when_scroll_restored
+        case: 正常
+        summary: 描き終えた後に本文の位置をもう一度戻す
+        condition: ルーターが本文の領域の位置 400 を持ち、本文を描き終える
+        mock: mdmark（`mount` を記録する偽物）・`useElementScrollRestoration`（400 を返却する偽物）
+        expected: 本文の領域の `scrollTop` が 400
 refs:
   - to: SCR-155-1
     item: elements[本文]

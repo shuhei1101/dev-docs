@@ -1,0 +1,43 @@
+$ (lint の全件実行。TP-155-1 の TL-7)
+All checks passed!
+167 files already formatted
+Success: no issues found in 164 source files
+Validating marketplace manifest: /home/shuhei2441/repo/dev-docs/.claude/worktrees/design-frontend-design-schemas-v12/.claude-plugin/marketplace.json
+
+⚠ Found 3 warnings:
+
+  ❯ description: No marketplace description provided. Adding a description helps users understand what this marketplace offers
+  ❯ plugins[0] plugin.json → version: No version specified. Consider adding a version following semver (e.g., "1.0.0")
+  ❯ plugins[0] plugin.json → author: No author information provided. Consider adding author details for plugin attribution
+
+ℹ Advice (does not change the verdict):
+
+  ❯ /home/shuhei2441/repo/dev-docs/.claude/worktrees/design-frontend-design-schemas-v12/README.md: This README has no line that installs "dev-docs" from a marketplace. Add the install line, which works in one step on Claude Code 2.1.275 or later. In it, replace <owner>/<repo> with the repository that holds the marketplace.
+      /plugin install dev-docs --marketplace <owner>/<repo>
+
+✔ Validation passed with warnings
+
+> lint
+> eslint frontend tests/unit/frontend tests/integration/frontend eslint.config.js
+
+
+> typecheck
+> node node_modules/typescript-native/bin/tsc --noEmit -p frontend/tsconfig.json
+
+tests/unit/frontend/src/features/docs/shared/comments/comment-store.test.ts(64,7): error TS1345: An expression of type 'void' cannot be tested for truthiness.
+tests/unit/frontend/src/features/docs/shared/comments/comment-store.test.ts(64,43): error TS2339: Property 'restore' does not exist on type 'CommentState'.
+tests/unit/frontend/src/features/docs/shared/comments/comment-store.test.ts(64,59): error TS2339: Property 'comment' does not exist on type 'never'.
+tests/unit/frontend/src/features/docs/shared/comments/comment-store.test.ts(64,76): error TS2339: Property 'index' does not exist on type 'never'.
+tests/unit/frontend/src/features/docs/shared/comments/comment-store.test.ts(73,7): error TS1345: An expression of type 'void' cannot be tested for truthiness.
+tests/unit/frontend/src/features/docs/shared/comments/comment-store.test.ts(74,32): error TS2339: Property 'restore' does not exist on type 'CommentState'.
+tests/unit/frontend/src/features/docs/shared/comments/comment-store.test.ts(74,48): error TS2339: Property 'comment' does not exist on type 'never'.
+tests/unit/frontend/src/features/docs/shared/comments/comment-store.test.ts(74,65): error TS2339: Property 'index' does not exist on type 'never'.
+tests/unit/frontend/src/features/docs/shared/comments/comment-store.test.ts(75,32): error TS2339: Property 'restore' does not exist on type 'CommentState'.
+tests/unit/frontend/src/features/docs/shared/comments/comment-store.test.ts(75,48): error TS2339: Property 'comment' does not exist on type 'never'.
+tests/unit/frontend/src/features/docs/shared/comments/comment-store.test.ts(75,65): error TS2339: Property 'index' does not exist on type 'never'.
+tests/unit/frontend/src/shared/hooks/use-leave-guard.test.tsx(15,31): error TS2307: Cannot find module '@/shared/hooks/use-leave-guard' or its corresponding type declarations.
+tests/unit/frontend/src/shared/hooks/use-scroll-restoration.test.tsx(4,38): error TS2307: Cannot find module '@/shared/hooks/use-scroll-restoration' or its corresponding type declarations.
+tests/unit/frontend/src/shared/stores/legacy-key-storage.test.ts(3,34): error TS2307: Cannot find module '@/shared/stores/legacy-key-storage' or its corresponding type declarations.
+exit=1
+
+型検査の違反は、単体テスト作成の工程で実装が無いことによるもの（未実装の legacy-key-storage・use-leave-guard・use-scroll-restoration の import と、comment-store の remove の戻り値・restore）だけ。

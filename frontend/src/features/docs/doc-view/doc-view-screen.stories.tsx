@@ -261,10 +261,8 @@ export const SidebarWide: Story = {
 /** 画面幅 48rem 未満の文書の一覧のドロワー。group の折りたたみはドロワーの中でも同じ */
 export const NarrowDrawer: Story = {
   beforeEach: withSidebar({}),
-  parameters: {
-    msw: handlers(documentResponse({ tabs: groupedTabs })),
-    viewport: { defaultViewport: "mobile1" },
-  },
+  parameters: { msw: handlers(documentResponse({ tabs: groupedTabs })) },
+  globals: { viewport: { value: "mobile1", isRotated: false } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(

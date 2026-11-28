@@ -2,7 +2,7 @@ import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode, useEffect } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 
-import { ConfirmDialogProvider } from "@/app/confirm-dialog";
+import { ConfirmDialogProvider } from "@/shared/components/confirm-dialog";
 import { ErrorFallback } from "@/app/error-fallback";
 import { Toaster } from "@/shared/components/ui/sonner";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
