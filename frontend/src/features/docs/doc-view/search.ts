@@ -11,7 +11,7 @@ export const DocViewSearchSchema = z.object({
   base: z.string().min(1).optional().catch(undefined),
   tab: z.coerce.number().int().min(0).optional().catch(undefined),
   edit: DocEditModeSchema.optional().catch(undefined),
-  // `edits` なら編集中のパネルを開いて始める（メタデータの画面の編集中のパネルから移るとき）
+  // `edits` ならレビュー中のパネルを開いて始める（メタデータの画面のレビュー中のパネルから移るとき）
   panel: z.literal("edits").optional().catch(undefined),
 });
 

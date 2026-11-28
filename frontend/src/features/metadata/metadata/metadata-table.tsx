@@ -26,7 +26,7 @@ type EditKind = PendingEdit["kind"];
 const LIST_SEPARATOR = ", ";
 const NEW_ID_PATTERN = /^[a-z0-9-]+$/;
 
-/** 表の行の要素の id。編集中のパネルから行へ移動するときに使用する */
+/** 表の行の要素の id。レビュー中のパネルから行へ移動するときに使用する */
 export const rowElementId = (kind: string, rowId: string): string =>
   `metadata-row-${kind}-${rowId}`;
 
