@@ -10,7 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { mswLoader } from "msw-storybook-addon/csf3";
 
-import { ConfirmDialogProvider } from "../src/app/confirm-dialog";
+import { ConfirmDialogProvider } from "../src/shared/components/confirm-dialog";
 import "../src/shared/styles/index.css";
 
 /**

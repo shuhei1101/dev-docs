@@ -2,7 +2,7 @@ import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { type Control, Controller } from "react-hook-form";
 
-import type { ConfirmRequest } from "@/app/confirm-dialog";
+import type { ConfirmRequest } from "@/shared/components/confirm-dialog";
 
 import { useSourceForm } from "@/features/settings/settings/hooks/use-source-form";
 import { fieldOf } from "@/features/settings/settings/problem-errors";
@@ -188,6 +188,26 @@ const StorageField = ({ control, stored }: StorageFieldProps) => {
     </Field>
   );
 };
+
+type FooterProps = {
+  editing: boolean;
+  saving: boolean;
+  disabled: boolean;
+  onCancel: () => void;
+};
+
+/** キャンセルと、保存を待つ間は回る表示を出す追加・保存のボタン */
+const EditDialogFooter = ({ editing, saving, disabled, onCancel }: FooterProps) => (
+  <DialogFooter>
+    <Button type="button" variant="outline" onClick={onCancel}>
+      キャンセル
+    </Button>
+    <Button type="submit" disabled={disabled}>
+      {saving && <Loader2 aria-hidden="true" className="animate-spin" />}
+      {editing ? "保存" : "追加"}
+    </Button>
+  </DialogFooter>
+);
 
 /** 入力したまま画面の中で移る前に出す確認のダイアログの文面 */
 const LEAVE_CONFIRM: ConfirmRequest = {
@@ -389,19 +409,12 @@ export const SourceEditDialog = ({
               {...form.register("write")}
             />
           </Field>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              キャンセル
-            </Button>
-            <Button type="submit" disabled={saving || gone}>
-              {saving && <Loader2 aria-hidden="true" className="animate-spin" />}
-              {editing ? "保存" : "追加"}
-            </Button>
-          </DialogFooter>
+          <EditDialogFooter
+            editing={editing}
+            saving={saving}
+            disabled={saving || gone}
+            onCancel={() => onOpenChange(false)}
+          />
         </form>
       </DialogContent>
     </Dialog>

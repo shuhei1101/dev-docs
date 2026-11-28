@@ -1,6 +1,6 @@
 import { useBlocker } from "@tanstack/react-router";
 
-import { type ConfirmRequest, useConfirmDialog } from "@/app/confirm-dialog";
+import { type ConfirmRequest, useConfirmDialog } from "@/shared/components/confirm-dialog";
 
 type Options = {
   /** 画面の中の移動も止めるときの確認のダイアログの文面。省くとタブを閉じる・再読み込みだけ警告する */

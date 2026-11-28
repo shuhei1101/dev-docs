@@ -10,7 +10,7 @@ import { MetadataTable, rowElementId } from "@/features/metadata/metadata/metada
 import { PendingPanel } from "@/shared/components/pending-panel/pending-panel";
 import { type PendingEdit, useBaseCommit, usePendingEdits } from "@/shared/stores/pending-edits-store";
 import { getMetadataGetMetadataQueryOptions } from "@/shared/api/generated/metadata/metadata";
-import type { MetadataResponse } from "@/shared/api/generated/model";
+import type { MetadataResponse, SettingsSourcesView } from "@/shared/api/generated/model";
 import { useSettingsGetSettingsSources } from "@/shared/api/generated/settings/settings";
 import {
   ProjectIndexUnreachableAlert,
@@ -36,6 +36,9 @@ const NOT_FOUND = 404;
 const NEXT_SCHEME = { system: "dark", dark: "light", light: "dark" } as const;
 
 type MetadataSearch = { tab?: string; q?: string; panel?: "edits" };
+
+/** URL の `q`（絞り込みの文字。無ければ空） */
+const queryOf = (search: MetadataSearch): string => search.q ?? "";
 
 /** メタデータの取得を待つ間の読み込み中の表示 */
 const MetadataSkeleton = () => (
@@ -90,6 +93,43 @@ const KindTabs = ({ source, data, tab, query, onTabChange }: KindTabsProps) => (
   </Tabs>
 );
 
+type DialogsProps = {
+  source: string;
+  settings: SettingsSourcesView | undefined;
+  searchOpen: boolean;
+  onSearchOpenChange: (open: boolean) => void;
+};
+
+/** 検索のダイアログとショートカットの一覧と、それらを開くキー */
+const MetadataDialogs = ({ source, settings, searchOpen, onSearchOpenChange }: DialogsProps) => {
+  const navigate = useNavigate();
+  const singleKeyShortcuts = usePreferencesStore((state) => state.singleKeyShortcuts);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const idle = !searchOpen && !helpOpen;
+  useShortcut("search", () => onSearchOpenChange(true), { enabled: idle });
+  useShortcut("help", () => setHelpOpen(true), { enabled: idle });
+  return (
+    <>
+      <SearchDialog
+        open={searchOpen}
+        onOpenChange={onSearchOpenChange}
+        source={source}
+        sources={servingSources(settings).map((item) => item.id)}
+        unavailable={unservedSources(settings)}
+        onResultSelect={(path, resultSource) =>
+          void navigate({ to: "/$source/$", params: { source: resultSource, _splat: path } })
+        }
+      />
+      <ShortcutDialog
+        open={helpOpen}
+        onOpenChange={setHelpOpen}
+        screen="metadata"
+        singleKey={singleKeyShortcuts}
+      />
+    </>
+  );
+};
+
 type Props = { source: string };
 
 /** 1 つの配信元のメタデータを、種類ごとの表で参照・編集する画面 */
@@ -103,13 +143,9 @@ export const MetadataScreen = ({ source }: Props) => {
   );
   const settings = useSettingsGetSettingsSources().data;
   const edits = usePendingEdits(source);
-  const { colorScheme, setColorScheme, singleKeyShortcuts } = usePreferencesStore();
+  const { colorScheme, setColorScheme } = usePreferencesStore();
   const loading = useDelayedFlag(metadata.isPending, LOADING_DELAY_MS);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
-  const idle = !searchOpen && !helpOpen;
-  useShortcut("search", () => setSearchOpen(true), { enabled: idle });
-  useShortcut("help", () => setHelpOpen(true), { enabled: idle });
   // 編集中の変更は sessionStorage に残るので、タブを閉じる・再読み込みだけ警告する
   useLeaveGuard(edits.length > 0);
   // 移動先の変更（描いた後に行の DOM を探す）と、移動を押した回数
@@ -117,7 +153,7 @@ export const MetadataScreen = ({ source }: Props) => {
   const [locateCount, setLocateCount] = useState(0);
 
   const tab = search.tab ?? metadata.data?.kinds[0]?.id ?? "terms";
-  const query = search.q ?? "";
+  const query = queryOf(search);
   const panelOpen = search.panel === "edits";
   const setSearch = (next: MetadataSearch) =>
     void navigate({
@@ -218,21 +254,11 @@ export const MetadataScreen = ({ source }: Props) => {
         onOpenChange={(open) => setSearch({ panel: open ? "edits" : undefined })}
         onLocate={locate}
       />
-      <SearchDialog
-        open={searchOpen}
-        onOpenChange={setSearchOpen}
+      <MetadataDialogs
         source={source}
-        sources={servingSources(settings).map((item) => item.id)}
-        unavailable={unservedSources(settings)}
-        onResultSelect={(path, resultSource) =>
-          void navigate({ to: "/$source/$", params: { source: resultSource, _splat: path } })
-        }
-      />
-      <ShortcutDialog
-        open={helpOpen}
-        onOpenChange={setHelpOpen}
-        screen="metadata"
-        singleKey={singleKeyShortcuts}
+        settings={settings}
+        searchOpen={searchOpen}
+        onSearchOpenChange={setSearchOpen}
       />
     </div>
   );
