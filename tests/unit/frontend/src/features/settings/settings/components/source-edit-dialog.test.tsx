@@ -205,6 +205,9 @@ test("test_source_edit_dialog_when_navigation_blocked", async () => {
       <SourceEditDialog open onOpenChange={vi.fn()} sources={sources as never} index={null} />
     </ConfirmDialogProvider>,
     "/s/a.md",
+    undefined,
+    // ブラウザの戻る・進むを止めるのはブラウザの履歴だけ（メモリの履歴は追加・置き換えだけを止める）
+    { browser: true },
   );
   await act(() => router.navigate({ to: "/_settings" }));
   await userEvent.type(await screen.findByLabelText(/配信元の ID/), "extra");
