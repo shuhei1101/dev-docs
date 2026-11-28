@@ -44,6 +44,14 @@ components:
         condition: '`outsideRead: false` の行と `outsideRead` を持たない行'
         mock: なし
         expected: '「範囲の外から参照できません」が 1 つだけ、`outsideRead: false` の行に出る'
+      - name: test_source_table_when_tooltip
+        case: 正常
+        summary: アイコンだけのボタンのツールチップ
+        condition: 行の編集のボタンにフォーカスする
+        mock: なし
+        expected: '`{配信元の ID} を編集` のツールチップが出る'
+    notes:
+      ツールチップ: 編集・削除のアイコンだけのボタンは、shadcn/ui の `Tooltip` で `{配信元の ID} を編集`・`{配信元の ID} を削除` を出す
 tags:
   - name: topic:設定画面
     main: true

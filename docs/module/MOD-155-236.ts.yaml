@@ -1,0 +1,55 @@
+id: MOD-155-236
+title: 画面 / 共通 / legacy-key-storage.ts
+lead: Web Storage の旧キーの値を新キーへ移し替える Zustand の `persist` の保存先を受け持ち、共通の legacy-key-storage.ts を修正するときに参照する。
+functions:
+  - name: legacyKeyStorage
+    title: 旧キーを移し替える保存先
+    kind: 関数
+    container: shared/stores/legacy-key-storage.ts
+    usecase: 共通
+    role: 変換
+    summary: '`getItem` で新キーに値が無く旧キーに値があれば、その値を新キーへ書き込んで旧キーを削除する `StateStorage`'
+    scope: public
+    args:
+      - name: storage
+        type: () => Storage
+        required: true
+        passing: positional
+        description: 保存先（`() => localStorage`・`() => sessionStorage`）
+      - name: legacyName
+        type: string
+        required: true
+        passing: positional
+        description: 移し替える前のキー（`dev-docs:preferences` など）
+    returns:
+      type: StateStorage
+      description: '`createJSONStorage` に指定する保存先'
+    process: |-
+      1. `getItem(name)` は、`name` に値があればその値を返却する
+      2. 無ければ `legacyName` の値を参照し、あれば `name` へ書き込んで `legacyName` を削除し、その値を返却する
+      3. どちらにも値が無ければ `null` を返却する
+      4. `setItem`・`removeItem` は `name` だけを書き換える
+    unit_tests:
+      - name: test_legacy_key_storage_when_legacy
+        case: 正常
+        summary: 旧キーを移し替える
+        condition: 旧キーだけに値がある
+        mock: なし（jsdom の `localStorage`）
+        expected: '`getItem` が旧キーの値を返却し、新キーに同じ値があり、旧キーが無い'
+      - name: test_legacy_key_storage_when_both
+        case: 正常
+        summary: 新キーを優先する
+        condition: 新キーと旧キーの両方に値がある
+        mock: なし（jsdom の `localStorage`）
+        expected: '`getItem` が新キーの値を返却し、旧キーを触らない'
+      - name: test_legacy_key_storage_when_empty
+        case: 正常
+        summary: どちらにも無い
+        condition: どちらのキーにも値が無い
+        mock: なし（jsdom の `localStorage`）
+        expected: '`getItem` が `null`'
+tags:
+  - name: topic:ストア
+    main: true
+  - name: action:保存
+  - name: topic:画面

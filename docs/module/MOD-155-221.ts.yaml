@@ -71,7 +71,7 @@ stores:
     container: shared/stores/pending-edits-store.ts
     usecase: 画面で編集中の変更をまとめて直コミットする
     role: ストア
-    summary: Zustand の `persist`（`sessionStorage`、キー `dev-docs:pending-edits`、`version` 2。`version` 1 からの移行は編集中の変更を捨てる）で保存する、配信元の ID ごとの編集中の変更と編集を始めたときのコミット
+    summary: Zustand の `persist`（`sessionStorage`、キー `dev-docs:v2:shared:pending-edits`、`version` 2。`version` 1 からの移行は編集中の変更を捨てる。旧キー `dev-docs:pending-edits` は `legacyKeyStorage` で移し替える）で保存する、配信元の ID ごとの編集中の変更と編集を始めたときのコミット
     state:
       - name: bySource
         type: Record<string, PendingEdit[]>

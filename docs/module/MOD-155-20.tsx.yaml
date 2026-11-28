@@ -30,9 +30,9 @@ components:
         notes: '`useState`'
       - name: commentPanelOpen
         type: boolean
-        initial: 'false'
+        initial: 'URL の `panel` が `comments`'
         description: コメントのパネル
-        notes: '`useState`'
+        notes: 'URL の `panel` から求め、開閉は `panel` を `replace` で書き換える（`edits` とは並べない）'
       - name: emptyTab
         type: NavTab | null
         initial: 'null'
@@ -52,7 +52,7 @@ components:
         type: boolean
         initial: 'URL の `panel` が `edits`'
         description: レビュー中のパネル
-        notes: '`useState`（メタデータの画面から移ったときに開いたままにするため、初期値を URL から取る）'
+        notes: 'URL の `panel` から求め、開閉は `panel` を `replace` で書き換える（`comments` とは並べない）'
     unit_tests:
       - name: test_doc_view_screen
         case: 正常
@@ -102,6 +102,27 @@ components:
         condition: メモリの履歴のルーターで `/s/a.md` を開く
         mock: MSW のハンドラ・mdmark（偽物）
         expected: 最上位の要素が `h-dvh` と `overflow-hidden` を持ち、本文は `id="doc-scroll"` の要素の中にあり、サイドバーが `sticky` を持たない
+      - name: test_doc_view_screen_when_comment_panel_in_url
+        case: 正常
+        summary: コメントのパネルを URL に保つ
+        condition: トップバーのコメントのボタンを押し、続けてレビュー中のボタンを押す
+        mock: MSW のハンドラ・mdmark（偽物）
+        expected: 1 回目で URL の `panel` が `comments` になりコメントのパネルが開き、2 回目で `edits` になりコメントのパネルが閉じる。履歴の件数は増えない
+      - name: test_doc_view_screen_when_leave_guard
+        case: 正常
+        summary: 編集中の変更があるときに離脱を警告する
+        condition: 開いている配信元に編集中の変更を 1 件入れ、`beforeunload` を発火させる
+        mock: MSW のハンドラ・mdmark（偽物）
+        expected: イベントの `defaultPrevented` が `true`。変更が 0 件のときは `false`
+      - name: test_doc_view_screen_when_scroll_restored
+        case: 正常
+        summary: 戻るで本文のスクロール位置を戻す
+        condition: '`/s/a.md` で本文の領域を 400 までスクロールし、`/s/b.md` へ移ってから履歴を戻る'
+        mock: MSW のハンドラ・mdmark（偽物）
+        expected: '`b.md` は一番上から表示され、戻った `a.md` の本文の領域の `scrollTop` が 400'
+    notes:
+      離脱の警告: '`useLeaveGuard` に、開いている配信元の編集中の変更が 1 件以上あるかを指定する'
+      スクロール位置: 本文の領域（`id="doc-scroll"`）に `useScrollRestoration` をキー `dev-docs:v1:doc-view:body:{source}:{path}:scroll`・`ready` は本文を描いた後・`restore` は戻る・進むと再読み込みのときだけ `true`（TanStack Router の履歴の移動の種類で判定する）で使用する。サイドバーのスクロールの領域にはキー `dev-docs:v1:doc-view:sidebar:{source}:{tab}:scroll` で使用し、同じタブの中で文書を移るときはキーが変わらないので位置を変えない
 refs:
   - to: SCR-155-1
     type: requires

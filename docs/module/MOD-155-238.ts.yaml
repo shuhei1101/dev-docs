@@ -1,0 +1,72 @@
+id: MOD-155-238
+title: 画面 / 共通 / use-scroll-restoration.ts
+lead: 画面の中のスクロールの領域（本文・サイドバー）の位置を `sessionStorage` に保存して戻すフックを受け持ち、共通の use-scroll-restoration.ts を修正するときに参照する。
+constants:
+  - name: SCROLL_SAVE_INTERVAL_MS
+    title: スクロール位置の保存の間引き
+    container: shared/hooks/use-scroll-restoration.ts
+    usecase: 共通
+    summary: スクロールの間に `sessionStorage` へ書き込む間隔（ミリ秒）。移る前と `pagehide` で必ず書き込むので、間引きの間の位置は失わない。書き込みは同期で 1 回 1 ミリ秒未満のため、入力の応答の目安（100 ミリ秒）の 2 倍で間引く
+    value: '200'
+functions:
+  - name: useScrollRestoration
+    title: スクロール位置の保持
+    kind: 関数
+    container: shared/hooks/use-scroll-restoration.ts
+    usecase: 共通
+    role: フック
+    summary: 要素の縦のスクロール位置をキーごとに `sessionStorage` に保存し、中身を描いた後に戻す
+    scope: public
+    args:
+      - name: ref
+        type: RefObject<HTMLElement | null>
+        required: true
+        passing: positional
+        description: スクロールの領域
+      - name: key
+        type: string
+        required: true
+        passing: positional
+        description: 保存のキー（画面設計の `retained_state` の `key`。`dev-docs:v1:doc-view:body:{source}:{path}:scroll` など）
+      - name: ready
+        type: boolean
+        required: true
+        passing: positional
+        description: 中身を描き終えたか。`true` になったときに 1 回だけ戻す
+      - name: restore
+        type: boolean
+        required: false
+        passing: keyword
+        description: 戻すか。リンクで新規に開いたときは `false` にし、一番上から表示する（既定は `true`）
+    returns:
+      type: void
+      description: 何も返却しない
+    process: |-
+      1. `ready` が `true` になったとき、`restore` が `true` なら `sessionStorage` の `key` の値を `scrollTop` に設定する
+      2. スクロールのたびに `SCROLL_SAVE_INTERVAL_MS` で間引いて `scrollTop` を `key` に書き込む
+      3. `key` が変わる前（文書・タブを移る前）と `pagehide` で、その時点の `scrollTop` を書き込む
+      4. `history.scrollRestoration` は変えない（ルーターが管理する）
+    unit_tests:
+      - name: test_use_scroll_restoration_restore
+        case: 正常
+        summary: 保存した位置に戻す
+        condition: '`sessionStorage` のキーに `480` があり、`ready` を `true` にする'
+        mock: なし
+        expected: 要素の `scrollTop` が `480`
+      - name: test_use_scroll_restoration_when_not_restore
+        case: 正常
+        summary: 新規に開いたときは戻さない
+        condition: '`restore` が `false` で、キーに `480` がある'
+        mock: なし
+        expected: 要素の `scrollTop` が `0`
+      - name: test_use_scroll_restoration_save_on_key_change
+        case: 正常
+        summary: 移る前に保存する
+        condition: '`scrollTop` を `300` にして `key` を別の文書のキーに変える'
+        mock: なし
+        expected: 前のキーの値が `300`
+tags:
+  - name: topic:スクロール
+    main: true
+  - name: action:保存
+  - name: topic:画面

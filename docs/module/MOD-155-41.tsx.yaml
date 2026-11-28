@@ -70,6 +70,28 @@ components:
         condition: '`storage` の無い行を編集し、読み書きの方法を `ディスク` にして保存する'
         mock: MSW（PUT の本文を記録する）
         expected: '初期値が `自動` で、送信した行に `storage: {type: disk}` がある'
+      - name: test_source_edit_dialog_when_outside_click
+        case: 正常
+        summary: 外側のクリックで閉じない
+        condition: 配信元の ID を入力してダイアログの外側をクリックする
+        mock: なし
+        expected: ダイアログが開いたままで、入力が残る
+      - name: test_source_edit_dialog_when_saving
+        case: 正常
+        summary: 保存を待つ間の表示
+        condition: 端末の設定の保存の応答を止めて追加を押す
+        mock: MSW のハンドラ（応答を待たせる）
+        expected: 追加のボタンが押せず、回る表示（`aria-hidden` のアイコン）を持つ
+      - name: test_source_edit_dialog_when_leave_guard
+        case: 正常
+        summary: 入力したまま離れるときに警告する
+        condition: 配信元の ID を入力して `beforeunload` を発火させる
+        mock: なし
+        expected: イベントの `defaultPrevented` が `true`。入力する前は `false`
+    notes:
+      閉じ方: '`DialogContent` の `onInteractOutside` で `preventDefault` を呼び、外側のクリックで閉じない（Esc・キャンセルは閉じる）'
+      保存を待つ間: 追加・保存のボタンは応答を待つ間、文字の前に `Loader2` の回る表示を出して押せなくする（ボタンの幅は変えない）
+      離脱の警告: '`useLeaveGuard` に、ダイアログを開いていてフォームが `isDirty` かを指定する'
   - name: StorageField
     title: 読み書きの方法のセレクト
     kind: コンポーネント

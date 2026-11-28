@@ -1,0 +1,42 @@
+id: MOD-155-237
+title: 画面 / 共通 / use-leave-guard.ts
+lead: 未保存の入力や編集中の変更があるままブラウザのタブを閉じる・再読み込みするときの警告を受け持ち、共通の use-leave-guard.ts を修正するときに参照する。
+functions:
+  - name: useLeaveGuard
+    title: 離脱の警告
+    kind: 関数
+    container: shared/hooks/use-leave-guard.ts
+    usecase: 共通
+    role: フック
+    summary: '`active` が `true` の間だけ `beforeunload` を受け、ブラウザの離脱の確認を出させる'
+    scope: public
+    args:
+      - name: active
+        type: boolean
+        required: true
+        passing: positional
+        description: 警告するか（画面設計の `leave_guard` が `unsaved` の条件を満たしているか）
+    returns:
+      type: void
+      description: 何も返却しない
+    process: |-
+      1. `active` が `true` の間だけ `window` に `beforeunload` を登録し、発火したら `event.preventDefault()` を呼ぶ
+      2. `active` が `false` になったときと画面を離れたときは登録を解除する
+    unit_tests:
+      - name: test_use_leave_guard_when_active
+        case: 正常
+        summary: 警告する
+        condition: '`active` が `true` で `beforeunload` を発火させる'
+        mock: なし
+        expected: イベントの `defaultPrevented` が `true`
+      - name: test_use_leave_guard_when_inactive
+        case: 正常
+        summary: 警告しない
+        condition: '`active` を `true` から `false` にして `beforeunload` を発火させる'
+        mock: なし
+        expected: イベントの `defaultPrevented` が `false`
+tags:
+  - name: topic:画面
+    main: true
+  - name: topic:警告
+  - name: topic:編集
