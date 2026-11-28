@@ -206,6 +206,22 @@ args:
     default: '0'
     description: 開いている配信元の編集中の変更の件数。レビュー中のボタンに出す（0 のときは件数を出さない）
     enabled_when: '`screen` が `doc-view` か `metadata` で、`currentSource` がある'
+  - name: refs.branches[].name
+    type: string
+    required: true
+    description: ブランチ名
+  - name: refs.tags[].name
+    type: string
+    required: true
+    description: タグ名
+  - name: refs.commits[].commit
+    type: string
+    required: true
+    description: commit の短縮 SHA
+  - name: refs.commits[].subject
+    type: string
+    required: true
+    description: commit の題名
 events:
   - name: sourceSelect
     when: 配信元のメニューの項目を選んだ
