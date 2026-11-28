@@ -8,7 +8,9 @@ docs:
   - page: project-index.yaml
     new: false
     change: nav のグループのうち、名前を / で区切って並べたグループ（モジュール構成・テスト）を group の入れ子にし、他のグループも判定フローチャート『サイドバーのグループの分け方』で見直す
-    status: todo
+    status: done
+    updated_by: planner
+    updated_at: '2026-11-28T09:19:06.660443+00:00'
 scope_out:
   - item: 他の配信元（ai-monitor・project-index など）の project-index.yaml の nav の入れ子
     reason: 要望はこの配信元 dev-docs の nav だけを対象にする。他のリポジトリの設定はそれぞれのリポジトリで扱う
@@ -16,3 +18,6 @@ scope_out:
   - item: 画面のサイドバーの入れ子の描き方（字下げ・折りたたみ）の変更
     reason: 入れ子の group は画面が既に描いている。要望は配信元の設定の構成だけで、画面のコードは変えない。スクリーンショットの確認で描き方の不具合を見つけたら、その場で起票する
     plan: none
+  - item: 文書の画面のパンくずに、入れ子のグループの外側のグループが出ない
+    reason: 画面の nav.ts の不具合で、配信元の設定の修正の範囲外。今回の入れ子で見えるようになったが、knowledge・mdmark の入れ子でも同じく起きている
+    plan: '#349'
