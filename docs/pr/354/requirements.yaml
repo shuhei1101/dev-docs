@@ -1,0 +1,51 @@
+use_cases:
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: run_only
+    detail: 画面の表とコメントの部品が変わるため、文書の参照・コメント・配信元の追加と削除の流れが壊れていないかを確認する
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-14.yaml
+    impact: run_only
+    detail: メタデータを種類ごとの表で参照して絞り込む流れが、表の部品の置き換えで壊れていないかを確認する
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-15.yaml
+    impact: run_only
+    detail: メタデータの行と文書の本文を編集して溜め、まとめて直コミットする流れが、表の部品の置き換えで壊れていないかを確認する
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-6.yaml
+    impact: run_only
+    detail: 溜めたコメントをコピー・起票する流れが、コメントの部品の置き換えで壊れていないかを確認する
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-12.yaml
+    impact: run_only
+    detail: 設定画面の配信元の一覧から配信元を追加・編集する流れが、表の部品の置き換えで壊れていないかを確認する
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-11.yaml
+    impact: run_only
+    detail: 設定画面の配信元の一覧から配信元を除外する流れが、表の部品の置き換えで壊れていないかを確認する
+    depends_on: []
+docs:
+  - page: docs/guide/用語集.md
+    new: false
+    change: 「編集中の変更」の説明を、メタデータの画面で編集した行と文書の画面で編集した文書の本文の両方の、まだコミットしていない変更にする
+    status: todo
+  - page: docs/library/LIB-155-9.yaml
+    new: false
+    change: 画面の表・コメントに `<mdmark-table>`・`<mdmark-comments>` のカスタム要素を使用する範囲と利用方法を追加する
+    status: todo
+  - page: docs/library/LIB-155-25.yaml
+    new: false
+    change: 配信元の一覧の表を `<mdmark-table>` に置き換えた後の利用箇所に合わせる（利用箇所が無くなれば削除する）
+    status: todo
+scope_out:
+  - item: 保てない機能を mdmark の部品へ追加する修正
+    reason: mdmark のリポジトリの変更で、要否と方法は突き合わせで保てない機能が見つかったときに議論中で利用者と決める
+    plan: to_file
+  - item: 文書の本文の表のマーカーの記載の移行
+    reason: 要望に含まれない（画面の部品ではなく文書の本文の記載で、#244 が扱う）
+    plan: '#244'
