@@ -1,6 +1,6 @@
 id: MOD-155-238
 title: 画面 / 共通 / use-scroll-restoration.ts
-lead: 画面の中のスクロールの領域（本文・サイドバー）の位置を `sessionStorage` に保存して戻すフックを受け持ち、共通の use-scroll-restoration.ts を修正するときに参照する。
+lead: 文書の画面のサイドバーのスクロール位置を種類のタブごとに `sessionStorage` に保存し、タブを移って戻ったときに戻すフックを受け持ち、共通の use-scroll-restoration.ts を修正するときに参照する。
 constants:
   - name: SCROLL_SAVE_INTERVAL_MS
     title: スクロール位置の保存の間引き
@@ -10,12 +10,12 @@ constants:
     value: '200'
 functions:
   - name: useScrollRestoration
-    title: スクロール位置の保持
+    title: スクロール位置のキーごとの復元
     kind: 関数
     container: shared/hooks/use-scroll-restoration.ts
     usecase: 共通
     role: フック
-    summary: 要素の縦のスクロール位置をキーごとに `sessionStorage` に保存し、中身を描いた後に戻す
+    summary: 要素の縦のスクロール位置をキーごとに `sessionStorage` に保存し、キーが変わったときに新しいキーの位置へ戻す
     scope: public
     args:
       - name: ref
@@ -27,44 +27,35 @@ functions:
         type: string
         required: true
         passing: positional
-        description: 保存のキー（画面設計の `retained_state` の `key`。`dev-docs:v1:doc-view:body:{source}:{path}:scroll` など）
-      - name: ready
-        type: boolean
-        required: true
-        passing: positional
-        description: 中身を描き終えたか。`true` になったときに 1 回だけ戻す
-      - name: restore
-        type: boolean
-        required: false
-        passing: keyword
-        description: 戻すか。リンクで新規に開いたときは `false` にし、一番上から表示する（既定は `true`）
+        description: 保存のキー（画面設計の `retained_state` の `key`。`dev-docs:v1:doc-view:sidebar:{source}:{tab}:scroll`）
     returns:
       type: void
       description: 何も返却しない
     process: |-
-      1. `ready` が `true` になったとき、`restore` が `true` なら `sessionStorage` の `key` の値を `scrollTop` に設定する
-      2. スクロールのたびに `SCROLL_SAVE_INTERVAL_MS` で間引いて `scrollTop` を `key` に書き込む
-      3. `key` が変わる前（文書・タブを移る前）と `pagehide` で、その時点の `scrollTop` を書き込む
-      4. `history.scrollRestoration` は変えない（ルーターが管理する）
+      1. スクロールのたびに `SCROLL_SAVE_INTERVAL_MS` で間引いて `scrollTop` を `key` に書き込み、`key` が変わる前と `pagehide` ではその時点の `scrollTop` を書き込む
+      2. `key` が変わったときだけ、描いた後の次のフレーム（`requestAnimationFrame`。ルーターの復元の後）で、新しい `key` に値があればその値を、無ければ 0 を `scrollTop` に設定する
+      3. 初めて描いたときは戻さない（再読み込みと戻る・進むはルーターの `scrollRestoration` が戻す）
     unit_tests:
-      - name: test_use_scroll_restoration_restore
+      - name: test_use_scroll_restoration_when_key_changed
         case: 正常
-        summary: 保存した位置に戻す
-        condition: '`sessionStorage` のキーに `480` があり、`ready` を `true` にする'
-        mock: なし
-        expected: 要素の `scrollTop` が `480`
-      - name: test_use_scroll_restoration_when_not_restore
+        summary: キーが変わったら保存した位置に戻す
+        condition: キー A で `scrollTop` を 300 にし、キー B（`sessionStorage` に 120）に変え、続けてキー A に戻す
+        mock: '`requestAnimationFrame`（すぐに呼ぶ偽物）'
+        expected: B に変えた後の `scrollTop` が 120、A に戻した後が 300
+      - name: test_use_scroll_restoration_when_first_render
         case: 正常
-        summary: 新規に開いたときは戻さない
-        condition: '`restore` が `false` で、キーに `480` がある'
-        mock: なし
-        expected: 要素の `scrollTop` が `0`
-      - name: test_use_scroll_restoration_save_on_key_change
+        summary: 初めて描いたときは戻さない
+        condition: キーに 480 がある状態で初めて描く
+        mock: '`requestAnimationFrame`（すぐに呼ぶ偽物）'
+        expected: '`scrollTop` を設定しない'
+      - name: test_use_scroll_restoration_when_new_key
         case: 正常
-        summary: 移る前に保存する
-        condition: '`scrollTop` を `300` にして `key` を別の文書のキーに変える'
-        mock: なし
-        expected: 前のキーの値が `300`
+        summary: 保存が無いキーは一番上から
+        condition: '`scrollTop` を 300 にして、`sessionStorage` に値の無いキーに変える'
+        mock: '`requestAnimationFrame`（すぐに呼ぶ偽物）'
+        expected: '`scrollTop` が 0'
+    notes:
+      ルーターとの分担: TanStack Router の `scrollRestoration` は履歴の項目ごとに位置を持ち、新しい履歴へは直前の場所にある要素の位置だけを引き継ぐ。種類のタブを移って戻るときは新しい履歴になり、前のタブのサイドバーの位置を持たないため、タブごとの位置はこのフックで戻す。キーが変わらないとき（同じタブの中の移動・再読み込み・戻る・進む）はこのフックは戻さず、ルーターの復元に任せるので、同じ要素を 2 つの仕組みが同時に戻すことは無い。キーが変わったときは、ルーターが引き継いだ位置を次のフレームでこのフックが上書きする
 tags:
   - name: topic:スクロール
     main: true

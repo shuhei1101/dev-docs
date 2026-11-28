@@ -887,16 +887,16 @@ screen_type: detail
 leave_guard: unsaved
 retained_state:
   - what: 本文の領域のスクロール位置
-    store: session_storage
-    key: dev-docs:v1:doc-view:body:{source}:{path}:scroll
-    save_on: 文書を移る前と `pagehide`（スクロールの間は間引く）
-    restore_on: 戻る・進むと再読み込みで同じ文書を開いたとき（本文を描いた後）
-    reset_when: リンクで新規に開いたとき（一番上から表示する）
+    store: router
+    save_on: ルーターの `scrollRestoration` が履歴の項目ごとに保存する（本文の領域は `data-scroll-restoration-id="doc-body"`）
+    restore_on: 戻る・進むと再読み込みで同じ文書を開いたとき
+    reset_when: リンクで新規に開いたとき（ルーターの `scrollToTopSelectors` で一番上から表示する）
   - what: サイドバーのスクロール位置
     store: session_storage
     key: dev-docs:v1:doc-view:sidebar:{source}:{tab}:scroll
     save_on: 文書を移る前と `pagehide`（スクロールの間は間引く）
-    restore_on: 種類のタブを移って戻ったときと再読み込みしたとき。同じタブの中で文書を移るときは位置を変えない
+    restore_on: 種類のタブを移って戻ったとき
+    precedence: 同じタブの中で文書を移るとき・再読み込み・戻る・進むは、ルーターの `scrollRestoration`（`data-scroll-restoration-id="doc-sidebar"`）が位置を引き継ぐ・戻す。タブを移ったときだけこの値で上書きする
   - what: 溜めたコメント
     store: session_storage
     key: dev-docs:v1:doc-view:comments

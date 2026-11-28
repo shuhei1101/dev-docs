@@ -523,6 +523,19 @@ elements:
       scope: screen
     visible_when: 1 文字のショートカットが有効で、入力欄にフォーカスが無く、ダイアログを開いていないとき
     action: ショートカットの一覧を開く
+  - name: 移動の確認のダイアログ
+    kind: dialog
+    position: 画面の中央
+    description: 配信元のダイアログに入力したまま画面の中で移る（リンク・ブラウザの戻る・進む）前に、入力を破棄して移るかを確認する
+    label: タイトル `入力した内容を破棄して移動しますか？`、説明 `配信元のダイアログに入力した内容は保存されていません。`、ボタン `キャンセル` と `破棄して移動`（危険の色）
+    visible_when: 配信元のダイアログの入力を変えたまま、画面の中で移ろうとしたとき
+    modal: true
+    close:
+      outside_click: false
+      escape: close
+    initial_focus: '`キャンセル`'
+    return_focus: 移る前にフォーカスしていた要素
+    action: '`破棄して移動` で入力を捨てて移り、`キャンセル`・Esc で移らずに配信元のダイアログに戻る'
 screen: frontend/src/features/settings/settings/settings-screen.tsx
 mock: frontend/src/features/settings/settings/settings-screen.stories.tsx
 lead: '端末の設定の配信元を状態とともに並べ、追加・編集・削除する設定画面の要素と振る舞いを定め、設定画面を修正するときに参照する。'

@@ -121,8 +121,8 @@ components:
         mock: MSW のハンドラ・mdmark（偽物）
         expected: '`b.md` は一番上から表示され、戻った `a.md` の本文の領域の `scrollTop` が 400'
     notes:
-      離脱の警告: '`useLeaveGuard` に、開いている配信元の編集中の変更が 1 件以上あるかを指定する'
-      スクロール位置: 本文の領域（`id="doc-scroll"`）に `useScrollRestoration` をキー `dev-docs:v1:doc-view:body:{source}:{path}:scroll`・`ready` は本文を描いた後・`restore` は戻る・進むと再読み込みのときだけ `true`（TanStack Router の履歴の移動の種類で判定する）で使用する。サイドバーのスクロールの領域にはキー `dev-docs:v1:doc-view:sidebar:{source}:{tab}:scroll` で使用し、同じタブの中で文書を移るときはキーが変わらないので位置を変えない
+      離脱の警告: '`useLeaveGuard` に、開いている配信元の編集中の変更が 1 件以上あるかを指定する。編集中の変更は `sessionStorage` に残るので、`navigation` は指定しない（タブを閉じる・再読み込みだけ警告する）'
+      スクロール位置: 本文の領域（`id="doc-scroll"`）に `data-scroll-restoration-id="doc-body"`、サイドバーのスクロールの領域に `data-scroll-restoration-id="doc-sidebar"` を付け、再読み込みと戻る・進むはルーターの `scrollRestoration` に任せる。種類のタブごとのサイドバーの位置は、サイドバーの領域に `useScrollRestoration` をキー `dev-docs:v1:doc-view:sidebar:{source}:{tab}:scroll` で使用して戻す
 refs:
   - to: SCR-155-1
     type: requires
