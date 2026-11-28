@@ -4,7 +4,8 @@ import { CircleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { NotFoundScreen } from "@/features/docs/not-found/not-found-screen";
-import { servingSources } from "@/features/docs/shared/serving-sources";
+import { SearchDialog } from "@/features/docs/shared/search-dialog/search-dialog";
+import { servingSources, unservedSources } from "@/features/docs/shared/serving-sources";
 import { MetadataTable, rowElementId } from "@/features/metadata/metadata/metadata-table";
 import { PendingPanel } from "@/shared/components/pending-panel/pending-panel";
 import { type PendingEdit, useBaseCommit, usePendingEdits } from "@/shared/stores/pending-edits-store";
@@ -15,6 +16,7 @@ import {
   ProjectIndexUnreachableAlert,
   toProjectIndexUnreachable,
 } from "@/shared/components/project-index-unreachable";
+import { ShortcutDialog } from "@/shared/components/shortcut-dialog/shortcut-dialog";
 import { SkipLink } from "@/shared/components/skip-link";
 import { Topbar } from "@/shared/components/topbar/topbar";
 import { Alert, AlertDescription, AlertTitle } from "@/shared/components/ui/alert";
@@ -25,13 +27,15 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { AppError } from "@/shared/core/app-error";
 import { useDelayedFlag } from "@/shared/hooks/use-delayed-flag";
+import { useLeaveGuard } from "@/shared/hooks/use-leave-guard";
+import { useShortcut } from "@/shared/hooks/use-shortcut";
 import { usePreferencesStore } from "@/shared/stores/preferences";
 
 const LOADING_DELAY_MS = 1000;
 const NOT_FOUND = 404;
 const NEXT_SCHEME = { system: "dark", dark: "light", light: "dark" } as const;
 
-type MetadataSearch = { tab?: string; panel?: "edits" };
+type MetadataSearch = { tab?: string; q?: string; panel?: "edits" };
 
 /** メタデータの取得を待つ間の読み込み中の表示 */
 const MetadataSkeleton = () => (
@@ -99,14 +103,21 @@ export const MetadataScreen = ({ source }: Props) => {
   );
   const settings = useSettingsGetSettingsSources().data;
   const edits = usePendingEdits(source);
-  const { colorScheme, setColorScheme } = usePreferencesStore();
+  const { colorScheme, setColorScheme, singleKeyShortcuts } = usePreferencesStore();
   const loading = useDelayedFlag(metadata.isPending, LOADING_DELAY_MS);
-  const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const idle = !searchOpen && !helpOpen;
+  useShortcut("search", () => setSearchOpen(true), { enabled: idle });
+  useShortcut("help", () => setHelpOpen(true), { enabled: idle });
+  // 編集中の変更は sessionStorage に残るので、タブを閉じる・再読み込みだけ警告する
+  useLeaveGuard(edits.length > 0);
   // 移動先の変更（描いた後に行の DOM を探す）と、移動を押した回数
   const locating = useRef<PendingEdit | null>(null);
   const [locateCount, setLocateCount] = useState(0);
 
   const tab = search.tab ?? metadata.data?.kinds[0]?.id ?? "terms";
+  const query = search.q ?? "";
   const panelOpen = search.panel === "edits";
   const setSearch = (next: MetadataSearch) =>
     void navigate({
@@ -143,8 +154,7 @@ export const MetadataScreen = ({ source }: Props) => {
       return;
     }
     locating.current = edit;
-    setQuery("");
-    setSearch({ tab: edit.kind });
+    setSearch({ tab: edit.kind, q: undefined });
     setLocateCount((count) => count + 1);
   };
 
@@ -165,6 +175,7 @@ export const MetadataScreen = ({ source }: Props) => {
         onSourceSelect={(id) => void navigate({ to: "/$source/_metadata", params: { source: id } })}
         onColorSchemeToggle={() => setColorScheme(NEXT_SCHEME[colorScheme])}
         onPendingPanelToggle={() => setSearch({ panel: panelOpen ? undefined : "edits" })}
+        onSearchOpen={() => setSearchOpen(true)}
       />
       <main id="main" tabIndex={-1} className="flex min-w-0 flex-col gap-4 p-4">
         <h1 className="text-2xl font-semibold">{source} のメタデータ</h1>
@@ -175,7 +186,7 @@ export const MetadataScreen = ({ source }: Props) => {
             type="search"
             placeholder="用語・パス・タグ"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => setSearch({ q: event.target.value === "" ? undefined : event.target.value })}
           />
         </div>
         {loading && <MetadataSkeleton />}
@@ -206,6 +217,22 @@ export const MetadataScreen = ({ source }: Props) => {
         open={panelOpen}
         onOpenChange={(open) => setSearch({ panel: open ? "edits" : undefined })}
         onLocate={locate}
+      />
+      <SearchDialog
+        open={searchOpen}
+        onOpenChange={setSearchOpen}
+        source={source}
+        sources={servingSources(settings).map((item) => item.id)}
+        unavailable={unservedSources(settings)}
+        onResultSelect={(path, resultSource) =>
+          void navigate({ to: "/$source/$", params: { source: resultSource, _splat: path } })
+        }
+      />
+      <ShortcutDialog
+        open={helpOpen}
+        onOpenChange={setHelpOpen}
+        screen="metadata"
+        singleKey={singleKeyShortcuts}
       />
     </div>
   );
