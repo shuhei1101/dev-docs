@@ -409,7 +409,9 @@ nav:
                     filter:
                       or:
                         - {field: id, op: regex, values: ['\Asrc/dev_docs/[^/]+\Z']}
-                        - {field: id, op: prefix, values: [src/dev_docs/server/]}
+                        - and:
+                            - {field: id, op: prefix, values: [src/dev_docs/server/]}
+                            - not: {field: id, op: prefix, values: [src/dev_docs/server/mcp/, src/dev_docs/server/origin.py]}
             - group: 画面のAPI
               items:
                 - auto:
@@ -460,11 +462,11 @@ nav:
                 - auto:
                     document: src
                     filter: {field: id, op: prefix, values: [src/dev_docs/features/lifecycle/]}
-            - group: 管理
+            - group: 管理のMCP
               items:
                 - auto:
                     document: src
-                    filter: {field: id, op: prefix, values: [src/dev_docs/features/admin/]}
+                    filter: {field: id, op: prefix, values: [src/dev_docs/features/admin/, src/dev_docs/server/mcp/]}
             - group: project-indexの呼び出し
               items:
                 - auto:
@@ -474,7 +476,7 @@ nav:
               items:
                 - auto:
                     document: src
-                    filter: {field: id, op: prefix, values: [src/dev_docs/shared/, src/dev_docs/schemas/]}
+                    filter: {field: id, op: prefix, values: [src/dev_docs/shared/, src/dev_docs/schemas/, src/dev_docs/server/origin.py]}
         - group: 画面
           items:
             - group: アプリとルート
