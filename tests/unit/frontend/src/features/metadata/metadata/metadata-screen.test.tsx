@@ -224,7 +224,8 @@ test("test_metadata_screen_when_search", async () => {
   await userEvent.keyboard("{Escape}");
   await waitFor(() => expect(screen.queryByPlaceholderText("文書を検索")).not.toBeInTheDocument());
 
-  await userEvent.keyboard("?");
+  // ショートカットの一覧のキーの定義は `Shift+/`
+  await userEvent.keyboard("{Shift>}/{/Shift}");
   expect(await screen.findByRole("heading", { name: "キーボードのショートカット" })).toBeInTheDocument();
 });
 
