@@ -131,6 +131,18 @@ states:
         value: '{"git": true, "defaultRef": "develop", "branches": [{"name": "feat/screen/metadata-only-kinds-and-excluded-docs"}], "tags": [{"name": "v1.12.0"}], "commits": [{"commit": "5b3f8e2", "subject": "docs: PR ドキュメント #331 の要件と計画書を記入"}]}'
       - name: currentRef
         value: feat/screen/metadata-only-kinds-and-excluded-docs
+  - name: DocViewWithPendingEditsNarrow
+    description: 文書の画面を幅 48rem 未満の場所に配置し、コメントと編集中の変更の件数を両方並べる。幅 390px でも横にはみ出さない
+    viewport: mobile
+    args:
+      - name: screen
+        value: doc-view
+      - name: currentSource
+        value: sample
+      - name: commentCount
+        value: '2'
+      - name: pendingEditCount
+        value: '3'
 lead: 3 画面に共通の画面上部のバー（配信元・リビジョンの切り替え・検索・コメント・設定・明暗）の引数と状態を定め、トップバーを修正するときに参照する。
 args:
   - name: screen
