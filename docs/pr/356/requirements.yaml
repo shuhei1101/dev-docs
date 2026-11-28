@@ -54,3 +54,6 @@ scope_out:
   - item: レビュー中のパネル（`CMP-155-4`）の狭い幅で、下から出すパネルの高さが画面の高さの 25% を超える（`detect_screen_issues` の `fixed-area-height`。ストーリー `Narrow`・`MetadataEdits`）
     reason: '固定の領域の高さの上限（規約『レイアウト』）から外れている。今回はパネルの高さを変えておらず、変えていないストーリーにも同じ検出が出るので、今回の要望に含まれない。`pane.narrow: bottom_sheet` の高さの上限を決めるかも含めて別の Issue で扱う'
     plan: to_file
+  - item: 文書の画面の結合テスト『列の表示のメニュー』の 6 件（`columns_menu_visible` ほか）が、mdmark の表のメニューのボタン（`表のメニュー`）を見つけられずに失敗する
+    reason: 結合テストが全 pass すること（テスト実行方法『TL-3』）から外れている。develop でも同じ 6 件が失敗し、テストが読み込む mdmark（jsDelivr の develop）の表のメニューの変化と見られ、今回の要望に含まれない
+    plan: to_file
