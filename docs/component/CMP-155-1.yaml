@@ -37,16 +37,16 @@ lead: その画面で使用できるキーボードのショートカットを�
 status: planned
 args:
   - name: open
-    type: 真偽値
+    type: boolean
     required: true
     description: 開いているか
   - name: screen
-    type: 列挙
+    type: enum
     required: true
-    choices: '`doc-view` / `settings` / `not-found`'
-    description: 配置する画面。`doc-view` は画面全体・検索のダイアログ・コメントのパネル、`not-found` は画面全体・検索のダイアログ、`settings` は画面全体・配信元のダイアログのセクションを出す
+    choices: '`doc-view` / `metadata` / `settings` / `not-found`'
+    description: 配置する画面。`doc-view` は画面全体・検索のダイアログ・コメントのパネル、`metadata`・`not-found` は画面全体・検索のダイアログ、`settings` は画面全体・配信元のダイアログのセクションを出す
   - name: singleKey
-    type: 真偽値
+    type: boolean
     default: 'true'
     description: 1 文字のショートカット（`?`・`/`）を使用するか。`false` のとき、`1 文字` の行を出さない
 events:
@@ -55,8 +55,10 @@ events:
     value: '`false`'
     description: 開閉の状態を戻す。閉じた後は開いた要素へフォーカスを戻す
 accessibility:
-  - キーは `kbd` 要素で出し、読み上げ名を操作の名前にする
-  - 開いたとき閉じるボタンへフォーカスを移し、Esc 1 回で閉じる
+  keyboard: Tab・Shift+Tab でダイアログの中の閉じるボタンへ移り、Esc 1 回で閉じる
+  rules:
+    - キーは `kbd` 要素で出し、読み上げ名を操作の名前にする
+    - 開いたとき閉じるボタンへフォーカスを移し、閉じた後は開いた要素へフォーカスを戻す
 notes:
   モック: 各画面のモックの `ショートカットの一覧` の状態
 test_file: tests/integration/frontend/shortcut-dialog.spec.ts

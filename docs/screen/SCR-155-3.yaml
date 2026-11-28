@@ -16,7 +16,7 @@ elements:
     tab_order: 1
     action: クリックで本文の領域へフォーカスを移す
   - name: トップバー
-    kind: header
+    kind: nav
     component: CMP-155-2#
     args:
       - name: screen
@@ -32,18 +32,20 @@ elements:
     kind: link
     position: 本文の上
     description: 直前に開いていた文書の画面へ戻る
-    label: 左向きの矢印のアイコンと `文書の画面に戻る`
+    label: '`文書の画面に戻る`'
     visible_when: 直前に開いていた文書の画面か、配信中の配信元があるとき
     action: クリックで直前に開いていた文書の画面（無ければ配信中の配信元の先頭のトップ）を開く
     action_ref: SCR-155-1#
+    label_display: icon_and_text
+    icon: ArrowLeft
   - name: 見出し
-    kind: label
+    kind: heading
     position: 本文
     description: 画面の見出し
     label: '`設定`'
     visible_when: 常時
   - name: 配信元の見出し
-    kind: label
+    kind: heading
     position: 本文 > 配信元のセクション
     description: 配信元のセクションの見出し
     label: '`配信元`'
@@ -52,10 +54,14 @@ elements:
     kind: button
     position: 本文 > 配信元のセクション > 見出しの右
     description: 追加のダイアログを開く
-    label: プラスのアイコンと `配信元を追加`
+    label: '`配信元を追加`'
     visible_when: 常時
     enabled_when: project-index に接続できているとき（接続できない間は押せず、`aria-describedby` で project-index から受け取れないときの表示の見出しを指す）
     action: クリックで配信元のダイアログを追加で開く
+    label_display: icon_and_text
+    icon: Plus
+    confirm: none
+    disabled_reason: 押せない間は `aria-describedby` で project-index から受け取れないときの表示の見出しを指し、理由をその表示で出す
   - name: project-index から受け取れないときの表示
     kind: alert
     position: 本文 > 配信元のセクション（配信元の一覧の代わり）
@@ -68,12 +74,11 @@ elements:
     notes:
       読み上げ: '`role="alert"` で、出たときに読み上げる'
   - name: 配信元の読み込み中の表示
-    kind: skeleton
+    kind: progress
     position: 本文 > 配信元のセクション
     description: 端末の設定の取得を待つ間に表の行の形状の枠を出す
     visible_when: 端末の設定の取得を待っているとき（待ちが 1 秒を超えたときだけ出す）
-    notes:
-      読み上げ名: '`配信元を読み込んでいます`'
+    accessible_name: '`配信元を読み込んでいます`'
   - name: 配信元が無いことの表示
     kind: label
     position: 本文 > 配信元のセクション
@@ -87,11 +92,19 @@ elements:
     description: 端末の設定の `sources[]` の行と状態
     label: 列は `配信元`・`設定ファイル`・`状態`・`操作`
     visible_when: '`sources` が 1 件以上のとき'
-    sorting: 並べ替え・絞り込みはしない。端末の設定の `sources[]` の並び順
     source: 端末の設定の取得.sources
-    notes:
-      読み上げ名: '`配信元の表`'
-      狭い幅: 表を横にスクロールする領域に入れ、画面は横にスクロールさせない
+    accessible_name: '`配信元の表`'
+    narrow:
+      action: horizontal_scroll
+    table:
+      default_sort: 端末の設定の `sources[]` の並び順。並べ替えの巡回は持たない
+      filter: 絞り込みはしない
+      selection: none
+      sticky_header: false
+    retained_state:
+      - what: 表のスクロール位置
+        store: none
+        reason: 表は画面全体と一緒にスクロールし、表の中に縦のスクロールの領域を持たない
   - name: 配信元の ID
     kind: link
     position: 配信元の一覧 > 配信元
@@ -102,8 +115,11 @@ elements:
     source: 端末の設定の取得.sources[].id
     action: '`status` が `serving` の行だけ、クリックでその配信元のトップを開く（他の行はリンクにしない）'
     action_ref: SCR-155-1#
-    notes:
-      読み上げ名: '`{id} のトップ`'
+    io: output
+    overflow:
+      type: wrap
+      unbounded: true
+    accessible_name: '`{id} のトップ`'
   - name: 設定ファイル
     kind: label
     position: 配信元の一覧 > 設定ファイル
@@ -112,15 +128,24 @@ elements:
     type: 文字列
     visible_when: 常時
     source: 端末の設定の取得.sources[].config
+    io: output
+    overflow:
+      type: wrap
+      unbounded: true
   - name: 状態
-    kind: badge
+    kind: label
     position: 配信元の一覧 > 状態
     description: 配信元の今の状態
-    label: アイコンと `配信中`（`serving`）/ `配信停止`（`not_served`）/ `無効`（`disabled`）/ `再読み込み待ち`（`pending_reload`）
+    label: '`配信中`（`serving`）/ `配信停止`（`not_served`）/ `無効`（`disabled`）/ `再読み込み待ち`（`pending_reload`）'
     visible_when: 常時
     source: 端末の設定の取得.sources[].status
     notes:
       色: 配信中は成功、配信停止は危険、無効・再読み込み待ちは弱めの色。アイコンと文言でも区別する
+    icon: 状態ごとに `CircleCheck`（配信中）・`CircleAlert`（配信停止）・`CircleMinus`（無効）・`CircleDashed`（再読み込み待ち）
+    io: output
+    overflow:
+      type: wrap
+      max_length: 7
   - name: 状態の補足
     kind: label
     position: 配信元の一覧 > 状態 > バッジの下
@@ -128,41 +153,56 @@ elements:
     label: 配信停止のときは `project-index が起動時の検証で除外しました。` と `errors[]` ごとの `{path} {reason}`。設定のバージョンが古いときは `設定のバージョン {config}（project-index が読み込めるのは {server}）`。無効のときは `enabled が false です`。再読み込み待ちのときは `ファイルにありますが、まだ再読み込みしていません。`
     visible_when: 配信停止・設定のバージョンが古い・無効・再読み込み待ちのいずれかのとき
     source: 端末の設定の取得.sources[].errors・端末の設定の取得.sources[].configVersion
+    io: output
+    overflow:
+      type: wrap
+      unbounded: true
   - name: 編集ボタン
     kind: button
     position: 配信元の一覧 > 操作
     description: その行の配信元のダイアログを編集で開く
-    label: 鉛筆のアイコン
     visible_when: 常時
     action: クリックでその行の値を入れた配信元のダイアログを開く
-    notes:
-      読み上げ名: '`{id} を編集`'
+    label_display: icon_only
+    icon: Pencil
+    accessible_name: '`{id} を編集`'
+    tooltip: '`{id} を編集`'
+    confirm: none
   - name: 削除ボタン
     kind: button
     position: 配信元の一覧 > 操作
     description: その行の削除の確認を開く
-    label: ごみ箱のアイコン
     visible_when: 常時
     action: クリックで削除の確認のダイアログを開く
-    notes:
-      読み上げ名: '`{id} を削除`'
+    label_display: icon_only
+    icon: Trash2
+    accessible_name: '`{id} を削除`'
+    tooltip: '`{id} を削除`'
+    confirm: dialog
   - name: キーボードの見出し
-    kind: label
+    kind: heading
     position: 本文 > キーボードのセクション
     description: キーボードのセクションの見出し
     label: '`キーボード`'
     visible_when: 常時
   - name: 1 文字のショートカットのスイッチ
-    kind: switch
+    kind: toggle
     position: 本文 > キーボードのセクション
     description: '`/`・`?` の 1 文字のショートカットを使用するか'
     label: '`1 文字のショートカットを使用する`'
-    io: 入力
+    io: input
     type: 真偽値
     visible_when: 常時
     hint: '`/ で検索、? でショートカットの一覧を開きます。この端末のブラウザに保存します。`'
     initial_value: ブラウザに保存した値（無ければオン）
     action: 切り替えでブラウザの `localStorage` に保存し、全ての画面ですぐに適用する
+    toggle_state: checked
+    retained_state:
+      - what: 1 文字のショートカットを使用するか
+        store: local_storage
+        key: dev-docs:v1:shared:preferences
+        save_on: 切り替えたとき
+        restore_on: この端末のブラウザで全ての画面を開いたとき
   - name: ショートカットの一覧を開く
     kind: button
     position: 本文 > キーボードのセクション
@@ -170,8 +210,10 @@ elements:
     label: '`ショートカットの一覧を開く`'
     visible_when: 常時
     action: クリックでショートカットの一覧を開く
+    label_display: text_only
+    confirm: none
   - name: 配信元のダイアログのタイトル
-    kind: label
+    kind: heading
     position: 配信元のダイアログ
     description: ダイアログの見出し
     label: 追加は `配信元を追加`、編集は `配信元を編集` とその下に `配信元 {id}`
@@ -192,7 +234,7 @@ elements:
     position: 配信元のダイアログ
     description: 配信元の ID。追加のときだけ入力できる
     label: '`配信元の ID`'
-    io: 入力
+    io: input
     type: 文字列
     visible_when: 追加のとき（編集では入力欄を出さず、タイトルの下に ID を出す）
     required: true
@@ -204,12 +246,16 @@ elements:
     autocomplete: off
     autofocus: true
     target: 端末の設定の保存.sources[].id
+    retained_state:
+      - what: 入力した値
+        store: none
+        reason: ダイアログを開くたびに追加は空、編集はその行の値から始める。入力したまま画面を離れるときは離脱の警告を出す
   - name: 設定ファイルの入力欄
     kind: textarea
     position: 配信元のダイアログ
     description: 配信元の設定の YAML のパス
     label: '`設定ファイル`'
-    io: 入力
+    io: input
     type: 文字列
     visible_when: 配信元のダイアログを開いたとき
     required: true
@@ -220,23 +266,32 @@ elements:
     target: 端末の設定の保存.sources[].config（1 行のときは文字列、2 行以上は配列）
     notes:
       初期フォーカス: 編集のときだけ初めにフォーカスする
+    retained_state:
+      - what: 入力した値
+        store: none
+        reason: ダイアログを開くたびに追加は空、編集はその行の値から始める。入力したまま画面を離れるときは離脱の警告を出す
   - name: 配信のスイッチ
-    kind: switch
+    kind: toggle
     position: 配信元のダイアログ
     description: 配信するか
     label: '`配信` と `配信する`'
-    io: 入力
+    io: input
     type: 真偽値
     visible_when: 配信元のダイアログを開いたとき
     hint: '`オフにすると、設定を残したまま配信を止めます。`'
     initial_value: 追加はオン、編集はその行の `enabled`
     target: 端末の設定の保存.sources[].enabled
+    toggle_state: checked
+    retained_state:
+      - what: 切り替えた値
+        store: none
+        reason: ダイアログを開くたびに追加はオン、編集はその行の値から始める
   - name: 読み取りの範囲の入力欄
     kind: textarea
     position: 配信元のダイアログ
     description: この配信元を参照できる作業場所の glob
     label: '`読み取りの範囲`'
-    io: 入力
+    io: input
     type: 文字列
     visible_when: 配信元のダイアログを開いたとき
     required: true
@@ -245,12 +300,16 @@ elements:
     placeholder: '`~/repo/**`'
     initial_value: 追加は空、編集はその行の `scope.read` を 1 行に 1 つ
     target: 端末の設定の保存.sources[].scope.read
+    retained_state:
+      - what: 入力した値
+        store: none
+        reason: ダイアログを開くたびに追加は空、編集はその行の値から始める。入力したまま画面を離れるときは離脱の警告を出す
   - name: 書き込みの範囲の入力欄
     kind: textarea
     position: 配信元のダイアログ
     description: この配信元を読み書きできる作業場所の glob
     label: '`書き込みの範囲`'
-    io: 入力
+    io: input
     type: 文字列
     visible_when: 配信元のダイアログを開いたとき
     required: false
@@ -258,6 +317,10 @@ elements:
     hint: '`glob を 1 行に 1 つ。当たる作業場所から、この配信元の文書へ書き込めます。`'
     initial_value: 追加は空、編集はその行の `scope.write` を 1 行に 1 つ
     target: 端末の設定の保存.sources[].scope.write（空なら送信しない）
+    retained_state:
+      - what: 入力した値
+        store: none
+        reason: ダイアログを開くたびに追加は空、編集はその行の値から始める。入力したまま画面を離れるときは離脱の警告を出す
   - name: 配信元のダイアログのキャンセル
     kind: button
     position: 配信元のダイアログ > フッター
@@ -265,6 +328,8 @@ elements:
     label: '`キャンセル`'
     visible_when: 配信元のダイアログを開いたとき
     action: クリックか Esc で入力を捨てて閉じ、開いたボタンへフォーカスを戻す
+    label_display: text_only
+    confirm: none
   - name: 追加・保存ボタン
     kind: button
     position: 配信元のダイアログ > フッター
@@ -274,8 +339,12 @@ elements:
     enabled_when: 保存の応答を待っていないとき。編集していた配信元が他のプロセスに削除されていないとき
     action: クリックで入力チェックを通し、通ったら今の一覧に入力を反映した `sources[]` を丸ごと、端末の設定の取得か前の保存で受けた `version` を `expectedVersion` に添えて送信する。編集は、開いたときの配信元を ID（ID を持たない行は設定ファイル）で今の一覧から探して置き換える。200 ならダイアログを閉じて一覧を再取得、通知を出す。422 ならダイアログを開いたまま保存の失敗のまとめと項目のエラーを出す。409 ならダイアログを開いたまま入力を残し、他の変更の表示を出して一覧を再取得する
     action_ref: IF-155-19#
+    label_display: text_only
+    confirm: none
+    pending_state: 押せなくし、ボタンの文字の前にスピナーを出す（ボタンの幅は変えない）
+    disabled_reason: 応答を待つ間はボタンの上のスピナーで、編集していた配信元が削除されたときは『配信元が削除されたときの表示』で理由を示す
   - name: 削除の確認のタイトル
-    kind: label
+    kind: heading
     position: 削除の確認のダイアログ
     description: 削除の確認の見出し
     label: '`{id} を削除しますか?`'
@@ -295,6 +364,8 @@ elements:
     visible_when: 削除の確認のダイアログを開いたとき
     autofocus: true
     action: クリックか Esc で閉じ、削除ボタンへフォーカスを戻す
+    label_display: text_only
+    confirm: none
   - name: 削除の確定ボタン
     kind: button
     position: 削除の確認のダイアログ > フッター
@@ -304,6 +375,10 @@ elements:
     enabled_when: 保存の応答を待っていないとき。削除する配信元が他のプロセスに削除されていないとき
     action: クリックで、開いたときの配信元を ID（ID を持たない行は設定ファイル）で今の一覧から探して除いた `sources[]` を丸ごと、`version` を `expectedVersion` に添えて送信し、200 ならダイアログを閉じて一覧を再取得、通知を出す。409 なら削除の他の変更の表示を出して一覧を再取得する。それ以外の失敗はダイアログに Problem Details の `detail` を出す
     action_ref: IF-155-19#
+    label_display: text_only
+    confirm: none
+    pending_state: 押せなくし、ボタンの文字の前にスピナーを出す（ボタンの幅は変えない）
+    disabled_reason: 応答を待つ間はボタンの上のスピナーで、削除する配信元が削除されたときは『削除する配信元が削除されたときの表示』で理由を示す
   - name: 保存の失敗の通知
     kind: toast
     position: 画面の右下
@@ -334,6 +409,12 @@ elements:
     position: 画面の中央
     description: この画面で使用できるキー
     visible_when: '`?` を押したときか、ショートカットの一覧を開くを押したとき'
+    modal: true
+    close:
+      outside_click: true
+      escape: close
+    initial_focus: 閉じるボタン
+    return_focus: 開く前にフォーカスしていた要素（ショートカットの一覧を開くのボタン）
   - name: 範囲の外からの参照の補足
     kind: label
     position: 配信元の一覧 > 配信元 > ID の下
@@ -342,16 +423,21 @@ elements:
     visible_when: '`outsideRead` が `false` の行だけ'
     source: 端末の設定の取得.sources[].outsideRead
   - name: 範囲の外からの参照のスイッチ
-    kind: switch
+    kind: toggle
     position: 配信元のダイアログ > 読み取りの範囲の下
     description: '`scope` に該当しない作業場所からも作業範囲の外（参考）として参照できるか'
     label: '`範囲の外からの参照` と `範囲の外から参照できるようにする`'
-    io: 入力
+    io: input
     type: 真偽値
     visible_when: 配信元のダイアログを開いたとき
     hint: '`オフにすると、読み取りの範囲に当たらない作業場所からは参照できません。`'
     initial_value: 追加はオン、編集はその行の `outsideRead`（無ければオン）
     target: 端末の設定の保存.sources[].outside_read（オフのときだけ `false` を送信する）
+    toggle_state: checked
+    retained_state:
+      - what: 切り替えた値
+        store: none
+        reason: ダイアログを開くたびに追加は既定、編集はその行の値から始める
   - name: 他の変更の表示
     kind: alert
     position: 配信元のダイアログ > タイトルの下
@@ -393,7 +479,7 @@ elements:
     position: 配信元のダイアログ > 範囲の外からの参照の下（書き込みの範囲の上）
     description: 配信元の読み書きの方法（端末の設定の `storage.type`）
     label: '`読み書きの方法`'
-    io: 入力
+    io: input
     type: 列挙
     visible_when: 配信元のダイアログを開いたとき
     required: false
@@ -403,6 +489,40 @@ elements:
     initial_value: 追加は `自動`、編集はその行の `storage.type`（無ければ `自動`）
     source: 端末の設定の取得.sources[].storage.type
     target: 端末の設定の保存.sources[].storage.type（`自動` のときは `storage` を送信しない）
+    retained_state:
+      - what: 選んだ値
+        store: none
+        reason: ダイアログを開くたびに追加は既定、編集はその行の値から始める
+  - name: 配信元のダイアログ
+    kind: dialog
+    position: 画面の中央
+    description: 配信元を追加・編集する入力をまとめる
+    visible_when: 配信元を追加か、その行の編集ボタンを押したとき
+    modal: true
+    close:
+      outside_click: false
+      escape: close
+    initial_focus: 追加は配信元の ID の入力欄、編集は設定ファイルの入力欄
+    return_focus: 開いたボタン（配信元を追加か、その行の編集ボタン）
+  - name: 削除の確認のダイアログ
+    kind: dialog
+    position: 画面の中央
+    description: 配信元を端末の設定から削除する前に確認する
+    visible_when: その行の削除ボタンを押したとき
+    modal: true
+    close:
+      outside_click: false
+      escape: close
+    initial_focus: 削除のキャンセル
+    return_focus: その行の削除ボタン
+  - name: ショートカットの一覧を開くキー
+    kind: shortcut
+    description: ショートカットの一覧を開く
+    shortcut:
+      key: Shift+?
+      scope: screen
+    visible_when: 1 文字のショートカットが有効で、入力欄にフォーカスが無く、ダイアログを開いていないとき
+    action: ショートカットの一覧を開く
 screen: frontend/src/features/settings/settings/settings-screen.tsx
 mock: frontend/src/features/settings/settings/settings-screen.stories.tsx
 lead: '端末の設定の配信元を状態とともに並べ、追加・編集・削除する設定画面の要素と振る舞いを定め、設定画面を修正するときに参照する。'
@@ -459,3 +579,5 @@ tags:
   - name: topic:端末の設定
   - name: topic:設定
   - name: topic:端末
+screen_type: settings
+leave_guard: unsaved

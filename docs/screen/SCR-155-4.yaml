@@ -12,7 +12,7 @@ elements:
     label: '`メタデータ | {配信元の ID} | dev-docs`'
     visible_when: 常時
   - name: トップバー
-    kind: header
+    kind: nav
     component: CMP-155-2#
     args:
       - name: screen
@@ -31,7 +31,7 @@ elements:
     action: '`sourceSelect` でその配信元のメタデータの画面を開く。`pendingPanelToggle` でレビュー中のパネルを開閉する。画面名のクリックで、その配信元の文書の画面のトップを開く'
     action_ref: SCR-155-1#
   - name: 見出し
-    kind: label
+    kind: heading
     position: 本文
     description: 画面の見出し
     label: '`{配信元の ID} のメタデータ`'
@@ -42,12 +42,20 @@ elements:
     description: 選んでいる種類の表の行を、値に単語を含む行だけにする
     label: '`絞り込み`'
     placeholder: '`用語・パス・タグ`'
-    io: 入力
+    io: input
     type: 文字列
     visible_when: メタデータを取得できたとき
     initial_value: 空
     action: 入力のたびに、選んでいる種類の表を、どれかの列の値に入力を含む行（大文字・小文字と全角・半角を区別しない）だけにする。種類を切り替えても入力を残す
     width: 24rem まで
+    history: replace
+    retained_state:
+      - what: 絞り込みの文字
+        store: url_query
+        key: q
+        save_on: 入力のたび（URL を `replace` で書き換える）
+        restore_on: 再読み込みしたときと、URL を開いたとき
+        reset_when: レビュー中のパネルの変更の行へ移動したとき
   - name: 種類のタブ
     kind: tabs
     position: 本文 > 絞り込みの入力欄の下
@@ -58,13 +66,42 @@ elements:
     initial_value: URL の `tab` の種類（無ければ `terms`）
     action: クリックでその種類の表に切り替え、URL の `tab` に保つ。狭い幅ではタブを折り返す
     action_ref: IF-155-28#
+    tabs:
+      items:
+        - label: 用語集
+          value: terms
+          count_source: メタデータの取得.kinds[].rows
+        - label: エイリアス
+          value: aliases
+          count_source: メタデータの取得.kinds[].rows
+        - label: タグ
+          value: tags
+          count_source: メタデータの取得.kinds[].rows
+        - label: rule-inject の索引
+          value: rules
+          count_source: メタデータの取得.kinds[].rows
+        - label: 配信元の設定
+          value: config
+          count_source: メタデータの取得.kinds[].rows
+        - label: 管理用の YAML
+          value: files
+          count_source: メタデータの取得.kinds[].rows
+      mode: in_screen
+      activation: automatic
+      empty_behavior: 行が無いことの表示を出す。配信していない種類は種類を配信していないことの表示を出す
+    history: replace
+    retained_state:
+      - what: 選んだ種類
+        store: url_query
+        key: tab
+        save_on: タブを切り替えたとき（URL を `replace` で書き換える）
+        restore_on: 再読み込みしたときと、URL を開いたとき
   - name: 読み込み中の表示
-    kind: skeleton
+    kind: progress
     position: 本文
     description: メタデータの取得を待つ間に、タブと表の行の形状の枠線を出す
     visible_when: メタデータの取得を待っているとき（待ちが 1 秒を超えたときだけ出す）
-    notes:
-      読み上げ名: '`メタデータを読み込んでいます`'
+    accessible_name: '`メタデータを読み込んでいます`'
   - name: project-index から受け取れないときの表示
     kind: alert
     position: 本文（タブと表の代わり）
@@ -93,12 +130,22 @@ elements:
     description: 選んでいる種類の行と列
     label: 列はメタデータの取得の `columns[].label`。削除の操作を持つ種類は末尾に操作の列
     visible_when: 選んでいる種類の `served` が `true` で、行が 1 件以上のとき（追加した行だけのときも出す）
-    sorting: 並べ替えはしない。メタデータの取得の並び順。絞り込みの入力欄で絞る
     source: メタデータの取得.kinds[].rows[]
     notes:
       狭い幅: 表を横にスクロールする領域に入れ、画面は横にスクロールさせない
       編集中の行: 変更した値の列は背景の色を変え、削除した行は取り消し線で出す
     width: 画面の横幅から左右の余白を除いた幅（上限なし）
+    table:
+      default_sort: メタデータの取得の並び順。並べ替えの巡回は持たない
+      filter: 絞り込みの入力欄で、どれかの列の値に入力を含む行だけにする
+      selection: none
+      sticky_header: false
+    narrow:
+      action: horizontal_scroll
+    retained_state:
+      - what: 表のスクロール位置
+        store: none
+        reason: 表は画面全体と一緒にスクロールし、表の中に縦のスクロールの領域を持たない
   - name: 行の値
     kind: button
     position: 種類の表 > 各列
@@ -108,8 +155,10 @@ elements:
     enabled_when: 行の `editable` と列の `editable` が両方 `true` のとき（それ以外はボタンにせず文字で出す）
     source: メタデータの取得.kinds[].rows[].values
     action: クリックでその場に入力欄を出し、フォーカスを移して、押した位置の文字の間に入力位置を配置する（値の右の余白を押したときと、Enter・Space で始めたときは末尾）。Enter かフォーカスを外すと、元の値と違えば編集中の変更（`update`）に追加し、同じなら変更を作らない。Esc で入力を捨てて戻す。`list` の列は `, ` で区切って配列にする
-    notes:
-      読み上げ名: '`{列の見出し} {値} を編集`'
+    label_display: text_only
+    confirm: none
+    disabled_reason: 編集できない値はボタンにせず文字で出し、参照のみの種類は参照のみの表示で理由を示す
+    accessible_name: '`{列の見出し} {値} を編集`'
   - name: 行が指す文書のリンク
     kind: link
     position: 種類の表 > 文書・ファイルの列
@@ -123,24 +172,28 @@ elements:
     kind: button
     position: 種類の表 > 操作
     description: 行を削除する変更を編集中の変更に追加する
-    label: ごみ箱のアイコン
     visible_when: 種類の `canDelete` が `true` で、行の `editable` が `true` のとき
     action: クリックで編集中の変更（`delete`）に追加し、行を取り消し線にする。削除の変更がある行では `元に戻す` のアイコンにし、クリックで変更を除く
-    notes:
-      読み上げ名: '`{行の名前} を削除`（削除の変更がある行は `{行の名前} を元に戻す`）'
+    label_display: icon_only
+    icon: '`Trash2`（削除の変更がある行は `Undo2`）'
+    accessible_name: '`{行の名前} を削除`（削除の変更がある行は `{行の名前} を元に戻す`）'
+    tooltip: 読み上げ名と同じ文言
+    confirm: undo
   - name: 行追加ボタン
     kind: button
     position: 本文 > 種類の表の下
     description: 表の末尾に追加の行の入力欄を出す
-    label: プラスのアイコンと `行追加`
     visible_when: 種類の `canAdd` が `true` のとき
     action: クリックで表の末尾に追加の行を出し、ID の入力欄へフォーカスを移す
+    label_display: icon_and_text
+    icon: Plus
+    confirm: none
   - name: 追加の行の ID の入力欄
     kind: input
     position: 種類の表 > 追加の行
     description: 追加する文書の ID
     label: '`ID`'
-    io: 入力
+    io: input
     type: 文字列
     visible_when: 行追加ボタンを押した後
     required: true
@@ -148,16 +201,24 @@ elements:
     charset: 英小文字・数字・ハイフン。変換はしない
     initial_value: 空
     target: 編集中の変更の直コミット.edits[].docId
+    retained_state:
+      - what: 入力した値
+        store: none
+        reason: 追加の行は追加かキャンセルで閉じ、追加した値は編集中の変更として保つ
   - name: 追加の行の値の入力欄
     kind: input
     position: 種類の表 > 追加の行 > 各列
     description: 追加する行の列ごとの値
     label: 列の見出し
-    io: 入力
+    io: input
     type: 文字列
     visible_when: 行追加ボタンを押した後、列の `editable` が `true` の列
     initial_value: 空
     target: 編集中の変更の直コミット.edits[].values
+    retained_state:
+      - what: 入力した値
+        store: none
+        reason: 追加の行は追加かキャンセルで閉じ、追加した値は編集中の変更として保つ
   - name: 追加の行の追加ボタン
     kind: button
     position: 種類の表 > 追加の行 > 操作
@@ -165,6 +226,8 @@ elements:
     label: '`追加`'
     visible_when: 行追加ボタンを押した後
     action: クリックで入力チェックを通し、通ったら編集中の変更（`add`、`docKind` は種類の `createKind`）に追加して、表の末尾に追加の変更の行を出す
+    label_display: text_only
+    confirm: none
   - name: 追加の行のキャンセル
     kind: button
     position: 種類の表 > 追加の行 > 操作
@@ -172,6 +235,8 @@ elements:
     label: '`キャンセル`'
     visible_when: 行追加ボタンを押した後
     action: クリックか Esc で入力を捨てて追加の行を閉じ、行追加ボタンへフォーカスを戻す
+    label_display: text_only
+    confirm: none
   - name: 行が無いことの表示
     kind: label
     position: 本文 > 種類の表の代わり
@@ -185,7 +250,7 @@ elements:
     label: '`「{入力}」に一致する行はありません。`'
     visible_when: 絞り込みの入力欄が空でなく、当たる行が無いとき
   - name: レビュー中のパネル
-    kind: sheet
+    kind: pane
     position: 画面の右（狭い幅では画面の下から出す面）
     description: 開いている配信元の編集中の変更の一覧と、差分確認・コミットの結果。表を操作しながら開いたままにする
     label: 見出し `レビュー中` と `{配信元の ID} の {branch} へ、{件数} 件の変更をまとめてコミットします。`（説明の文は変更が 1 件以上のときだけ出す）
@@ -194,6 +259,26 @@ elements:
     notes:
       モーダル: モーダルにせず、背景を暗くしない。外を押しても閉じない
       保存先: 編集中の変更は配信元ごとにブラウザのタブ（`sessionStorage`）に保ち、画面を再読み込みしても残す。コメントの保存先と同じ
+    component: CMP-155-4#
+    args:
+      - name: source
+        value: URL の配信元の ID
+      - name: branch
+        value: メタデータの取得.branch
+      - name: open
+        value: URL の `panel` が `edits`
+    pane:
+      side: right
+      narrow: bottom_sheet
+      collapsible: true
+      default_collapsed: true
+      resizable: false
+    retained_state:
+      - what: 開閉
+        store: url_query
+        key: panel
+        save_on: トップバーのレビュー中のボタンか閉じるボタンで開閉したとき（URL を `replace` で書き換える）
+        restore_on: 再読み込みしたときと、URL を開いたとき
   - name: 編集中の変更が無いことの表示
     kind: label
     position: レビュー中のパネル
@@ -201,7 +286,7 @@ elements:
     label: '`編集中の変更はありません。`'
     visible_when: 編集中の変更が 0 件のとき
   - name: 変更の種類のバッジ
-    kind: badge
+    kind: label
     position: レビュー中のパネル > 変更の行
     description: 変更の種類
     label: '`変更`（`update`）/ `追加`（`add`）/ `削除`（`delete`）'
@@ -213,18 +298,22 @@ elements:
     label: '`{種類の title}: {行の名前}`（`update` は下に `{変更前} → {変更後}`）。文書の本文の変更は `{項目の名前}（{文書のパス}）`'
     visible_when: 変更が 1 件以上のとき
     action: クリックでその種類のタブに切り替え、絞り込みを空にし、その行へスクロールして行にフォーカスを移す。文書の本文の変更は、その文書の文書の画面を編集の表示（項目のパスの変更は `edit=fields`、`@file` は `edit=file`）で開き、レビュー中のパネルを開いたままにする
-    notes:
-      読み上げ名: '`{種類の title}: {行の名前} の行へ移動`'
+    label_display: text_only
+    confirm: none
+    accessible_name: '`{種類の title}: {行の名前} の行へ移動`'
   - name: 変更を元に戻す
     kind: button
     position: レビュー中のパネル > 変更の行
     description: その変更を編集中の変更から除く
-    label: 元に戻すのアイコン
     visible_when: 変更が 1 件以上のとき
     enabled_when: 差分確認・コミットの応答を待っていないとき
     action: クリックで変更を除き、表の値を元に戻す
-    notes:
-      読み上げ名: '`{種類の title}: {行の名前} を元に戻す`'
+    label_display: icon_only
+    icon: Undo2
+    accessible_name: '`{種類の title}: {行の名前} を元に戻す`'
+    tooltip: 読み上げ名と同じ文言
+    confirm: none
+    disabled_reason: 応答を待つ間は、押した差分確認・コミットのボタンの回る表示で待っていることを示す
   - name: 変更の差分・理由
     kind: label
     position: レビュー中のパネル > 変更の行の下
@@ -259,8 +348,10 @@ elements:
     enabled_when: 差分確認・コミットの応答を待っていないとき
     action: 'クリックで編集中の変更を `dryRun: true` で送信し、200 なら変更ごとに差分を出す'
     action_ref: IF-155-29#
-    notes:
-      応答を待つ間: 非活性にし、ボタンの文言の左に回る表示を出す（ボタンの幅は変えない）
+    label_display: text_only
+    confirm: none
+    pending_state: 非活性にし、ボタンの文言の左に回る表示を出す（ボタンの幅は変えない）
+    disabled_reason: 応答を待つ間は、押したボタンの回る表示で待っていることを示す
   - name: コミットボタン
     kind: button
     position: レビュー中のパネル > フッター
@@ -269,8 +360,11 @@ elements:
     visible_when: 変更が 1 件以上のとき
     enabled_when: 差分確認・コミットの応答を待っていないとき
     action: クリックでコミットの確認のダイアログを開く。`最新の内容で続ける` のときは、編集を始めたときのコミットを既定のブランチの先頭で再度記録し、編集中の変更を残したままメタデータを再取得して、失敗のまとめを閉じる。再取得した値が変更前の値と違う `update` は編集中の変更から取り消し、最新の内容と食い違う変更の取り消しを出す。文書の本文の変更は、その文書を文書の取得で再取得し、項目のパスの変更は再取得した `edit.blocks[].value`（タイトルは `edit.titleBlock.value`）、`@file` の変更は再取得した `edit.source` が変更前の値と違えば取り消す。一致した変更だけ `edit.baseCommit` と `edit.version` を再度記録し、取り消した変更は最新の内容と食い違う変更の取り消しに並べる
+    label_display: text_only
+    confirm: none
+    disabled_reason: 応答を待つ間は、押したボタンの回る表示で待っていることを示す
   - name: コミットの確認のタイトル
-    kind: label
+    kind: heading
     position: コミットの確認のダイアログ
     description: 確認の見出し
     label: '`コミットしますか？`'
@@ -287,7 +381,7 @@ elements:
     position: コミットの確認のダイアログ
     description: コミットの説明
     label: '`コミットの説明`'
-    io: 入力
+    io: input
     type: 文字列
     visible_when: コミットの確認のダイアログを開いたとき
     required: true
@@ -296,6 +390,10 @@ elements:
     initial_value: 空
     autofocus: true
     target: 編集中の変更の直コミット.message
+    retained_state:
+      - what: 入力した説明
+        store: none
+        reason: コミットの確認のダイアログを開くたびに空から始める
   - name: コミットの確認のキャンセル
     kind: button
     position: コミットの確認のダイアログ > フッター
@@ -303,6 +401,8 @@ elements:
     label: '`キャンセル`'
     visible_when: コミットの確認のダイアログを開いたとき
     action: クリックか Esc で閉じ、コミットボタンへフォーカスを戻す
+    label_display: text_only
+    confirm: none
   - name: コミットの確定ボタン
     kind: button
     position: コミットの確認のダイアログ > フッター
@@ -312,8 +412,10 @@ elements:
     enabled_when: コミットの説明が空でなく、応答を待っていないとき
     action: 'クリックで編集中の変更とコミットの説明を `dryRun: false` で送信し、ダイアログを閉じる。結果はレビュー中のパネルに出す'
     action_ref: IF-155-29#
-    notes:
-      応答を待つ間: 非活性にし、ボタンの文言の左に回る表示を出す（ボタンの幅は変えない）
+    label_display: text_only
+    confirm: none
+    pending_state: 非活性にし、ボタンの文言の左に回る表示を出す（ボタンの幅は変えない）
+    disabled_reason: コミットの説明が空の間は入力欄の `必須` で、応答を待つ間はボタンの回る表示で示す
   - name: 修正できない種類の表示
     kind: label
     position: 本文 > 種類の表の上
@@ -321,7 +423,7 @@ elements:
     label: '`配信元の設定はこの画面では参照のみです。修正するときは project-index.yaml を編集してください。`'
     visible_when: 選んでいる種類が `config` のとき
   - name: 見つからない画面
-    kind: screen
+    kind: label
     position: 本文（画面全体の代わり）
     description: 配信元が無い・配信していないときの表示
     visible_when: メタデータの取得が 404 を返却したとき
@@ -364,6 +466,75 @@ elements:
     visible_when: 「最新の内容で続ける」で 1 件以上の変更を取り消した直後（次の差分確認・コミットまで）
     notes:
       読み上げ: '`role="status"` で、出たときに読み上げる'
+  - name: コミットの確認のダイアログ
+    kind: dialog
+    position: 画面の中央
+    description: 編集中の変更をコミットする前に、コミットの説明を入力して確認する
+    visible_when: コミットボタンを押したとき
+    modal: true
+    close:
+      outside_click: false
+      escape: close
+    initial_focus: コミットの説明の入力欄
+    return_focus: コミットボタン
+  - name: 検索のダイアログ
+    kind: dialog
+    component: CMP-155-3#
+    args:
+      - name: open
+        value: トップバーの `searchOpen` か Ctrl+K・`/` で `true`
+      - name: source
+        value: URL の配信元の ID
+      - name: sources
+        value: 端末の設定の取得.sources[]（`status` が `serving` の行の `id`）
+      - name: unavailable
+        value: 端末の設定の取得.sources[]（`status` が `not_served` の行の `id` と、`errors[]` の `path`・`reason` をつないだ理由）
+    position: 画面の上寄り（上端から 3rem、幅は最大 48rem、高さは最大で画面の 5/6）。画面幅が 48rem 未満では画面いっぱい
+    description: この配信元の既定のリビジョンか、配信中の全ての配信元の文書を単語で探す
+    visible_when: 検索を開いたとき
+    modal: true
+    close:
+      outside_click: true
+      escape: close
+    initial_focus: 検索欄
+    return_focus: 開いた要素（トップバーの検索のボタン。キーで開いたときは開く前にフォーカスしていた要素）
+    action: '`resultSelect` でその文書を文書の画面で開く。編集中の変更は削除しない'
+    action_ref: SCR-155-1#
+  - name: ショートカットの一覧
+    kind: dialog
+    component: CMP-155-1#
+    args:
+      - name: open
+        value: '`?` で `true`'
+      - name: screen
+        value: '`metadata`'
+      - name: singleKey
+        value: ブラウザに保存した 1 文字のショートカットの設定（無ければ `true`）
+    position: 画面の中央
+    description: この画面で使用できるキー
+    visible_when: '`?` を押したとき'
+    modal: true
+    close:
+      outside_click: true
+      escape: close
+    initial_focus: 閉じるボタン
+    return_focus: 開く前にフォーカスしていた要素
+  - name: 検索を開くキー
+    kind: shortcut
+    description: 検索のダイアログを開く
+    shortcut:
+      key: Control+K /
+      scope: screen
+    visible_when: 常時。`/` は 1 文字のショートカットが有効で、入力欄にフォーカスが無いとき
+    action: 検索のダイアログを開く
+  - name: ショートカットの一覧を開くキー
+    kind: shortcut
+    description: ショートカットの一覧を開く
+    shortcut:
+      key: Shift+?
+      scope: screen
+    visible_when: 1 文字のショートカットが有効で、入力欄にフォーカスが無いとき
+    action: ショートカットの一覧を開く
 input_checks:
   - element: 追加の行の ID の入力欄
     violation: 空
@@ -404,3 +575,5 @@ tags:
   - name: topic:画面
   - name: topic:直コミット
   - name: action:編集
+screen_type: list
+leave_guard: unsaved

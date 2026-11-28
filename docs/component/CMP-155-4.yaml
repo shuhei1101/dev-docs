@@ -6,16 +6,16 @@ implementation: frontend/src/shared/components/pending-panel/pending-panel.tsx#P
 story: Layout/PendingPanel
 args:
   - name: source
-    type: 文字列
+    type: string
     required: true
     description: 編集中の変更を出す配信元の ID
   - name: branch
-    type: 文字列
+    type: string
     required: false
     default: なし（「既定のブランチ」と出す）
     description: コミットするブランチの名前。説明とコミットの確認に出す
   - name: open
-    type: 真偽値
+    type: boolean
     required: true
     description: 開いているか
 events:
@@ -83,17 +83,12 @@ states:
         value: 'true'
   - name: Narrow
     description: 幅 48rem 未満の場所で、下から出す
+    viewport: mobile
     args:
       - name: source
         value: sample
       - name: open
         value: 'true'
-    notes:
-      幅: ストーリーのビューポートを幅 390px にする
-accessibility:
-  - モーダルにしない画面の横のパネルで、開いている間も本文・表を操作できる。Esc で閉じて、開いたボタンへフォーカスを戻す
-  - 変更の行の移動・取り消しのボタンの読み上げ名に、変更の名前を含める
-  - 差分確認・コミットの結果と失敗は `role="status"`・`role="alert"` で伝える
 notes:
   モック: 文書の画面のストーリー `Docs/DocViewScreen` の `PendingPanelOnDocView`・`PendingPanelLongLabels`・`BodyEditInvalid`
   API: 差分確認とコミットは編集中の変更の直コミット（`POST /_api/sources/{source}/commits`）を呼ぶ。ストーリーは MSW の handler で応答を差し替える
@@ -108,3 +103,16 @@ tags:
   - name: topic:部品
   - name: topic:直コミット
   - name: topic:差分
+persisted_state:
+  - what: 配信元ごとの編集中の変更と、編集を始めたときのコミット
+    store: session_storage
+    key: dev-docs:v2:shared:pending-edits
+    save_on: 変更を追加・取り消し・コミットしたとき
+    restore_on: 同じブラウザのタブで再読み込みしたときと、文書の画面とメタデータの画面を行き来したとき
+    reset_when: その配信元の変更をコミットしたとき（コミットした変更だけを捨てる）
+accessibility:
+  keyboard: 変更の行の移動・元に戻すのボタンと、差分確認・コミットのボタンを Tab で移り、Enter と Space で押す。Esc で閉じて、開いたボタンへフォーカスを戻す
+  rules:
+    - モーダルにしない画面の横のパネルで、開いている間も本文・表を操作できる
+    - 変更の行の移動・取り消しのボタンの読み上げ名に、変更の名前を含める（`{変更の名前} の行へ移動`・`{変更の名前} を元に戻す`）
+    - 差分確認・コミットの結果と失敗は `role="status"`・`role="alert"` で伝える
