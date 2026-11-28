@@ -212,3 +212,52 @@ test.describe("LongItemsNarrow", () => {
     expect(await axeViolations(page)).toEqual([]);
   });
 });
+
+test.describe("DocViewWithPendingEdits", () => {
+  // 文書の画面で、編集中の変更が 3 件ある。レビュー中のボタンに件数を出す（正常系）
+  test("doc_view_with_pending_edits", async ({ page }) => {
+    await openStory(page, "layout-topbar--doc-view-with-pending-edits");
+    const pending = bar(page).getByRole("button", { name: "レビュー中 3 件" });
+    await expect(pending).toContainText("3");
+    await expect(bar(page).getByRole("link", { name: "メタデータ" })).toBeVisible();
+    expect(await axeViolations(page)).toEqual([]);
+  });
+});
+
+test.describe("DocViewWithPendingEditsNarrow", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  // 幅 390px で、コメントと編集中の変更の件数を両方並べても横にはみ出さない（正常系）
+  test("doc_view_with_pending_edits_narrow", async ({ page }) => {
+    await openStory(page, "layout-topbar--doc-view-with-pending-edits-narrow");
+    await expect(bar(page).getByRole("button", { name: "コメント 2 件" })).toBeVisible();
+    await expect(bar(page).getByRole("button", { name: "レビュー中 3 件" })).toBeVisible();
+    await expect(bar(page).getByRole("button", { name: "明暗を固定する" })).toBeInViewport({ ratio: 1 });
+    expect(await noHorizontalScroll(page)).toBe(true);
+    expect(await axeViolations(page)).toEqual([]);
+  });
+});
+
+test.describe("Metadata", () => {
+  // メタデータの画面。メタデータのボタンを今の画面にし、レビュー中の件数を出す（正常系）
+  test("metadata", async ({ page }) => {
+    await openStory(page, "layout-topbar--metadata");
+    await expect(bar(page).getByRole("link", { name: "メタデータ" })).toHaveAttribute("aria-current", "page");
+    await expect(bar(page).getByRole("button", { name: "レビュー中 3 件" })).toBeVisible();
+    await expect(bar(page).getByRole("button", { name: "検索 Ctrl K" })).toBeVisible();
+    expect(await axeViolations(page)).toEqual([]);
+  });
+});
+
+test.describe("MetadataNarrow", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  // 幅 48rem 未満。メタデータとレビュー中のボタンをアイコンと件数だけにする（正常系）
+  test("metadata_narrow", async ({ page }) => {
+    await openStory(page, "layout-topbar--metadata-narrow");
+    await expect(bar(page).getByText("メタデータ", { exact: true })).toBeHidden();
+    await expect(bar(page).getByRole("button", { name: "レビュー中 3 件" })).toContainText("3");
+    expect(await noHorizontalScroll(page)).toBe(true);
+    expect(await axeViolations(page)).toEqual([]);
+  });
+});

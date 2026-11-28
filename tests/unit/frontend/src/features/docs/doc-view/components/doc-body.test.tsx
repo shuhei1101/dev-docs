@@ -8,6 +8,12 @@ import { documentResponse } from "@tests/helpers/fixtures";
 import { renderInRouter } from "@tests/helpers/render";
 
 const mount = vi.hoisted(() => vi.fn());
+const savedScroll = vi.hoisted(() => vi.fn<() => { scrollX: number; scrollY: number } | undefined>(() => undefined));
+
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+  useElementScrollRestoration: savedScroll,
+}));
 
 vi.mock("https://cdn.jsdelivr.net/gh/shuhei1101/mdmark@develop/dist/index.js", () => ({ mount }));
 
@@ -35,6 +41,8 @@ const comment = (docId: string, id: string) => ({
 });
 
 beforeEach(() => {
+  savedScroll.mockReset();
+  savedScroll.mockReturnValue(undefined);
   mount.mockReset();
   mount.mockReturnValue(handle());
   useCommentStore.setState({ comments: [] });
@@ -147,4 +155,32 @@ test("test_doc_body_when_locating", async () => {
   );
   expect(current.focusComment).toHaveBeenCalledTimes(1);
   await waitFor(() => expect(onLocated).toHaveBeenCalledTimes(1));
+});
+
+test("test_doc_body_when_scroll_restored", async () => {
+  savedScroll.mockReturnValue({ scrollX: 0, scrollY: 400 });
+  // jsdom は配置を計算せず `scrollTop` の書き込みを捨てるので、書き込んだ値を保つ
+  const positions = new WeakMap<Element, number>();
+  const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, "scrollTop");
+  Object.defineProperty(Element.prototype, "scrollTop", {
+    get() {
+      return positions.get(this as Element) ?? 0;
+    },
+    set(value: number) {
+      positions.set(this as Element, value);
+    },
+    configurable: true,
+  });
+  try {
+    renderInRouter(
+      <div data-scroll-restoration-id="doc-body" data-testid="area">
+        <DocBody document={documentResponse() as never} onCommentSaved={vi.fn()} locating={null} onLocated={vi.fn()} />
+      </div>,
+    );
+
+    await waitFor(() => expect(mount).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByTestId("area").scrollTop).toBe(400));
+  } finally {
+    if (descriptor) Object.defineProperty(Element.prototype, "scrollTop", descriptor);
+  }
 });

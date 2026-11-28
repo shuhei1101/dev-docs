@@ -630,7 +630,7 @@ const seedBodyEdit = async (page: Page, path: string, before: string, value: str
     label: `${path === "@file" ? "ファイル全体" : "説明"}（docs/rule/rule-sample.yaml）`,
   };
   await page.addInitScript((stored) => {
-    window.sessionStorage.setItem("dev-docs:pending-edits", stored);
+    window.sessionStorage.setItem("dev-docs:v2:shared:pending-edits", stored);
   }, JSON.stringify({ state: { bySource: { [SOURCE]: [edit] }, baseCommitBySource: { [SOURCE]: BASE_COMMIT } }, version: 2 }));
 };
 
@@ -696,5 +696,73 @@ test.describe("文書の本文の変更", () => {
     await expect(dropped).toContainText("説明（docs/rule/rule-sample.yaml）");
     expect(documents.some((path) => path.endsWith("/docs/docs/rule/rule-sample.yaml"))).toBe(true);
     expect(api.commits[0]?.edits).toMatchObject([{ kind: "body", values: { description: "修正後の説明" } }]);
+  });
+});
+
+test.describe("絞り込みの URL", () => {
+  // 絞り込みの文字を URL の `q` に保ち、開き直しても同じ絞り込みで始める（正常系）
+  test("filter_query_in_url", async ({ page }) => {
+    await open(page, { url: `/${SOURCE}/_metadata?q=${encodeURIComponent("旧称")}` });
+    const input = page.getByLabel("絞り込み");
+    await expect(input).toHaveValue("旧称");
+    const table = page.getByRole("table", { name: "用語集の表" });
+    await expect(table).toContainText("旧称");
+    await expect(table).not.toContainText("フォルダ");
+
+    await input.fill("配信元");
+
+    await expect(page).toHaveURL(/[?&]q=%E9%85%8D%E4%BF%A1%E5%85%83/);
+    await expect(table).toContainText("配信元");
+  });
+});
+
+test.describe("検索とショートカットの一覧", () => {
+  // トップバーの検索のボタンと `Control+K` で検索のダイアログ、`Shift+/` でショートカットの一覧を開く（正常系）
+  test("search_and_shortcut_dialogs", async ({ page }) => {
+    await open(page);
+    const search = page.getByRole("dialog").filter({ has: page.getByPlaceholder("文書を検索") });
+
+    await page.getByRole("button", { name: "検索 Ctrl K" }).click();
+    await expect(search).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(search).toBeHidden();
+
+    await page.keyboard.press("Control+k");
+    await expect(search).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(search).toBeHidden();
+
+    await page.keyboard.press("Shift+/");
+    await expect(page.getByRole("dialog", { name: "キーボードのショートカット" })).toBeVisible();
+  });
+});
+
+test.describe("離脱の警告", () => {
+  // 編集中の変更があるときは、タブを閉じる前にブラウザの確認を出す（正常系）
+  test("leave_guard_on_unload", async ({ page }) => {
+    await seedBodyEdit(page, "description", "本文を編集する決まり", "修正後の説明");
+    await open(page);
+    await page.getByLabel("絞り込み").click();
+    const dialogs: string[] = [];
+    page.on("dialog", (dialog) => {
+      dialogs.push(dialog.type());
+      void dialog.dismiss();
+    });
+
+    await page.close({ runBeforeUnload: true });
+
+    await expect.poll(() => dialogs).toContain("beforeunload");
+  });
+});
+
+test.describe("行の削除のツールチップ", () => {
+  // アイコンだけの行の削除のボタンにポインタを合わせると、読み上げ名と同じ文言のツールチップを出す（正常系）
+  test("delete_button_tooltip", async ({ page }) => {
+    await open(page);
+    const button = page.getByRole("button", { name: /^用語 配信元 .*を削除$|配信元 を削除$/ }).first();
+
+    await button.hover();
+
+    await expect(page.getByText(await button.getAttribute("aria-label") ?? "", { exact: true }).last()).toBeVisible();
   });
 });
