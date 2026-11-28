@@ -10,9 +10,13 @@ import {
 } from "@tanstack/react-router";
 import { mswLoader } from "msw-storybook-addon/csf3";
 
+import { ConfirmDialogProvider } from "../src/app/confirm-dialog";
 import "../src/shared/styles/index.css";
 
-/** Link を使用できるよう、メモリの履歴のルーターに story を配置する（`parameters.initialPath` で開く URL を選ぶ） */
+/**
+ * Link を使用できるよう、メモリの履歴のルーターに story を配置する（`parameters.initialPath` で開く URL を選ぶ）。
+ * 離脱の警告が確認のダイアログを開くため、確認のダイアログの Provider の中に置く
+ */
 const withRouter: Decorator = (Story, context) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -29,7 +33,9 @@ const withRouter: Decorator = (Story, context) => {
   });
   return (
     <QueryClientProvider client={client}>
-      <RouterProvider router={router} />
+      <ConfirmDialogProvider>
+        <RouterProvider router={router} />
+      </ConfirmDialogProvider>
     </QueryClientProvider>
   );
 };
