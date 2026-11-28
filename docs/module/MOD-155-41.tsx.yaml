@@ -98,6 +98,7 @@ components:
       閉じ方: 'Base UI の `Dialog` の `disablePointerDismissal` で、外側のクリックで閉じない（Esc・キャンセルは閉じる）'
       保存を待つ間: 追加・保存のボタンは応答を待つ間、文字の前に `Loader2` の回る表示を出して押せなくする（ボタンの幅は変えない）
       離脱の警告: '`useLeaveGuard` に、ダイアログを開いていてフォームが `isDirty` かを指定し、`navigation` に画面設計の『移動の確認のダイアログ』の文面（`destructive: true`）を指定する。入力はどこにも残らないので、画面の中の移動も止める'
+      再利用と新規作成の判定: 「ダイアログのフッター」「保存を待つ間のボタン」で `frontend/src` を探した。候補は shadcn/ui の `DialogFooter`（並べるだけ）だけで、回る表示を持つボタンは無い。複雑さの上限（ESLint の `complexity` 15）に収めるため、同じファイルに `EditDialogFooter`（`DialogFooter` にキャンセルと追加・保存のボタンを並べる）を新規作成する。ほかの画面からは使用しないので `shared/` には配置しない
   - name: StorageField
     title: 読み書きの方法のセレクト
     kind: コンポーネント

@@ -96,6 +96,7 @@ components:
     notes:
       検索とショートカット: 検索のダイアログ（`SearchDialog`。`source` は URL の配信元、`ref` は指定しない）とショートカットの一覧（`ShortcutDialog` の `screen` が `metadata`）を配置し、トップバーの `onSearchOpen` と `useShortcut("search")`・`useShortcut("help")` で開く。結果を選んだらその文書を文書の画面で開く
       離脱の警告: '`useLeaveGuard` に、配信元の編集中の変更が 1 件以上あるかを指定する。編集中の変更は `sessionStorage` に残るので、`navigation` は指定しない（タブを閉じる・再読み込みだけ警告する）'
+      再利用と新規作成の判定: 「検索のダイアログ」「ショートカットの一覧」「useShortcut」で `frontend/src` を探した。文書の画面（`doc-view-screen.tsx`）は画面の中で直接配置していて、再利用できる部品は無い。複雑さの上限（ESLint の `complexity` 15）に収めるため、同じファイルに `MetadataDialogs`（検索のダイアログ・ショートカットの一覧とそれらを開くキー。`helpOpen` を持ち、`searchOpen` はトップバーと共有するので画面から受け取る）と `queryOf`（URL の `q` を無ければ空にする）を新規作成する
 refs:
   - to: SCR-155-4
     type: requires
