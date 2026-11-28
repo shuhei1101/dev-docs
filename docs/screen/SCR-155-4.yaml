@@ -26,9 +26,9 @@ elements:
       - name: colorScheme
         value: ブラウザに保存した明暗（無ければ `system`）
     position: 画面の上
-    description: 配信元の切り替え・検索・設定・明暗の切り替えと、メタデータ・編集中のボタン
+    description: 配信元の切り替え・検索・設定・明暗の切り替えと、メタデータ・レビュー中のボタン
     visible_when: 常時
-    action: '`sourceSelect` でその配信元のメタデータの画面を開く。`pendingPanelToggle` で編集中のパネルを開閉する。画面名のクリックで、その配信元の文書の画面のトップを開く'
+    action: '`sourceSelect` でその配信元のメタデータの画面を開く。`pendingPanelToggle` でレビュー中のパネルを開閉する。画面名のクリックで、その配信元の文書の画面のトップを開く'
     action_ref: SCR-155-1#
   - name: 見出し
     kind: label
@@ -184,40 +184,40 @@ elements:
     description: 絞り込みに当たる行が無いこと
     label: '`「{入力}」に一致する行はありません。`'
     visible_when: 絞り込みの入力欄が空でなく、当たる行が無いとき
-  - name: 編集中のパネル
+  - name: レビュー中のパネル
     kind: sheet
     position: 画面の右（狭い幅では画面の下から出す面）
     description: 開いている配信元の編集中の変更の一覧と、差分確認・コミットの結果。表を操作しながら開いたままにする
-    label: 見出し `編集中` と `{配信元の ID} の {branch} へ、{件数} 件の変更をまとめてコミットします。`（説明の文は変更が 1 件以上のときだけ出す）
-    visible_when: トップバーの編集中のボタンを押したとき
+    label: 見出し `レビュー中` と `{配信元の ID} の {branch} へ、{件数} 件の変更をまとめてコミットします。`（説明の文は変更が 1 件以上のときだけ出す）
+    visible_when: トップバーのレビュー中のボタンを押したとき
     source: メタデータの取得.branch
     notes:
       モーダル: モーダルにせず、背景を暗くしない。外を押しても閉じない
       保存先: 編集中の変更は配信元ごとにブラウザのタブ（`sessionStorage`）に保ち、画面を再読み込みしても残す。コメントの保存先と同じ
   - name: 編集中の変更が無いことの表示
     kind: label
-    position: 編集中のパネル
+    position: レビュー中のパネル
     description: 変更が無いこと
     label: '`編集中の変更はありません。`'
     visible_when: 編集中の変更が 0 件のとき
   - name: 変更の種類のバッジ
     kind: badge
-    position: 編集中のパネル > 変更の行
+    position: レビュー中のパネル > 変更の行
     description: 変更の種類
     label: '`変更`（`update`）/ `追加`（`add`）/ `削除`（`delete`）'
     visible_when: 変更が 1 件以上のとき
   - name: 変更の行へ移動
     kind: button
-    position: 編集中のパネル > 変更の行
+    position: レビュー中のパネル > 変更の行
     description: 変更の対象の行を表で出す
     label: '`{種類の title}: {行の名前}`（`update` は下に `{変更前} → {変更後}`）。文書の本文の変更は `{項目の名前}（{文書のパス}）`'
     visible_when: 変更が 1 件以上のとき
-    action: クリックでその種類のタブに切り替え、絞り込みを空にし、その行へスクロールして行にフォーカスを移す。文書の本文の変更は、その文書の文書の画面を編集の表示（項目のパスの変更は `edit=fields`、`@file` は `edit=file`）で開き、編集中のパネルを開いたままにする
+    action: クリックでその種類のタブに切り替え、絞り込みを空にし、その行へスクロールして行にフォーカスを移す。文書の本文の変更は、その文書の文書の画面を編集の表示（項目のパスの変更は `edit=fields`、`@file` は `edit=file`）で開き、レビュー中のパネルを開いたままにする
     notes:
       読み上げ名: '`{種類の title}: {行の名前} の行へ移動`'
   - name: 変更を元に戻す
     kind: button
-    position: 編集中のパネル > 変更の行
+    position: レビュー中のパネル > 変更の行
     description: その変更を編集中の変更から除く
     label: 元に戻すのアイコン
     visible_when: 変更が 1 件以上のとき
@@ -227,14 +227,14 @@ elements:
       読み上げ名: '`{種類の title}: {行の名前} を元に戻す`'
   - name: 変更の差分・理由
     kind: label
-    position: 編集中のパネル > 変更の行の下
+    position: レビュー中のパネル > 変更の行の下
     description: 差分確認の差分か、送信できなかった理由
     label: '差分は等幅で行頭の `-`・`+` を色分けする。理由は危険の色で `{path}: {reason}`'
     visible_when: 差分確認の応答か、送信の失敗の `errors[]` にその変更の `key` があるとき
     source: 編集中の変更の直コミット.results[].diff・errors[]
   - name: 送信の失敗のまとめ
     kind: alert
-    position: 編集中のパネル > 説明の下
+    position: レビュー中のパネル > 説明の下
     description: 差分確認・コミットが失敗したときの見出しと説明
     label: 見出しは Problem Details の `title`。説明は、変更ごとの理由があれば `コミットできませんでした。変更ごとの理由を確認してください。`、無ければ `detail`。`nextSteps` を続け、続けて `編集中の変更はそのままです。`（`title` が `BaseCommitUnusableError` のときは `編集中の変更はそのままです。「最新の内容で続ける」を押すと、最新の内容を再取得し、変更を残したまま送信できます。`）
     visible_when: 差分確認かコミットが 200 以外を返却したとき
@@ -243,7 +243,7 @@ elements:
       読み上げ: '`role="alert"` で、出たときに読み上げる'
   - name: コミットの結果
     kind: alert
-    position: 編集中のパネル > 説明の下
+    position: レビュー中のパネル > 説明の下
     description: コミットしたことと、コミットとブランチ
     label: '`{branch} にコミットしました（{sha の先頭 7 文字}）`'
     visible_when: コミットが 200 を返却した直後
@@ -252,7 +252,7 @@ elements:
     action_ref: IF-155-28#
   - name: 差分確認ボタン
     kind: button
-    position: 編集中のパネル > フッター
+    position: レビュー中のパネル > フッター
     description: コミットせずに変更ごとの差分を確認する
     label: '`差分確認`'
     visible_when: 変更が 1 件以上のとき
@@ -263,7 +263,7 @@ elements:
       応答を待つ間: 非活性にし、ボタンの文言の左に回る表示を出す（ボタンの幅は変えない）
   - name: コミットボタン
     kind: button
-    position: 編集中のパネル > フッター
+    position: レビュー中のパネル > フッター
     description: コミットの確認のダイアログを開く
     label: '`コミット`（プライマリ）。直前の送信が失敗していれば `再試行`、失敗の `title` が `BaseCommitUnusableError` なら `最新の内容で続ける`'
     visible_when: 変更が 1 件以上のとき
@@ -310,7 +310,7 @@ elements:
     label: '`コミット`（プライマリ）'
     visible_when: コミットの確認のダイアログを開いたとき
     enabled_when: コミットの説明が空でなく、応答を待っていないとき
-    action: 'クリックで編集中の変更とコミットの説明を `dryRun: false` で送信し、ダイアログを閉じる。結果は編集中のパネルに出す'
+    action: 'クリックで編集中の変更とコミットの説明を `dryRun: false` で送信し、ダイアログを閉じる。結果はレビュー中のパネルに出す'
     action_ref: IF-155-29#
     notes:
       応答を待つ間: 非活性にし、ボタンの文言の左に回る表示を出す（ボタンの幅は変えない）
@@ -340,7 +340,7 @@ elements:
       読み上げ: '`role="alert"` で、出たときに読み上げる'
   - name: 衝突の結果
     kind: alert
-    position: 編集中のパネル > 説明の下
+    position: レビュー中のパネル > 説明の下
     description: 修正をブランチに残したことと、ブランチ・PR・残した変更・衝突した理由
     label: '見出し `ほかの変更と衝突したため、修正をブランチに残しました`。`ブランチ {branch}（編集を始めたときの {baseCommit の先頭 7 文字} から）`、スクリプトの結果（`prUrl` があればリンク `PR を開く`。失敗は危険の色で `衝突したときのスクリプトが失敗しました（終了コード {exitCode}）。` と標準エラー出力（等幅）、止めたときは `衝突したときのスクリプトが制限時間を過ぎたため止めました。`、指定が無いときは `衝突したときのスクリプトが登録されていないため、PR は作成していません。ブランチはこの端末のクローンにだけあります。`）、小見出し `ブランチに残した変更` と変更の `{種類の title}: {行の名前}` の箇条書き、小見出し `衝突した理由` と `reasons[].reason` の箇条書き、`ブランチに残した変更は、編集中の変更から除きました。`'
     visible_when: コミットが `conflict` を持つ 200 を返却した直後
@@ -351,14 +351,14 @@ elements:
       読み上げ: '`role="status"` で、出たときに読み上げる'
   - name: 差分確認の衝突の注意
     kind: alert
-    position: 編集中のパネル > 説明の下
+    position: レビュー中のパネル > 説明の下
     description: このままコミットすると衝突してブランチに残ること
     label: 見出し `コミットすると、ほかの変更と衝突して修正がブランチに残ります`。衝突した変更の行の下に `reasons[].reason` を危険の色で出す
     visible_when: 差分確認が `conflict` を持つ 200 を返却したとき
     source: 編集中の変更の直コミット.conflict.reasons[]
   - name: 最新の内容と食い違う変更の取り消し
     kind: alert
-    position: 編集中のパネル > 説明の下
+    position: レビュー中のパネル > 説明の下
     description: 「最新の内容で続ける」で、最新の値が変更前の値と違っていたため取り消した変更
     label: '見出し `最新の内容と食い違うため、次の変更を取り消しました`。取り消した変更の `{種類の title}: {行の名前}` の箇条書き。続けて `最新の値を確認して、もう一度編集してください。`'
     visible_when: 「最新の内容で続ける」で 1 件以上の変更を取り消した直後（次の差分確認・コミットまで）
@@ -395,7 +395,7 @@ refs:
   - to: SC-155-15
     item: scenarios[正常シナリオ]
     type: references
-    when: 編集中のパネルの操作を変えるときに、画面での直コミットの流れを確認する。
+    when: レビュー中のパネルの操作を変えるときに、画面での直コミットの流れを確認する。
   - to: SCR-155-2
     type: references
     when: 配信元が無いときの表示を変えるときに、見つからない画面の理由とリンクを確認する。
