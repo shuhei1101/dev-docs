@@ -1,5 +1,7 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
+
+import { legacyKeyStorage } from "@/shared/stores/legacy-key-storage";
 
 export type ColorScheme = "light" | "dark" | "system";
 
@@ -35,6 +37,12 @@ export const usePreferencesStore = create<PreferencesState>()(
       setSidebarWidth: (value) =>
         set({ sidebarWidth: clampSidebarWidth(value) }),
     }),
-    { name: "dev-docs:preferences", version: 1 },
+    {
+      name: "dev-docs:v1:shared:preferences",
+      version: 1,
+      storage: createJSONStorage(() =>
+        legacyKeyStorage(() => localStorage, "dev-docs:preferences"),
+      ),
+    },
   ),
 );

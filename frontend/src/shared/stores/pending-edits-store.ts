@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+import { legacyKeyStorage } from "@/shared/stores/legacy-key-storage";
+
 import type { Edit } from "@/shared/api/generated/model";
 
 /** 変更の 1 つの列・項目の値（表の項目は行ごとの列の値） */
@@ -127,9 +129,11 @@ export const usePendingEditsStore = create<PendingEditsState>()(
       },
     }),
     {
-      name: "dev-docs:pending-edits",
+      name: "dev-docs:v2:shared:pending-edits",
       version: 2,
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() =>
+        legacyKeyStorage(() => sessionStorage, "dev-docs:pending-edits"),
+      ),
       partialize: (state) => ({ bySource: state.bySource, baseCommitBySource: state.baseCommitBySource }),
       // version 1 の変更は編集を始めたときのコミットを持たないため捨てる
       migrate: () => ({ bySource: {}, baseCommitBySource: {} }),
