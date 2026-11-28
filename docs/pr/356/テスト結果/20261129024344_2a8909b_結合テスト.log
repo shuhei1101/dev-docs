@@ -1,0 +1,1036 @@
+$ gh workflow run test.yml --ref "$(git branch --show-current)" -f layer=frontend-integration -f paths="tests/integration/frontend/doc-view-screen.spec.ts tests/integration/frontend/metadata-screen.spec.ts tests/integration/frontend/settings-screen.spec.ts tests/integration/frontend/not-found-screen.spec.ts tests/integration/frontend/topbar.spec.ts tests/integration/frontend/pending-panel.spec.ts"（TP-155-1 の TL-3 の run_runner）
+https://github.com/shuhei1101/dev-docs/actions/runs/46171186489
+test	Set up job	﻿2026-11-28T17:34:23.0437235Z Current runner version: '2.338.2'
+test	Set up job	2026-11-28T17:34:23.0463712Z ##[group]Runner Image Provisioner
+test	Set up job	2026-11-28T17:34:23.0464934Z Hosted Compute Agent
+test	Set up job	2026-11-28T17:34:23.0465654Z Version: 20261111.635
+test	Set up job	2026-11-28T17:34:23.0466335Z Commit: b8a594ea514ff44cadb5342986c68b1eac6e22ed
+test	Set up job	2026-11-28T17:34:23.0467070Z Build Date: 2026-11-11T01:49:01Z
+test	Set up job	2026-11-28T17:34:23.0467888Z Worker ID: {46c28e4b-14fb-4fac-92c2-504a99df73d8}
+test	Set up job	2026-11-28T17:34:23.0468612Z Region: westus
+test	Set up job	2026-11-28T17:34:23.0469192Z Cloud: Azure
+test	Set up job	2026-11-28T17:34:23.0469755Z ##[endgroup]
+test	Set up job	2026-11-28T17:34:23.0471225Z ##[group]Operating System
+test	Set up job	2026-11-28T17:34:23.0471970Z Ubuntu
+test	Set up job	2026-11-28T17:34:23.0472566Z 26.04.1
+test	Set up job	2026-11-28T17:34:23.0473118Z LTS
+test	Set up job	2026-11-28T17:34:23.0473654Z ##[endgroup]
+test	Set up job	2026-11-28T17:34:23.0474217Z ##[group]Runner Image
+test	Set up job	2026-11-28T17:34:23.0475406Z Image: ubuntu-26.04
+test	Set up job	2026-11-28T17:34:23.0476029Z Version: 20261122.9.1
+test	Set up job	2026-11-28T17:34:23.0477097Z Included Software: https://github.com/actions/runner-images/blob/ubuntu26/20261122.9/images/ubuntu/Ubuntu2604-Readme.md
+test	Set up job	2026-11-28T17:34:23.0478971Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu26%2F20261122.9
+test	Set up job	2026-11-28T17:34:23.0480045Z ##[endgroup]
+test	Set up job	2026-11-28T17:34:23.0481180Z ##[group]GITHUB_TOKEN Permissions
+test	Set up job	2026-11-28T17:34:23.0483141Z Contents: read
+test	Set up job	2026-11-28T17:34:23.0483791Z Metadata: read
+test	Set up job	2026-11-28T17:34:23.0485069Z ##[endgroup]
+test	Set up job	2026-11-28T17:34:23.0487297Z Secret source: Actions
+test	Set up job	2026-11-28T17:34:23.0488376Z Cache mode: write
+test	Set up job	2026-11-28T17:34:23.0489107Z Prepare workflow directory
+test	Set up job	2026-11-28T17:34:23.0838856Z Prepare all required actions
+test	Set up job	2026-11-28T17:34:23.0888512Z Getting action download info
+test	Set up job	2026-11-28T17:34:23.4481241Z Download action repository 'actions/checkout@v7' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+test	Set up job	2026-11-28T17:34:23.5417126Z Download action repository 'actions/setup-node@v7' (SHA:949feb2413d6458794dcd2491c4babbbce0c15c1)
+test	Set up job	2026-11-28T17:34:23.6036224Z Download action repository 'astral-sh/setup-uv@v10.3.3' (SHA:68559e99cc807c1eb7e9238fd43a15bba460eec2)
+test	Set up job	2026-11-28T17:34:24.2342898Z Download action repository 'actions/upload-artifact@v7' (SHA:cf430e030ddbb5b0abf93d22962f4752f3646cd9)
+test	Set up job	2026-11-28T17:34:24.4129234Z Complete job name: test
+test	ブランチを取得する	﻿2026-11-28T17:34:24.5071055Z ##[group]Run actions/checkout@v7
+test	ブランチを取得する	2026-11-28T17:34:24.5072089Z with:
+test	ブランチを取得する	2026-11-28T17:34:24.5072624Z   repository: shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-28T17:34:24.5077008Z   token: ***
+test	ブランチを取得する	2026-11-28T17:34:24.5077527Z   ssh-strict: true
+test	ブランチを取得する	2026-11-28T17:34:24.5078033Z   ssh-user: git
+test	ブランチを取得する	2026-11-28T17:34:24.5078546Z   persist-credentials: true
+test	ブランチを取得する	2026-11-28T17:34:24.5079324Z   clean: true
+test	ブランチを取得する	2026-11-28T17:34:24.5079970Z   sparse-checkout-cone-mode: true
+test	ブランチを取得する	2026-11-28T17:34:24.5080593Z   fetch-depth: 1
+test	ブランチを取得する	2026-11-28T17:34:24.5081088Z   fetch-tags: false
+test	ブランチを取得する	2026-11-28T17:34:24.5081602Z   show-progress: true
+test	ブランチを取得する	2026-11-28T17:34:24.5082119Z   lfs: false
+test	ブランチを取得する	2026-11-28T17:34:24.5082607Z   submodules: false
+test	ブランチを取得する	2026-11-28T17:34:24.5083120Z   set-safe-directory: true
+test	ブランチを取得する	2026-11-28T17:34:24.5083695Z   allow-unsafe-pr-checkout: false
+test	ブランチを取得する	2026-11-28T17:34:24.5084617Z ##[endgroup]
+test	ブランチを取得する	2026-11-28T17:34:24.8045126Z Syncing repository: shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-28T17:34:24.8047071Z ##[group]Getting Git version info
+test	ブランチを取得する	2026-11-28T17:34:24.8047911Z Working directory is '/home/runner/work/dev-docs/dev-docs'
+test	ブランチを取得する	2026-11-28T17:34:24.8049066Z [command]/usr/bin/git version
+test	ブランチを取得する	2026-11-28T17:34:24.8058483Z git version 2.56.1
+test	ブランチを取得する	2026-11-28T17:34:24.8079298Z ##[endgroup]
+test	ブランチを取得する	2026-11-28T17:34:24.8091542Z Temporarily overriding HOME='/home/runner/work/_temp/182c3fdb-5fb8-4f31-bdd3-20dca4596a9e' before making global git config changes
+test	ブランチを取得する	2026-11-28T17:34:24.8094143Z Adding repository directory to the temporary git global config as a safe directory
+test	ブランチを取得する	2026-11-28T17:34:24.8096987Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/dev-docs/dev-docs
+test	ブランチを取得する	2026-11-28T17:34:24.8159082Z Deleting the contents of '/home/runner/work/dev-docs/dev-docs'
+test	ブランチを取得する	2026-11-28T17:34:24.8162253Z ##[group]Determining repository object format
+test	ブランチを取得する	2026-11-28T17:34:24.8163722Z ##[endgroup]
+test	ブランチを取得する	2026-11-28T17:34:24.8165275Z ##[group]Initializing the repository
+test	ブランチを取得する	2026-11-28T17:34:24.8168303Z [command]/usr/bin/git init /home/runner/work/dev-docs/dev-docs
+test	ブランチを取得する	2026-11-28T17:34:24.8266262Z hint: Using 'master' as the name for the initial branch. This default branch name
+test	ブランチを取得する	2026-11-28T17:34:24.8267816Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+test	ブランチを取得する	2026-11-28T17:34:24.8268978Z hint: to use in all of your new repositories, which will suppress this warning,
+test	ブランチを取得する	2026-11-28T17:34:24.8269758Z hint: call:
+test	ブランチを取得する	2026-11-28T17:34:24.8270204Z hint:
+test	ブランチを取得する	2026-11-28T17:34:24.8270785Z hint: 	git config --global init.defaultBranch <name>
+test	ブランチを取得する	2026-11-28T17:34:24.8271670Z hint:
+test	ブランチを取得する	2026-11-28T17:34:24.8272359Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+test	ブランチを取得する	2026-11-28T17:34:24.8273338Z hint: 'development'. The just-created branch can be renamed via this command:
+test	ブランチを取得する	2026-11-28T17:34:24.8274313Z hint:
+test	ブランチを取得する	2026-11-28T17:34:24.8274987Z hint: 	git branch -m <name>
+test	ブランチを取得する	2026-11-28T17:34:24.8275520Z hint:
+test	ブランチを取得する	2026-11-28T17:34:24.8276188Z hint: Disable this message with "git config set advice.defaultBranchName false"
+test	ブランチを取得する	2026-11-28T17:34:24.8279044Z Initialized empty Git repository in /home/runner/work/dev-docs/dev-docs/.git/
+test	ブランチを取得する	2026-11-28T17:34:24.8289047Z [command]/usr/bin/git remote add origin https://github.com/shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-28T17:34:24.8340782Z ##[endgroup]
+test	ブランチを取得する	2026-11-28T17:34:24.8341630Z ##[group]Disabling automatic garbage collection
+test	ブランチを取得する	2026-11-28T17:34:24.8344090Z [command]/usr/bin/git config --local gc.auto 0
+test	ブランチを取得する	2026-11-28T17:34:24.8378481Z ##[endgroup]
+test	ブランチを取得する	2026-11-28T17:34:24.8379566Z ##[group]Setting up auth
+test	ブランチを取得する	2026-11-28T17:34:24.8380169Z Removing SSH command configuration
+test	ブランチを取得する	2026-11-28T17:34:24.8385389Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+test	ブランチを取得する	2026-11-28T17:34:24.8420049Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+test	ブランチを取得する	2026-11-28T17:34:24.8846147Z Removing HTTP extra header
+test	ブランチを取得する	2026-11-28T17:34:24.8851503Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+test	ブランチを取得する	2026-11-28T17:34:24.8885331Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+test	ブランチを取得する	2026-11-28T17:34:24.9151885Z Removing includeIf entries pointing to credentials config files
+test	ブランチを取得する	2026-11-28T17:34:24.9156752Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+test	ブランチを取得する	2026-11-28T17:34:24.9191710Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+test	ブランチを取得する	2026-11-28T17:34:24.9464272Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-d6192dfc-c39e-4db2-8f22-eb04177d256d.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+test	ブランチを取得する	2026-11-28T17:34:24.9501819Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path /home/runner/work/_temp/git-credentials-d6192dfc-c39e-4db2-8f22-eb04177d256d.config
+test	ブランチを取得する	2026-11-28T17:34:24.9533339Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-d6192dfc-c39e-4db2-8f22-eb04177d256d.config
+test	ブランチを取得する	2026-11-28T17:34:24.9567362Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-d6192dfc-c39e-4db2-8f22-eb04177d256d.config
+test	ブランチを取得する	2026-11-28T17:34:24.9598623Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-d6192dfc-c39e-4db2-8f22-eb04177d256d.config
+test	ブランチを取得する	2026-11-28T17:34:24.9627602Z ##[endgroup]
+test	ブランチを取得する	2026-11-28T17:34:24.9628418Z ##[group]Fetching the repository
+test	ブランチを取得する	2026-11-28T17:34:24.9634297Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +2a8909b0aaa2031fb63f836f5861194247469e57:refs/remotes/origin/design/frontend/design-schemas-v12
+test	ブランチを取得する	2026-11-28T17:34:26.9397054Z From https://github.com/shuhei1101/dev-docs
+test	ブランチを取得する	2026-11-28T17:34:26.9399624Z  * [new ref]         2a8909b0aaa2031fb63f836f5861194247469e57 -> origin/design/frontend/design-schemas-v12
+test	ブランチを取得する	2026-11-28T17:34:26.9408131Z [command]/usr/bin/git branch --list --remote origin/design/frontend/design-schemas-v12
+test	ブランチを取得する	2026-11-28T17:34:26.9435887Z   origin/design/frontend/design-schemas-v12
+test	ブランチを取得する	2026-11-28T17:34:26.9443914Z [command]/usr/bin/git rev-parse refs/remotes/origin/design/frontend/design-schemas-v12
+test	ブランチを取得する	2026-11-28T17:34:26.9519694Z 2a8909b0aaa2031fb63f836f5861194247469e57
+test	ブランチを取得する	2026-11-28T17:34:26.9523389Z ##[endgroup]
+test	ブランチを取得する	2026-11-28T17:34:26.9525252Z ##[group]Determining the checkout info
+test	ブランチを取得する	2026-11-28T17:34:26.9526787Z ##[endgroup]
+test	ブランチを取得する	2026-11-28T17:34:26.9527869Z [command]/usr/bin/git sparse-checkout disable
+test	ブランチを取得する	2026-11-28T17:34:26.9545095Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+test	ブランチを取得する	2026-11-28T17:34:26.9571622Z ##[group]Checking out the ref
+test	ブランチを取得する	2026-11-28T17:34:26.9572761Z [command]/usr/bin/git checkout --progress --force -B design/frontend/design-schemas-v12 refs/remotes/origin/design/frontend/design-schemas-v12
+test	ブランチを取得する	2026-11-28T17:34:27.3705081Z Switched to a new branch 'design/frontend/design-schemas-v12'
+test	ブランチを取得する	2026-11-28T17:34:27.3711506Z branch 'design/frontend/design-schemas-v12' set up to track 'origin/design/frontend/design-schemas-v12'.
+test	ブランチを取得する	2026-11-28T17:34:27.3731616Z ##[endgroup]
+test	ブランチを取得する	2026-11-28T17:34:27.3795607Z [command]/usr/bin/git log -1 --format=%H
+test	ブランチを取得する	2026-11-28T17:34:27.3845166Z 2a8909b0aaa2031fb63f836f5861194247469e57
+test	Node.js を入れる	﻿2026-11-28T17:34:27.4149783Z ##[group]Run actions/setup-node@v7
+test	Node.js を入れる	2026-11-28T17:34:27.4150109Z with:
+test	Node.js を入れる	2026-11-28T17:34:27.4150302Z   node-version: 24
+test	Node.js を入れる	2026-11-28T17:34:27.4150515Z   check-latest: false
+test	Node.js を入れる	2026-11-28T17:34:27.4152866Z   token: ***
+test	Node.js を入れる	2026-11-28T17:34:27.4153087Z   package-manager-cache: true
+test	Node.js を入れる	2026-11-28T17:34:27.4153332Z ##[endgroup]
+test	Node.js を入れる	2026-11-28T17:34:27.5443556Z Found in cache @ /opt/hostedtoolcache/node/24.22.3/x64
+test	Node.js を入れる	2026-11-28T17:34:27.6246640Z ##[group]Environment details
+test	Node.js を入れる	2026-11-28T17:34:28.0426427Z node: v24.22.3
+test	Node.js を入れる	2026-11-28T17:34:28.0426955Z npm: 11.19.1
+test	Node.js を入れる	2026-11-28T17:34:28.0427360Z yarn: 1.22.22
+test	Node.js を入れる	2026-11-28T17:34:28.0428598Z ##[endgroup]
+test	npm の依存を入れる	﻿2026-11-28T17:34:28.0583262Z ##[group]Run npm ci
+test	npm の依存を入れる	2026-11-28T17:34:28.0583579Z ^[[36;1mnpm ci^[[0m
+test	npm の依存を入れる	2026-11-28T17:34:28.0628759Z shell: /usr/bin/bash -e {0}
+test	npm の依存を入れる	2026-11-28T17:34:28.0629065Z ##[endgroup]
+test	npm の依存を入れる	2026-11-28T17:35:29.5499161Z 
+test	npm の依存を入れる	2026-11-28T17:35:29.5514158Z > prepare
+test	npm の依存を入れる	2026-11-28T17:35:29.5514572Z > lefthook install
+test	npm の依存を入れる	2026-11-28T17:35:29.5515305Z 
+test	npm の依存を入れる	2026-11-28T17:35:29.6031543Z sync hooks: ✔️(pre-commit)
+test	npm の依存を入れる	2026-11-28T17:35:29.6620206Z 
+test	npm の依存を入れる	2026-11-28T17:35:29.6620773Z added 651 packages, and audited 652 packages in 1m
+test	npm の依存を入れる	2026-11-28T17:35:29.6621211Z 
+test	npm の依存を入れる	2026-11-28T17:35:29.6622350Z 236 packages are looking for funding
+test	npm の依存を入れる	2026-11-28T17:35:29.6623023Z   run `npm fund` for details
+test	npm の依存を入れる	2026-11-28T17:35:29.8531873Z 
+test	npm の依存を入れる	2026-11-28T17:35:29.8532774Z 12 moderate severity vulnerabilities
+test	npm の依存を入れる	2026-11-28T17:35:29.8533254Z 
+test	npm の依存を入れる	2026-11-28T17:35:29.8533655Z To address issues that do not require attention, run:
+test	npm の依存を入れる	2026-11-28T17:35:29.8534266Z   npm audit fix
+test	npm の依存を入れる	2026-11-28T17:35:29.8534507Z 
+test	npm の依存を入れる	2026-11-28T17:35:29.8535277Z To address all issues (including breaking changes), run:
+test	npm の依存を入れる	2026-11-28T17:35:29.8536044Z   npm audit fix --force
+test	npm の依存を入れる	2026-11-28T17:35:29.8536331Z 
+test	npm の依存を入れる	2026-11-28T17:35:29.8536585Z Run `npm audit` for details.
+test	npm の依存を入れる	2026-11-28T17:35:29.8544509Z npm warn install-scripts 3 packages have install scripts not yet covered by allowScripts:
+test	npm の依存を入れる	2026-11-28T17:35:29.8546220Z npm warn install-scripts   esbuild@0.28.2 (postinstall: node install.js)
+test	npm の依存を入れる	2026-11-28T17:35:29.8547675Z npm warn install-scripts   lefthook@2.2.2 (postinstall: node postinstall.js)
+test	npm の依存を入れる	2026-11-28T17:35:29.8549164Z npm warn install-scripts   unrs-resolver@1.12.2 (postinstall: node postinstall.js)
+test	npm の依存を入れる	2026-11-28T17:35:29.8550279Z npm warn install-scripts
+test	npm の依存を入れる	2026-11-28T17:35:29.8551730Z npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+test	Chromium を入れる	﻿2026-11-28T17:35:29.9662733Z ##[group]Run npx playwright install --with-deps chromium
+test	Chromium を入れる	2026-11-28T17:35:29.9663198Z ^[[36;1mnpx playwright install --with-deps chromium^[[0m
+test	Chromium を入れる	2026-11-28T17:35:29.9694352Z shell: /usr/bin/bash -e {0}
+test	Chromium を入れる	2026-11-28T17:35:29.9694611Z ##[endgroup]
+test	Chromium を入れる	2026-11-28T17:35:30.7231944Z Installing dependencies...
+test	Chromium を入れる	2026-11-28T17:35:30.7316579Z Switching to root user to install dependencies...
+test	Chromium を入れる	2026-11-28T17:35:30.8235895Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+test	Chromium を入れる	2026-11-28T17:35:30.8614633Z Hit:2 http://azure.archive.ubuntu.com/ubuntu resolute InRelease
+test	Chromium を入れる	2026-11-28T17:35:30.8616111Z Get:6 https://packages.microsoft.com/ubuntu/26.04/prod resolute InRelease [3964 B]
+test	Chromium を入れる	2026-11-28T17:35:30.8696399Z Get:3 http://azure.archive.ubuntu.com/ubuntu resolute-updates InRelease [137 kB]
+test	Chromium を入れる	2026-11-28T17:35:30.8716048Z Get:4 http://azure.archive.ubuntu.com/ubuntu resolute-backports InRelease [137 kB]
+test	Chromium を入れる	2026-11-28T17:35:30.8763450Z Get:5 http://azure.archive.ubuntu.com/ubuntu resolute-security InRelease [137 kB]
+test	Chromium を入れる	2026-11-28T17:35:30.9004362Z Get:7 https://packages.microsoft.com/ubuntu/26.04/prod resolute/main amd64 Packages [192 kB]
+test	Chromium を入れる	2026-11-28T17:35:30.9216136Z Get:8 http://azure.archive.ubuntu.com/ubuntu resolute-updates/main amd64v3 Packages [928 kB]
+test	Chromium を入れる	2026-11-28T17:35:30.9246003Z Get:14 https://packages.microsoft.com/ubuntu/26.04/prod resolute/main arm64 Packages [178 kB]
+test	Chromium を入れる	2026-11-28T17:35:30.9315704Z Get:9 http://azure.archive.ubuntu.com/ubuntu resolute-updates/main Translation-en [205 kB]
+test	Chromium を入れる	2026-11-28T17:35:30.9317307Z Get:10 http://azure.archive.ubuntu.com/ubuntu resolute-updates/universe amd64v3 Packages [402 kB]
+test	Chromium を入れる	2026-11-28T17:35:30.9399762Z Get:11 http://azure.archive.ubuntu.com/ubuntu resolute-updates/universe Translation-en [127 kB]
+test	Chromium を入れる	2026-11-28T17:35:30.9401242Z Get:12 http://azure.archive.ubuntu.com/ubuntu resolute-updates/restricted amd64v3 Packages [640 kB]
+test	Chromium を入れる	2026-11-28T17:35:30.9437747Z Get:13 http://azure.archive.ubuntu.com/ubuntu resolute-updates/restricted Translation-en [132 kB]
+test	Chromium を入れる	2026-11-28T17:35:30.9548607Z Get:15 http://azure.archive.ubuntu.com/ubuntu resolute-security/main amd64v3 Packages [765 kB]
+test	Chromium を入れる	2026-11-28T17:35:30.9595384Z Get:16 http://azure.archive.ubuntu.com/ubuntu resolute-security/main Translation-en [165 kB]
+test	Chromium を入れる	2026-11-28T17:35:30.9625361Z Get:17 http://azure.archive.ubuntu.com/ubuntu resolute-security/universe amd64v3 Packages [229 kB]
+test	Chromium を入れる	2026-11-28T17:35:30.9653472Z Get:18 http://azure.archive.ubuntu.com/ubuntu resolute-security/universe Translation-en [74.4 kB]
+test	Chromium を入れる	2026-11-28T17:35:31.0109160Z Get:19 http://azure.archive.ubuntu.com/ubuntu resolute-security/restricted amd64v3 Packages [618 kB]
+test	Chromium を入れる	2026-11-28T17:35:31.0139434Z Get:20 http://azure.archive.ubuntu.com/ubuntu resolute-security/restricted Translation-en [128 kB]
+test	Chromium を入れる	2026-11-28T17:35:34.2418846Z Fetched 5199 kB in 0s (11.7 MB/s)
+test	Chromium を入れる	2026-11-28T17:35:34.9140478Z Reading package lists...
+test	Chromium を入れる	2026-11-28T17:35:34.9408908Z Reading package lists...
+test	Chromium を入れる	2026-11-28T17:35:35.1010016Z Building dependency tree...
+test	Chromium を入れる	2026-11-28T17:35:35.1017633Z Reading state information...
+test	Chromium を入れる	2026-11-28T17:35:35.1326380Z libatk-bridge2.0-0t64 is already the newest version (2.60.4-0ubuntu0.1).
+test	Chromium を入れる	2026-11-28T17:35:35.1327238Z libatk-bridge2.0-0t64 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1327973Z libatk1.0-0t64 is already the newest version (2.60.4-0ubuntu0.1).
+test	Chromium を入れる	2026-11-28T17:35:35.1328511Z libatk1.0-0t64 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1329155Z libatspi2.0-0t64 is already the newest version (2.60.4-0ubuntu0.1).
+test	Chromium を入れる	2026-11-28T17:35:35.1329757Z libatspi2.0-0t64 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1330263Z libcairo2 is already the newest version (1.18.4-3).
+test	Chromium を入れる	2026-11-28T17:35:35.1330734Z libcairo2 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1331517Z libcups2t64 is already the newest version (2.4.16-1ubuntu1.3).
+test	Chromium を入れる	2026-11-28T17:35:35.1332389Z libcups2t64 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1333046Z libdbus-1-3 is already the newest version (1.16.2-2ubuntu4).
+test	Chromium を入れる	2026-11-28T17:35:35.1333831Z libdbus-1-3 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1334506Z libdrm2 is already the newest version (2.4.131-1).
+test	Chromium を入れる	2026-11-28T17:35:35.1336260Z libdrm2 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1337047Z libgbm1 is already the newest version (26.0.8-1ubuntu0.3).
+test	Chromium を入れる	2026-11-28T17:35:35.1337865Z libgbm1 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1338700Z libglib2.0-0t64 is already the newest version (2.88.0-1ubuntu0.1).
+test	Chromium を入れる	2026-11-28T17:35:35.1339594Z libglib2.0-0t64 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1340520Z libnspr4 is already the newest version (2:4.38.2-1ubuntu1).
+test	Chromium を入れる	2026-11-28T17:35:35.1341410Z libnspr4 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1342367Z libnss3 is already the newest version (2:3.120-1ubuntu2.2).
+test	Chromium を入れる	2026-11-28T17:35:35.1343144Z libnss3 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1343854Z libpango-1.0-0 is already the newest version (1.57.0-1).
+test	Chromium を入れる	2026-11-28T17:35:35.1344553Z libpango-1.0-0 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1345537Z libx11-6 is already the newest version (2:1.8.13-1ubuntu0.1).
+test	Chromium を入れる	2026-11-28T17:35:35.1346238Z libx11-6 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1346941Z libxcb1 is already the newest version (1.17.0-2ubuntu1).
+test	Chromium を入れる	2026-11-28T17:35:35.1347633Z libxcb1 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1348371Z libxcomposite1 is already the newest version (1:0.4.6-1build1).
+test	Chromium を入れる	2026-11-28T17:35:35.1349134Z libxcomposite1 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1349867Z libxdamage1 is already the newest version (1:1.1.7-1).
+test	Chromium を入れる	2026-11-28T17:35:35.1350528Z libxdamage1 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1351254Z libxext6 is already the newest version (2:1.3.4-1build3).
+test	Chromium を入れる	2026-11-28T17:35:35.1351952Z libxext6 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1352711Z libxfixes3 is already the newest version (1:6.0.0-2build2).
+test	Chromium を入れる	2026-11-28T17:35:35.1353406Z libxfixes3 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1354129Z libxkbcommon0 is already the newest version (1.13.1-1).
+test	Chromium を入れる	2026-11-28T17:35:35.1355028Z libxkbcommon0 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1355816Z libxrandr2 is already the newest version (2:1.5.4-1build1).
+test	Chromium を入れる	2026-11-28T17:35:35.1356577Z libxrandr2 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1357325Z xvfb is already the newest version (2:21.1.22-1ubuntu1.3).
+test	Chromium を入れる	2026-11-28T17:35:35.1358282Z fonts-noto-color-emoji is already the newest version (2.051-1build1).
+test	Chromium を入れる	2026-11-28T17:35:35.1359274Z libfontconfig1 is already the newest version (2.17.1-3ubuntu1).
+test	Chromium を入れる	2026-11-28T17:35:35.1360045Z libfontconfig1 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1360880Z libfreetype6 is already the newest version (2.14.2+dfsg-1ubuntu0.2).
+test	Chromium を入れる	2026-11-28T17:35:35.1361634Z libfreetype6 set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1362425Z fonts-liberation is already the newest version (1:2.1.5-3build1).
+test	Chromium を入れる	2026-11-28T17:35:35.1363218Z fonts-liberation set to manually installed.
+test	Chromium を入れる	2026-11-28T17:35:35.1869164Z Solving dependencies...
+test	Chromium を入れる	2026-11-28T17:35:35.2685189Z The following additional packages will be installed:
+test	Chromium を入れる	2026-11-28T17:35:35.2691224Z   libasound2-data xfonts-encodings xfonts-utils
+test	Chromium を入れる	2026-11-28T17:35:35.2697799Z Recommended packages:
+test	Chromium を入れる	2026-11-28T17:35:35.2698190Z   fonts-ipafont-mincho fonts-tlwg-loma
+test	Chromium を入れる	2026-11-28T17:35:35.2922623Z The following NEW packages will be installed:
+test	Chromium を入れる	2026-11-28T17:35:35.2923251Z   fonts-freefont-ttf fonts-ipafont-gothic fonts-tlwg-loma-otf fonts-unifont
+test	Chromium を入れる	2026-11-28T17:35:35.2928866Z   fonts-wqy-zenhei xfonts-cyrillic xfonts-encodings xfonts-scalable
+test	Chromium を入れる	2026-11-28T17:35:35.2929322Z   xfonts-utils
+test	Chromium を入れる	2026-11-28T17:35:35.2932851Z The following packages will be upgraded:
+test	Chromium を入れる	2026-11-28T17:35:35.2938172Z   libasound2-data libasound2t64
+test	Chromium を入れる	2026-11-28T17:35:35.3137404Z 2 upgraded, 9 newly installed, 0 to remove and 36 not upgraded.
+test	Chromium を入れる	2026-11-28T17:35:35.3138153Z Need to get 22.3 MB of archives.
+test	Chromium を入れる	2026-11-28T17:35:35.3138893Z After this operation, 80.2 MB of additional disk space will be used.
+test	Chromium を入れる	2026-11-28T17:35:35.3139721Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+test	Chromium を入れる	2026-11-28T17:35:35.3333928Z Get:2 http://azure.archive.ubuntu.com/ubuntu resolute/universe amd64v3 fonts-ipafont-gothic all 00303-23ubuntu1 [3703 kB]
+test	Chromium を入れる	2026-11-28T17:35:35.4142801Z Get:3 http://azure.archive.ubuntu.com/ubuntu resolute/main amd64v3 fonts-freefont-ttf all 20211204+svn4273-4build1 [5656 kB]
+test	Chromium を入れる	2026-11-28T17:35:35.5276258Z Get:4 http://azure.archive.ubuntu.com/ubuntu resolute/universe amd64v3 fonts-tlwg-loma-otf all 1:0.7.3-1build1 [106 kB]
+test	Chromium を入れる	2026-11-28T17:35:35.5293042Z Get:5 http://azure.archive.ubuntu.com/ubuntu resolute/universe amd64v3 fonts-unifont all 1:16.0.04-1build1 [3169 kB]
+test	Chromium を入れる	2026-11-28T17:35:35.5884210Z Get:6 http://azure.archive.ubuntu.com/ubuntu resolute/universe amd64v3 fonts-wqy-zenhei all 0.9.45-8build1 [7863 kB]
+test	Chromium を入れる	2026-11-28T17:35:35.7524481Z Get:7 http://azure.archive.ubuntu.com/ubuntu resolute-updates/main amd64v3 libasound2t64 amd64 1.2.15.3-1ubuntu1.2 [418 kB]
+test	Chromium を入れる	2026-11-28T17:35:35.7567242Z Get:8 http://azure.archive.ubuntu.com/ubuntu resolute-updates/main amd64v3 libasound2-data all 1.2.15.3-1ubuntu1.2 [19.7 kB]
+test	Chromium を入れる	2026-11-28T17:35:35.7575560Z Get:9 http://azure.archive.ubuntu.com/ubuntu resolute/main amd64v3 xfonts-encodings all 1:1.0.5-0ubuntu3 [576 kB]
+test	Chromium を入れる	2026-11-28T17:35:35.7638925Z Get:10 http://azure.archive.ubuntu.com/ubuntu resolute/main amd64v3 xfonts-utils amd64 1:7.7+7build1 [97.3 kB]
+test	Chromium を入れる	2026-11-28T17:35:35.7653362Z Get:11 http://azure.archive.ubuntu.com/ubuntu resolute/universe amd64v3 xfonts-cyrillic all 1:1.0.5+nmu1build1 [384 kB]
+test	Chromium を入れる	2026-11-28T17:35:35.7695360Z Get:12 http://azure.archive.ubuntu.com/ubuntu resolute/universe amd64v3 xfonts-scalable all 1:1.0.3-1.3build1 [304 kB]
+test	Chromium を入れる	2026-11-28T17:35:36.0974128Z Fetched 22.3 MB in 0s (47.3 MB/s)
+test	Chromium を入れる	2026-11-28T17:35:36.1205449Z Selecting previously unselected package fonts-ipafont-gothic.
+test	Chromium を入れる	2026-11-28T17:35:36.1500923Z (Reading database ... 
+test	Chromium を入れる	2026-11-28T17:35:36.1501346Z (Reading database ... 5%
+test	Chromium を入れる	2026-11-28T17:35:36.1501753Z (Reading database ... 10%
+test	Chromium を入れる	2026-11-28T17:35:36.1502121Z (Reading database ... 15%
+test	Chromium を入れる	2026-11-28T17:35:36.1502386Z (Reading database ... 20%
+test	Chromium を入れる	2026-11-28T17:35:36.1502627Z (Reading database ... 25%
+test	Chromium を入れる	2026-11-28T17:35:36.1502862Z (Reading database ... 30%
+test	Chromium を入れる	2026-11-28T17:35:36.1503436Z (Reading database ... 35%
+test	Chromium を入れる	2026-11-28T17:35:36.1503739Z (Reading database ... 40%
+test	Chromium を入れる	2026-11-28T17:35:36.1503977Z (Reading database ... 45%
+test	Chromium を入れる	2026-11-28T17:35:36.1504212Z (Reading database ... 50%
+test	Chromium を入れる	2026-11-28T17:35:36.1848603Z (Reading database ... 55%
+test	Chromium を入れる	2026-11-28T17:35:36.2269715Z (Reading database ... 60%
+test	Chromium を入れる	2026-11-28T17:35:36.2665694Z (Reading database ... 65%
+test	Chromium を入れる	2026-11-28T17:35:36.3030733Z (Reading database ... 70%
+test	Chromium を入れる	2026-11-28T17:35:36.3552570Z (Reading database ... 75%
+test	Chromium を入れる	2026-11-28T17:35:36.4575913Z (Reading database ... 80%
+test	Chromium を入れる	2026-11-28T17:35:36.6305206Z (Reading database ... 85%
+test	Chromium を入れる	2026-11-28T17:35:36.7813211Z (Reading database ... 90%
+test	Chromium を入れる	2026-11-28T17:35:36.9477490Z (Reading database ... 95%
+test	Chromium を入れる	2026-11-28T17:35:36.9477988Z (Reading database ... 100%
+test	Chromium を入れる	2026-11-28T17:35:36.9478631Z (Reading database ... 214389 files and directories currently installed.)
+test	Chromium を入れる	2026-11-28T17:35:36.9518908Z Preparing to unpack .../00-fonts-ipafont-gothic_00303-23ubuntu1_all.deb ...
+test	Chromium を入れる	2026-11-28T17:35:36.9615060Z Unpacking fonts-ipafont-gothic (00303-23ubuntu1) ...
+test	Chromium を入れる	2026-11-28T17:35:37.0284616Z Selecting previously unselected package fonts-freefont-ttf.
+test	Chromium を入れる	2026-11-28T17:35:37.0417977Z Preparing to unpack .../01-fonts-freefont-ttf_20211204+svn4273-4build1_all.deb ...
+test	Chromium を入れる	2026-11-28T17:35:37.0424923Z Unpacking fonts-freefont-ttf (20211204+svn4273-4build1) ...
+test	Chromium を入れる	2026-11-28T17:35:37.1242732Z Selecting previously unselected package fonts-tlwg-loma-otf.
+test	Chromium を入れる	2026-11-28T17:35:37.1380815Z Preparing to unpack .../02-fonts-tlwg-loma-otf_1%3a0.7.3-1build1_all.deb ...
+test	Chromium を入れる	2026-11-28T17:35:37.1387861Z Unpacking fonts-tlwg-loma-otf (1:0.7.3-1build1) ...
+test	Chromium を入れる	2026-11-28T17:35:37.1625430Z Selecting previously unselected package fonts-unifont.
+test	Chromium を入れる	2026-11-28T17:35:37.1760011Z Preparing to unpack .../03-fonts-unifont_1%3a16.0.04-1build1_all.deb ...
+test	Chromium を入れる	2026-11-28T17:35:37.1767523Z Unpacking fonts-unifont (1:16.0.04-1build1) ...
+test	Chromium を入れる	2026-11-28T17:35:37.2832878Z Selecting previously unselected package fonts-wqy-zenhei.
+test	Chromium を入れる	2026-11-28T17:35:37.2967660Z Preparing to unpack .../04-fonts-wqy-zenhei_0.9.45-8build1_all.deb ...
+test	Chromium を入れる	2026-11-28T17:35:37.3108775Z Unpacking fonts-wqy-zenhei (0.9.45-8build1) ...
+test	Chromium を入れる	2026-11-28T17:35:37.4127474Z Preparing to unpack .../05-libasound2t64_1.2.15.3-1ubuntu1.2_amd64v3.deb ...
+test	Chromium を入れる	2026-11-28T17:35:37.4166809Z Unpacking libasound2t64:amd64 (1.2.15.3-1ubuntu1.2) over (1.2.15.3-1ubuntu1.1) ...
+test	Chromium を入れる	2026-11-28T17:35:37.4637632Z Preparing to unpack .../06-libasound2-data_1.2.15.3-1ubuntu1.2_all.deb ...
+test	Chromium を入れる	2026-11-28T17:35:37.4662093Z Unpacking libasound2-data (1.2.15.3-1ubuntu1.2) over (1.2.15.3-1ubuntu1.1) ...
+test	Chromium を入れる	2026-11-28T17:35:37.5057980Z Selecting previously unselected package xfonts-encodings.
+test	Chromium を入れる	2026-11-28T17:35:37.5191837Z Preparing to unpack .../07-xfonts-encodings_1%3a1.0.5-0ubuntu3_all.deb ...
+test	Chromium を入れる	2026-11-28T17:35:37.5200571Z Unpacking xfonts-encodings (1:1.0.5-0ubuntu3) ...
+test	Chromium を入れる	2026-11-28T17:35:37.5483156Z Selecting previously unselected package xfonts-utils.
+test	Chromium を入れる	2026-11-28T17:35:37.5618270Z Preparing to unpack .../08-xfonts-utils_1%3a7.7+7build1_amd64v3.deb ...
+test	Chromium を入れる	2026-11-28T17:35:37.5635152Z Unpacking xfonts-utils (1:7.7+7build1) ...
+test	Chromium を入れる	2026-11-28T17:35:37.5974118Z Selecting previously unselected package xfonts-cyrillic.
+test	Chromium を入れる	2026-11-28T17:35:37.6108200Z Preparing to unpack .../09-xfonts-cyrillic_1%3a1.0.5+nmu1build1_all.deb ...
+test	Chromium を入れる	2026-11-28T17:35:37.6115311Z Unpacking xfonts-cyrillic (1:1.0.5+nmu1build1) ...
+test	Chromium を入れる	2026-11-28T17:35:37.6444146Z Selecting previously unselected package xfonts-scalable.
+test	Chromium を入れる	2026-11-28T17:35:37.6583570Z Preparing to unpack .../10-xfonts-scalable_1%3a1.0.3-1.3build1_all.deb ...
+test	Chromium を入れる	2026-11-28T17:35:37.6590689Z Unpacking xfonts-scalable (1:1.0.3-1.3build1) ...
+test	Chromium を入れる	2026-11-28T17:35:37.7077604Z Setting up fonts-wqy-zenhei (0.9.45-8build1) ...
+test	Chromium を入れる	2026-11-28T17:35:37.7226860Z Setting up fonts-freefont-ttf (20211204+svn4273-4build1) ...
+test	Chromium を入れる	2026-11-28T17:35:37.7245007Z Setting up libasound2-data (1.2.15.3-1ubuntu1.2) ...
+test	Chromium を入れる	2026-11-28T17:35:37.7263406Z Setting up libasound2t64:amd64 (1.2.15.3-1ubuntu1.2) ...
+test	Chromium を入れる	2026-11-28T17:35:37.7282223Z Setting up fonts-tlwg-loma-otf (1:0.7.3-1build1) ...
+test	Chromium を入れる	2026-11-28T17:35:37.7301088Z Setting up xfonts-encodings (1:1.0.5-0ubuntu3) ...
+test	Chromium を入れる	2026-11-28T17:35:37.7320525Z Setting up fonts-ipafont-gothic (00303-23ubuntu1) ...
+test	Chromium を入れる	2026-11-28T17:35:37.7381760Z update-alternatives: using /usr/share/fonts/opentype/ipafont-gothic/ipag.ttf to provide /usr/share/fonts/truetype/fonts-japanese-gothic.ttf (fonts-japanese-gothic.ttf) in auto mode
+test	Chromium を入れる	2026-11-28T17:35:37.7396807Z Setting up fonts-unifont (1:16.0.04-1build1) ...
+test	Chromium を入れる	2026-11-28T17:35:37.7414582Z Setting up xfonts-utils (1:7.7+7build1) ...
+test	Chromium を入れる	2026-11-28T17:35:37.7466475Z Setting up xfonts-cyrillic (1:1.0.5+nmu1build1) ...
+test	Chromium を入れる	2026-11-28T17:35:37.7908427Z Setting up xfonts-scalable (1:1.0.3-1.3build1) ...
+test	Chromium を入れる	2026-11-28T17:35:37.8310729Z Processing triggers for libc-bin (2.43-2ubuntu2.7) ...
+test	Chromium を入れる	2026-11-28T17:35:37.8595076Z Processing triggers for man-db (2.13.1-1build1) ...
+test	Chromium を入れる	2026-11-28T17:35:37.8615719Z Not building database; man-db/auto-update is not 'true'.
+test	Chromium を入れる	2026-11-28T17:35:37.8627035Z Processing triggers for fontconfig (2.17.1-3ubuntu1) ...
+test	Chromium を入れる	2026-11-28T17:35:38.5991871Z 
+test	Chromium を入れる	2026-11-28T17:35:38.5992630Z Running kernel seems to be up-to-date.
+test	Chromium を入れる	2026-11-28T17:35:38.5993178Z 
+test	Chromium を入れる	2026-11-28T17:35:38.5993424Z Restarting services...
+test	Chromium を入れる	2026-11-28T17:35:38.6081784Z 
+test	Chromium を入れる	2026-11-28T17:35:38.6082520Z Service restarts being deferred:
+test	Chromium を入れる	2026-11-28T17:35:38.6086582Z  systemctl restart hosted-compute-agent.service
+test	Chromium を入れる	2026-11-28T17:35:38.6086885Z 
+test	Chromium を入れる	2026-11-28T17:35:38.6087664Z No containers need to be restarted.
+test	Chromium を入れる	2026-11-28T17:35:38.6087925Z 
+test	Chromium を入れる	2026-11-28T17:35:38.6088238Z No user sessions are running outdated binaries.
+test	Chromium を入れる	2026-11-28T17:35:38.6088462Z 
+test	Chromium を入れる	2026-11-28T17:35:38.6088812Z No VM guests are running outdated hypervisor (qemu) binaries on this host.
+test	Chromium を入れる	2026-11-28T17:35:39.4317357Z Downloading Chrome for Testing 156.0.8078.4 (playwright chromium v1248) from https://cdn.playwright.dev/builds/cft/156.0.8078.4/linux64/chrome-linux64.zip
+test	Chromium を入れる	2026-11-28T17:35:39.8699738Z |                                                                                |   0% of 191.1 MiB
+test	Chromium を入れる	2026-11-28T17:35:40.0596099Z |■■■■■■■■                                                                        |  10% of 191.1 MiB
+test	Chromium を入れる	2026-11-28T17:35:40.2024351Z |■■■■■■■■■■■■■■■■                                                                |  20% of 191.1 MiB
+test	Chromium を入れる	2026-11-28T17:35:40.3345276Z |■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 191.1 MiB
+test	Chromium を入れる	2026-11-28T17:35:40.4590470Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 191.1 MiB
+test	Chromium を入れる	2026-11-28T17:35:40.6263859Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 191.1 MiB
+test	Chromium を入れる	2026-11-28T17:35:40.7829946Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 191.1 MiB
+test	Chromium を入れる	2026-11-28T17:35:40.8920498Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 191.1 MiB
+test	Chromium を入れる	2026-11-28T17:35:41.0357192Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 191.1 MiB
+test	Chromium を入れる	2026-11-28T17:35:41.1429709Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 191.1 MiB
+test	Chromium を入れる	2026-11-28T17:35:41.3291528Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 191.1 MiB
+test	Chromium を入れる	2026-11-28T17:35:44.2713074Z Chrome for Testing 156.0.8078.4 (playwright chromium v1248) downloaded to /home/runner/.cache/ms-playwright/chromium-1248
+test	Chromium を入れる	2026-11-28T17:35:44.2717930Z Downloading FFmpeg (playwright ffmpeg v1013) from https://cdn.playwright.dev/dbazure/download/playwright/builds/ffmpeg/1013/ffmpeg-linux.zip
+test	Chromium を入れる	2026-11-28T17:35:44.6245943Z |                                                                                |   0% of 2.2 MiB
+test	Chromium を入れる	2026-11-28T17:35:44.6301528Z |■■■■■■■■                                                                        |  10% of 2.2 MiB
+test	Chromium を入れる	2026-11-28T17:35:44.6315169Z |■■■■■■■■■■■■■■■■                                                                |  20% of 2.2 MiB
+test	Chromium を入れる	2026-11-28T17:35:44.6330576Z |■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 2.2 MiB
+test	Chromium を入れる	2026-11-28T17:35:44.6343678Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 2.2 MiB
+test	Chromium を入れる	2026-11-28T17:35:44.6361498Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 2.2 MiB
+test	Chromium を入れる	2026-11-28T17:35:44.6374324Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 2.2 MiB
+test	Chromium を入れる	2026-11-28T17:35:44.6392988Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 2.2 MiB
+test	Chromium を入れる	2026-11-28T17:35:44.6404158Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 2.2 MiB
+test	Chromium を入れる	2026-11-28T17:35:44.6423699Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 2.2 MiB
+test	Chromium を入れる	2026-11-28T17:35:44.6428395Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 2.2 MiB
+test	Chromium を入れる	2026-11-28T17:35:44.7011347Z FFmpeg (playwright ffmpeg v1013) downloaded to /home/runner/.cache/ms-playwright/ffmpeg-1013
+test	Chromium を入れる	2026-11-28T17:35:44.7014410Z Downloading Chrome Headless Shell 156.0.8078.4 (playwright chromium-headless-shell v1248) from https://cdn.playwright.dev/builds/cft/156.0.8078.4/linux64/chrome-headless-shell-linux64.zip
+test	Chromium を入れる	2026-11-28T17:35:45.1165378Z |                                                                                |   0% of 120 MiB
+test	Chromium を入れる	2026-11-28T17:35:45.2265758Z |■■■■■■■■                                                                        |  10% of 120 MiB
+test	Chromium を入れる	2026-11-28T17:35:45.3019357Z |■■■■■■■■■■■■■■■■                                                                |  20% of 120 MiB
+test	Chromium を入れる	2026-11-28T17:35:45.3624300Z |■■■■■■■■■■■■■■■■■■■■■■■■                                                        |  30% of 120 MiB
+test	Chromium を入れる	2026-11-28T17:35:45.4474360Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                                |  40% of 120 MiB
+test	Chromium を入れる	2026-11-28T17:35:45.5121245Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                        |  50% of 120 MiB
+test	Chromium を入れる	2026-11-28T17:35:45.5876089Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                                |  60% of 120 MiB
+test	Chromium を入れる	2026-11-28T17:35:45.6595407Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                        |  70% of 120 MiB
+test	Chromium を入れる	2026-11-28T17:35:45.7249620Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■                |  80% of 120 MiB
+test	Chromium を入れる	2026-11-28T17:35:45.7897446Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■        |  90% of 120 MiB
+test	Chromium を入れる	2026-11-28T17:35:45.8540985Z |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■| 100% of 120 MiB
+test	Chromium を入れる	2026-11-28T17:35:47.9934077Z Chrome Headless Shell 156.0.8078.4 (playwright chromium-headless-shell v1248) downloaded to /home/runner/.cache/ms-playwright/chromium_headless_shell-1248
+test	層の全件を回す	﻿2026-11-28T17:35:48.0317252Z ##[group]Run : > test.log
+test	層の全件を回す	2026-11-28T17:35:48.0317752Z ^[[36;1m: > test.log^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0318148Z ^[[36;1m# 結果の行を test.log と step の標準出力の両方に出す^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0318665Z ^[[36;1msay() { echo "$1" | tee -a test.log; }^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0319179Z ^[[36;1mcase "$LAYER" in^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0319576Z ^[[36;1m  backend-unit) limit=7 ;;^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0320140Z ^[[36;1m  backend-integration) limit=62; dir=tests/integration/ ;;^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0320705Z ^[[36;1m  frontend-unit) limit=19 ;;^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0321277Z ^[[36;1m  frontend-integration) limit=75; dir=tests/integration/frontend/ ;;^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0321871Z ^[[36;1mesac^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0322209Z ^[[36;1m# paths は結合テストの層の、層の結合テストのフォルダの下のパスだけを受け付ける^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0322652Z ^[[36;1mif [ -n "$PATHS" ]; then^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0323034Z ^[[36;1m  if [ -z "${dir:-}" ]; then^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0323508Z ^[[36;1m    say "paths は結合テストの層でだけ指定できる: layer=$LAYER"^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0323941Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0324273Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0324872Z ^[[36;1m  if ! printf '%s' "$PATHS" | grep -Eq '^[A-Za-z0-9_./ -]+$'; then^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0325608Z ^[[36;1m    say "paths に許可しない文字がある（英数字・_・.・/・-・空白だけを許可する）: $PATHS"^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0326373Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0326706Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0327033Z ^[[36;1m  for p in $PATHS; do^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0327441Z ^[[36;1m    case "$p" in^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0327875Z ^[[36;1m      *..*) say "paths の値が .. を含む: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0328351Z ^[[36;1m    esac^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0328679Z ^[[36;1m    case "$p" in^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0329042Z ^[[36;1m      "$dir"*) ;;^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0329519Z ^[[36;1m      *) say "paths の値が層の結合テストのフォルダ（$dir）の外: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0330053Z ^[[36;1m    esac^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0330451Z ^[[36;1m    if [ "$LAYER" = backend-integration ]; then^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0330953Z ^[[36;1m      case "$p" in^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0331874Z ^[[36;1m        tests/integration/frontend/*) say "paths の値が層の結合テストのフォルダの外（tests/integration/frontend/ は frontend-integration の層）: $p"; exit 1 ;;^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0332852Z ^[[36;1m      esac^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0333205Z ^[[36;1m    fi^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0333501Z ^[[36;1m  done^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0333812Z ^[[36;1mfi^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0334036Z ^[[36;1mcase "$LAYER" in^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0334348Z ^[[36;1m  backend-unit) cmd="uv run pytest tests/unit/ -v" ;;^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0335048Z ^[[36;1m  backend-integration) cmd="uv run pytest ${PATHS:-$dir} -v" ;;^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0335668Z ^[[36;1m  frontend-unit) cmd="npx vitest run --config frontend/vitest.config.ts --reporter=verbose" ;;^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0336446Z ^[[36;1m  frontend-integration) cmd="npx playwright test --config tests/integration/frontend/playwright.config.ts $PATHS" ;;^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0336998Z ^[[36;1mesac^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0337229Z ^[[36;1m# テストを裏で起動し、出力を test.log と step の標準出力の両方に出す^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0337645Z ^[[36;1msetsid -w bash -c "set -o pipefail; $cmd 2>&1 | tee -a test.log" &^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0338008Z ^[[36;1mpid=$!^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0338198Z ^[[36;1mlast=-1^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0338396Z ^[[36;1midle=0^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0338628Z ^[[36;1m# test.log の大きさを 1 秒ごとに確認し、無出力の時間が上限を超えたらテストを止める^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0338960Z ^[[36;1mwhile kill -0 "$pid" 2> /dev/null; do^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0339230Z ^[[36;1m  sleep 1^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0339444Z ^[[36;1m  size=$(stat -c %s test.log)^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0339710Z ^[[36;1m  if [ "$size" = "$last" ]; then^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0339975Z ^[[36;1m    idle=$((idle + 1))^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0340203Z ^[[36;1m  else^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0340386Z ^[[36;1m    idle=0^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0340582Z ^[[36;1m    last=$size^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0340785Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0340995Z ^[[36;1m  if [ "$idle" -gt "$limit" ]; then^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0341273Z ^[[36;1m    kill -- "-$pid"^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0341741Z ^[[36;1m    say "出力が ${limit} 秒変わらなかったため、テストを止めた"^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0342023Z ^[[36;1m    exit 1^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0342218Z ^[[36;1m  fi^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0342398Z ^[[36;1mdone^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0342709Z ^[[36;1mwait "$pid"^[[0m
+test	層の全件を回す	2026-11-28T17:35:48.0373670Z shell: /usr/bin/bash -e {0}
+test	層の全件を回す	2026-11-28T17:35:48.0373993Z env:
+test	層の全件を回す	2026-11-28T17:35:48.0374235Z   LAYER: frontend-integration
+test	層の全件を回す	2026-11-28T17:35:48.0375672Z   PATHS: tests/integration/frontend/doc-view-screen.spec.ts tests/integration/frontend/metadata-screen.spec.ts tests/integration/frontend/settings-screen.spec.ts tests/integration/frontend/not-found-screen.spec.ts tests/integration/frontend/topbar.spec.ts tests/integration/frontend/pending-panel.spec.ts
+test	層の全件を回す	2026-11-28T17:35:48.0376958Z   PYTHONUNBUFFERED: 1
+test	層の全件を回す	2026-11-28T17:35:48.0377195Z ##[endgroup]
+test	層の全件を回す	2026-11-28T17:35:56.2895483Z 
+test	層の全件を回す	2026-11-28T17:35:56.2903469Z Running 361 tests using 2 workers
+test	層の全件を回す	2026-11-28T17:35:56.2904160Z 
+test	層の全件を回す	2026-11-28T17:35:58.8025273Z   ✓    2 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:137:3 › ページのタイトル › page_title (1.4s)
+test	層の全件を回す	2026-11-28T17:35:58.8363651Z   ✓    1 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:143:3 › ページのタイトル › page_title_when_empty_tab (1.4s)
+test	層の全件を回す	2026-11-28T17:36:00.2776608Z   ✓    3 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:154:3 › 本文へスキップ › skip_link (1.4s)
+test	層の全件を回す	2026-11-28T17:36:00.7759583Z   ✓    4 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:170:3 › トップバー › topbar_source_select (1.9s)
+test	層の全件を回す	2026-11-28T17:36:02.0217581Z   ✓    5 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:178:3 › トップバー › topbar_ref_select (1.7s)
+test	層の全件を回す	2026-11-28T17:36:02.3758829Z   ✓    6 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:186:3 › トップバー › topbar_compare_start_when_default_ref (1.6s)
+test	層の全件を回す	2026-11-28T17:36:03.7149590Z   ✓    7 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:194:3 › トップバー › topbar_compare_start_when_other_ref (1.7s)
+test	層の全件を回す	2026-11-28T17:36:03.7967560Z   ✓    8 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:202:3 › トップバー › topbar_search_open (1.3s)
+test	層の全件を回す	2026-11-28T17:36:05.2809850Z   ✓   10 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:219:3 › トップバー › topbar_sidebar_open (1.5s)
+test	層の全件を回す	2026-11-28T17:36:05.3137058Z   ✓    9 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:209:3 › トップバー › topbar_comment_panel_toggle (1.6s)
+test	層の全件を回す	2026-11-28T17:36:06.7639300Z   ✓   11 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:227:3 › トップバー › topbar_color_scheme_toggle (1.5s)
+test	層の全件を回す	2026-11-28T17:36:06.8640342Z   ✓   12 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:237:3 › トップバー › topbar_sources_from_settings (1.5s)
+test	層の全件を回す	2026-11-28T17:36:08.0151637Z   ✓   13 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:259:3 › 種類のタブ › tabs_order_and_current (1.2s)
+test	層の全件を回す	2026-11-28T17:36:08.5030683Z   ✓   14 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:267:3 › 種類のタブ › tabs_click (1.6s)
+test	層の全件を回す	2026-11-28T17:36:09.3802592Z   ✓   15 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:274:3 › 種類のタブ › tabs_click_when_doc_in_two_tabs (1.3s)
+test	層の全件を回す	2026-11-28T17:36:09.9509991Z   ✓   16 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:289:3 › 種類のタブ › tabs_click_when_empty (1.4s)
+test	層の全件を回す	2026-11-28T17:36:10.6344288Z   ✓   17 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:299:3 › 文書の一覧 › sidebar_groups_and_pages (1.2s)
+test	層の全件を回す	2026-11-28T17:36:11.4887092Z   ✓   18 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:308:3 › 文書の一覧 › sidebar_click_keeps_rev_and_base (1.5s)
+test	層の全件を回す	2026-11-28T17:36:11.9602222Z   ✓   19 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:315:3 › 文書の一覧 › sidebar_click_when_deleted (1.3s)
+test	層の全件を回す	2026-11-28T17:36:12.8015198Z   ✓   20 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:322:3 › 文書の一覧 › sidebar_hidden_when_narrow (1.3s)
+test	層の全件を回す	2026-11-28T17:36:13.4027083Z   ✓   21 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:331:3 › 文書の変化のマーカー › change_markers (1.4s)
+test	層の全件を回す	2026-11-28T17:36:14.0736975Z   ✓   22 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:341:3 › 文書の変化のマーカー › change_markers_without_base (1.3s)
+test	層の全件を回す	2026-11-28T17:36:15.3018049Z   ✓   24 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:360:3 › 文書の一覧のドロワー › drawer_closes_on_escape (1.2s)
+test	層の全件を回す	2026-11-28T17:36:15.4032637Z   ✓   23 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:351:3 › 文書の一覧のドロワー › drawer_closes_on_navigate (2.0s)
+test	層の全件を回す	2026-11-28T17:36:16.7171802Z   ✓   25 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:399:3 › group の開閉ボタン › group_toggle_initial (1.4s)
+test	層の全件を回す	2026-11-28T17:36:16.9755310Z   ✓   26 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:408:3 › group の開閉ボタン › group_toggle_click (1.6s)
+test	層の全件を回す	2026-11-28T17:36:18.1007807Z   ✓   27 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:423:3 › group の開閉ボタン › group_toggle_keyboard (1.4s)
+test	層の全件を回す	2026-11-28T17:36:18.7801184Z   ✓   28 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:434:3 › group の開閉ボタン › group_opens_when_current_changed (1.8s)
+test	層の全件を回す	2026-11-28T17:36:19.8625455Z   ✓   29 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:450:3 › group の開閉ボタン › group_opens_when_change_appeared (1.7s)
+test	層の全件を回す	2026-11-28T17:36:20.1957934Z   ✓   30 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:463:3 › group の開閉ボタン › group_keeps_closed (1.4s)
+test	層の全件を回す	2026-11-28T17:36:21.3148494Z   ✓   31 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:475:3 › group の開閉ボタン › group_nested (1.4s)
+test	層の全件を回す	2026-11-28T17:36:21.8671626Z   ✓   32 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:489:3 › group の開閉ボタン › group_toggle_in_drawer (1.6s)
+test	層の全件を回す	2026-11-28T17:36:22.7672257Z   ✓   33 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:512:3 › サイドバーを閉じるボタン › sidebar_close_button (1.4s)
+test	層の全件を回す	2026-11-28T17:36:23.9490672Z   ✓   35 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:540:3 › サイドバーを閉じるボタン › sidebar_close_hidden_when_narrow (1.2s)
+test	層の全件を回す	2026-11-28T17:36:24.2926695Z   ✓   34 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:524:3 › サイドバーを閉じるボタン › sidebar_close (2.4s)
+test	層の全件を回す	2026-11-28T17:36:25.5689479Z   ✓   37 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:571:3 › サイドバーの境目 › separator_initial (1.3s)
+test	層の全件を回す	2026-11-28T17:36:26.7818028Z   ✓   36 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:550:3 › サイドバーを開くボタン › sidebar_open_restores_width (2.8s)
+test	層の全件を回す	2026-11-28T17:36:28.0607358Z   ✓   38 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:580:3 › サイドバーの境目 › separator_drag (2.5s)
+test	層の全件を回す	2026-11-28T17:36:28.4268547Z   ✓   39 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:599:3 › サイドバーの境目 › separator_drag_range (1.6s)
+test	層の全件を回す	2026-11-28T17:36:29.4656853Z   ✓   40 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:617:3 › サイドバーの境目 › separator_keyboard (1.4s)
+test	層の全件を回す	2026-11-28T17:36:29.9369480Z   ✓   41 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:633:3 › サイドバーの境目 › separator_double_click (1.5s)
+test	層の全件を回す	2026-11-28T17:36:30.7997002Z   ✓   42 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:646:3 › パンくず › breadcrumb (1.3s)
+test	層の全件を回す	2026-11-28T17:36:31.5226951Z   ✓   43 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:655:3 › パンくず › breadcrumb_source_link (1.6s)
+test	層の全件を回す	2026-11-28T17:36:32.2737970Z   ✓   44 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:662:3 › パンくず › breadcrumb_tab_link (1.5s)
+test	層の全件を回す	2026-11-28T17:36:32.9089853Z   ✓   45 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:669:3 › パンくず › breadcrumb_when_nested_group (1.4s)
+test	層の全件を回す	2026-11-28T17:36:33.7236102Z   ✓   46 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:678:3 › パンくず › breadcrumb_when_empty_tab (1.4s)
+test	層の全件を回す	2026-11-28T17:36:34.0957038Z   ✓   47 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:692:3 › 文書のタイトル › doc_title (1.2s)
+test	層の全件を回す	2026-11-28T17:36:35.1323682Z   ✓   48 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:698:3 › 文書のタイトル › doc_title_matches_mdmark_h1 (1.4s)
+test	層の全件を回す	2026-11-28T17:36:35.4967690Z   ✓   49 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:725:3 › 文書の情報 › doc_info (1.4s)
+test	層の全件を回す	2026-11-28T17:36:38.9444178Z   ✓   51 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:754:3 › 読み込み中の表示 › loading_keeps_previous_doc (3.4s)
+test	層の全件を回す	2026-11-28T17:36:38.9887054Z   ✓   50 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:739:3 › 読み込み中の表示 › loading_skeleton (3.8s)
+test	層の全件を回す	2026-11-28T17:36:40.2812248Z   ✓   53 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:783:3 › 差分の案内 › diff_banner_hidden_without_base (1.3s)
+test	層の全件を回す	2026-11-28T17:36:40.4122148Z   ✓   52 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:774:3 › 差分の案内 › diff_banner_visible (1.5s)
+test	層の全件を回す	2026-11-28T17:36:41.6997871Z   ✓   54 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:789:3 › 差分の案内 › diff_banner_hidden_when_non_git (1.4s)
+test	層の全件を回す	2026-11-28T17:36:42.3367220Z   ✓   55 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:802:3 › 比較元の選択 › base_select (1.9s)
+test	層の全件を回す	2026-11-28T17:36:43.2565542Z   ✓   56 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:824:3 › 比較先の選択 › head_select (1.5s)
+test	層の全件を回す	2026-11-28T17:36:43.8004178Z   ✓   57 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:836:3 › 差分の強調を解除 › diff_clear (1.4s)
+test	層の全件を回す	2026-11-28T17:36:44.7069898Z   ✓   58 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:845:3 › 差分の強調を解除 › diff_clear_body (1.4s)
+test	層の全件を回す	2026-11-28T17:36:45.1196910Z   ✓   59 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:860:3 › 文書の本文の差分 › body_diff_highlight (1.3s)
+test	層の全件を回す	2026-11-28T17:36:46.0861453Z   ✓   60 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:867:3 › 文書の本文の差分 › body_diff_highlight_when_block_deleted (1.4s)
+test	層の全件を回す	2026-11-28T17:36:46.4532723Z   ✓   61 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:886:3 › 文書の本文の差分 › body_diff_highlight_without_base (1.3s)
+test	層の全件を回す	2026-11-28T17:36:47.3017940Z   ✓   62 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:901:3 › 変換の失敗 › conversion_error_when_timeout (1.2s)
+test	層の全件を回す	2026-11-28T17:36:47.6460874Z   ✓   63 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:917:3 › 変換の失敗 › conversion_error_when_invalid_yaml (1.2s)
+test	層の全件を回す	2026-11-28T17:36:48.5806691Z   ✓   64 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:934:3 › 再読み込み › reload_button (1.3s)
+test	層の全件を回す	2026-11-28T17:36:48.9537216Z   ✓   65 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:959:3 › 文書が無いことの表示 › empty_tab_message (1.3s)
+test	層の全件を回す	2026-11-28T17:36:50.0906702Z   ✓   66 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:969:3 › 文書が無いことの表示 › empty_tab_message_when_non_git (1.5s)
+test	層の全件を回す	2026-11-28T17:36:50.2852339Z   ✓   67 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:984:3 › 本文 › body_without_first_h1 (1.3s)
+test	層の全件を回す	2026-11-28T17:36:51.5730872Z   ✓   68 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:991:5 › 本文 › body_width_without_upper_limit_1920 (1.5s)
+test	層の全件を回す	2026-11-28T17:36:51.7626293Z   ✓   69 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:991:5 › 本文 › body_width_without_upper_limit_2880 (1.5s)
+test	層の全件を回す	2026-11-28T17:36:53.1397673Z   ✓   71 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1068:3 › 本文 › frame_keeps_preflight (1.4s)
+test	層の全件を回す	2026-11-28T17:36:53.8579497Z   ✓   70 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1006:3 › 本文 › body_without_preflight (2.3s)
+test	層の全件を回す	2026-11-28T17:36:54.3601891Z   ✓   72 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1090:3 › 本文 › body_left_aligned_with_title (1.2s)
+test	層の全件を回す	2026-11-28T17:36:55.4214139Z   ✓   73 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1106:3 › 本文 › body_internal_link (1.5s)
+test	層の全件を回す	2026-11-28T17:36:55.7488703Z   ✓   74 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1120:3 › 本文 › body_external_link (1.4s)
+test	層の全件を回す	2026-11-28T17:36:56.9375012Z   ✓   75 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1134:3 › 本文 › body_mermaid_click_link (1.5s)
+test	層の全件を回す	2026-11-28T17:36:57.2597388Z   ✓   76 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1160:3 › 本文 › body_internal_link_when_missing (1.5s)
+test	層の全件を回す	2026-11-28T17:36:58.4416915Z   ✓   77 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1175:3 › 本文 › body_table_no_pinned_column_initially (1.5s)
+test	層の全件を回す	2026-11-28T17:37:13.6017433Z   ✘   78 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1222:3 › 列の表示のメニュー › columns_menu_visible (16.3s)
+test	層の全件を回す	2026-11-28T17:37:30.3690183Z   ✘   80 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1239:3 › 列の表示のメニュー › columns_menu_hidden_columns (16.1s)
+test	層の全件を回す	2026-11-28T17:37:58.5288064Z   ✘   79 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1230:3 › 列の表示のメニュー › columns_menu_first_column_locked (1.0m)
+test	層の全件を回す	2026-11-28T17:38:31.0791993Z   ✘   81 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1250:3 › 列の表示のメニュー › columns_menu_save (1.0m)
+test	層の全件を回す	2026-11-28T17:38:59.2533475Z   ✘   82 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1266:3 › 列の表示のメニュー › columns_menu_save_failure (1.0m)
+test	層の全件を回す	2026-11-28T17:39:01.0658658Z   ✓   84 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1310:3 › 列の表示のメニュー › columns_menu_json_marker (1.2s)
+test	層の全件を回す	2026-11-28T17:39:02.1025640Z   ✓   85 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1352:3 › 目次 › toc_items (1.0s)
+test	層の全件を回す	2026-11-28T17:39:03.0852571Z   ✓   86 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1361:3 › 目次 › toc_change_marker (964ms)
+test	層の全件を回す	2026-11-28T17:39:04.0248650Z   ✓   87 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1369:3 › 目次 › toc_after_doc_changed (925ms)
+test	層の全件を回す	2026-11-28T17:39:04.8862708Z   ✓   88 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1394:3 › 目次 › toc_hidden_without_headings (844ms)
+test	層の全件を回す	2026-11-28T17:39:05.9475354Z   ✓   89 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1405:3 › 目次 › toc_click (1.0s)
+test	層の全件を回す	2026-11-28T17:39:07.0209168Z   ✓   90 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1438:3 › 目次 › toc_below_tabs_when_scrolled (1.1s)
+test	層の全件を回す	2026-11-28T17:39:08.0605623Z   ✓   91 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1497:5 › 目次 › table_head_below_tabs_when_scrolled (1.0s)
+test	層の全件を回す	2026-11-28T17:39:09.1654331Z   ✓   92 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1497:5 › 目次 › table_head_below_tabs_when_scrolled_without_timeline (1.1s)
+test	層の全件を回す	2026-11-28T17:39:10.2106885Z   ✓   93 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1517:3 › 目次 › toc_below_tabs_when_scrolled_narrow (1.0s)
+test	層の全件を回す	2026-11-28T17:39:11.3385695Z   ✓   94 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1530:3 › コメントの追加 › comment_add (1.1s)
+test	層の全件を回す	2026-11-28T17:39:12.3292995Z   ✓   95 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1544:3 › コメントのパネル › panel_heading (979ms)
+test	層の全件を回す	2026-11-28T17:39:13.2931182Z   ✓   96 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1553:3 › コメントのパネル › panel_lists_other_docs (953ms)
+test	層の全件を回す	2026-11-28T17:39:14.2447704Z   ✓   97 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1563:3 › コメントのパネルの位置 › panel_position_on_the_right (941ms)
+test	層の全件を回す	2026-11-28T17:39:15.1959757Z   ✓   98 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1572:3 › コメントのパネルの位置 › panel_position_when_narrow (940ms)
+test	層の全件を回す	2026-11-28T17:39:16.2213478Z   ✓   99 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1585:3 › コメントのパネルを閉じる › panel_close_button (1.0s)
+test	層の全件を回す	2026-11-28T17:39:17.2247139Z   ✓  100 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1595:3 › コメントのパネルを閉じる › panel_close_by_escape (994ms)
+test	層の全件を回す	2026-11-28T17:39:18.5006585Z   ✓  101 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1613:3 › すべて選択 › select_all_state (1.3s)
+test	層の全件を回す	2026-11-28T17:39:19.8035508Z   ✓  102 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1622:3 › すべて選択 › select_all_toggle (1.3s)
+test	層の全件を回す	2026-11-28T17:39:20.7482118Z   ✓  103 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1633:3 › すべて選択 › select_all_hidden_when_empty (932ms)
+test	層の全件を回す	2026-11-28T17:39:22.1318395Z   ✓  104 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1641:3 › コメントの選択 › comment_select (1.4s)
+test	層の全件を回す	2026-11-28T17:39:23.1596277Z   ✓  105 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1659:3 › コメントの場所 › place_text (1.0s)
+test	層の全件を回す	2026-11-28T17:39:24.4283584Z   ✓  106 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1666:3 › コメントの場所 › place_click_other_doc (1.3s)
+test	層の全件を回す	2026-11-28T17:39:25.4756160Z   ✓  107 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1686:3 › コメントの場所への移動 › place_scroll_same_doc (1.0s)
+test	層の全件を回す	2026-11-28T17:39:27.4435459Z   ✓  108 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1702:3 › コメントの場所への移動 › place_scroll_cleared_when_doc_left (2.0s)
+test	層の全件を回す	2026-11-28T17:39:28.5440116Z   ✓  109 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1740:3 › コメントの場所への移動 › place_scroll_other_doc (1.1s)
+test	層の全件を回す	2026-11-28T17:39:29.5137096Z   ✓  110 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1758:3 › コメントの引用 › quote_text (960ms)
+test	層の全件を回す	2026-11-28T17:39:30.4936073Z   ✓  111 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1770:3 › コメントの本文 › comment_body (972ms)
+test	層の全件を回す	2026-11-28T17:39:31.8089595Z   ✓  112 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1786:3 › コメントの修正 › edit_button (1.3s)
+test	層の全件を回す	2026-11-28T17:39:31.8576652Z   ✘   83 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1280:3 › 列の表示のメニュー › columns_menu_save_when_tables_mixed (1.0m)
+test	層の全件を回す	2026-11-28T17:39:33.5319390Z   ✓  113 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1794:3 › コメントの修正 › edit_field_focus (1.7s)
+test	層の全件を回す	2026-11-28T17:39:34.8066434Z   ✓  114 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1801:3 › コメントの修正 › edit_save (2.0s)
+test	層の全件を回す	2026-11-28T17:39:35.3903212Z   ✓  115 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1811:3 › コメントの修正 › edit_save_redraws_mark (1.8s)
+test	層の全件を回す	2026-11-28T17:39:36.5464464Z   ✓  116 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1825:3 › コメントの修正 › edit_cancel (1.7s)
+test	層の全件を回す	2026-11-28T17:39:37.0932658Z   ✓  117 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1834:3 › コメントの修正 › edit_cancel_by_escape (1.7s)
+test	層の全件を回す	2026-11-28T17:39:38.2827256Z   ✓  118 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1843:3 › コメントの修正 › edit_save_when_blank (1.7s)
+test	層の全件を回す	2026-11-28T17:39:38.7815120Z   ✓  119 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1855:3 › コメントの削除 › delete_button (1.7s)
+test	層の全件を回す	2026-11-28T17:39:39.9497492Z   ✓  120 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1865:3 › コメントの削除 › delete_button_redraws_mark (1.6s)
+test	層の全件を回す	2026-11-28T17:39:40.2506543Z   ✓  121 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1884:3 › 選択をコピー › copy_button (1.4s)
+test	層の全件を回す	2026-11-28T17:39:41.9563043Z   ✓  122 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1900:3 › 選択をコピー › copy_button_disabled_when_none_selected (2.0s)
+test	層の全件を回す	2026-11-28T17:39:42.1947232Z   ✓  123 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1907:3 › 選択をコピー › copy_button_when_clipboard_denied (1.9s)
+test	層の全件を回す	2026-11-28T17:39:43.6113903Z   ✓  125 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1947:3 › Issue を作成 › issue_button_hidden_without_github (1.4s)
+test	層の全件を回す	2026-11-28T17:39:43.8696518Z   ✓  124 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1927:3 › Issue を作成 › issue_button (1.9s)
+test	層の全件を回す	2026-11-28T17:39:45.1921839Z   ✓  126 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1957:3 › Issue を作成 › issue_button_disabled_when_none_selected (1.6s)
+test	層の全件を回す	2026-11-28T17:39:45.7821026Z   ✓  127 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1964:3 › Issue を作成 › issue_button_when_url_too_long (1.9s)
+test	層の全件を回す	2026-11-28T17:39:46.5360624Z   ✓  128 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1991:3 › コメントが無いことの表示 › comment_empty_message (1.3s)
+test	層の全件を回す	2026-11-28T17:39:47.4888836Z   ✓  129 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2000:3 › 通知 › toast_position (1.7s)
+test	層の全件を回す	2026-11-28T17:39:48.3745568Z   ✓  130 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2016:3 › 検索のダイアログ › search_dialog_result_select (1.8s)
+test	層の全件を回す	2026-11-28T17:39:48.7110173Z   ✓  131 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2031:3 › ショートカットの一覧 › shortcut_dialog (1.2s)
+test	層の全件を回す	2026-11-28T17:39:49.7268824Z   ✓  132 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2042:3 › キーボードのショートカット › shortcut_ctrl_k (1.3s)
+test	層の全件を回す	2026-11-28T17:39:50.0707681Z   ✓  133 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2049:3 › キーボードのショートカット › shortcut_slash (1.3s)
+test	層の全件を回す	2026-11-28T17:39:51.2719325Z   ✓  135 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2070:3 › キーボードのショートカット › shortcut_ignored_in_dialog (1.2s)
+test	層の全件を回す	2026-11-28T17:39:51.7338014Z   ✓  134 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2056:3 › キーボードのショートカット › shortcut_ignored_in_input (2.0s)
+test	層の全件を回す	2026-11-28T17:39:52.6840563Z   ✓  136 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2078:3 › キーボードのショートカット › shortcut_single_key_off (1.4s)
+test	層の全件を回す	2026-11-28T17:39:53.7108167Z   ✓  137 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2099:3 › ランドマーク › landmarks_unique (2.0s)
+test	層の全件を回す	2026-11-28T17:39:53.9496601Z   ✓  138 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2132:3 › 本文の用語のツールチップ › term_tooltip (1.2s)
+test	層の全件を回す	2026-11-28T17:39:55.1261088Z   ✓  139 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2146:3 › 本文の用語のツールチップ › term_tooltip_when_doc_alias (1.4s)
+test	層の全件を回す	2026-11-28T17:39:55.3187359Z   ✓  140 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2159:3 › 本文の用語のツールチップ › term_tooltip_when_no_aliases (1.4s)
+test	層の全件を回す	2026-11-28T17:39:56.3899109Z   ✓  142 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2199:3 › project-index から文書を受け取れないときの表示 › project_index_timeout_alert (1.0s)
+test	層の全件を回す	2026-11-28T17:39:57.1462858Z   ✓  141 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2171:3 › project-index から文書を受け取れないときの表示 › project_index_unreachable_alert (2.0s)
+test	層の全件を回す	2026-11-28T17:39:57.5632566Z   ✓  143 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2226:3 › project-index から文書を受け取れないときの表示 › project_index_failed_alert (1.2s)
+test	層の全件を回す	2026-11-28T17:39:58.5826623Z   ✓  144 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2255:3 › レビュー中のボタン › open_pending_panel (1.4s)
+test	層の全件を回す	2026-11-28T17:39:58.9717051Z   ✓  145 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2286:3 › 検索から除外のマーカー › sidebar_excluded_marker (1.4s)
+test	層の全件を回す	2026-11-28T17:40:00.0231466Z   ✓  146 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2425:3 › 編集のボタン › edit_button_yaml (1.4s)
+test	層の全件を回す	2026-11-28T17:40:00.3946917Z   ✓  147 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2433:3 › 編集のボタン › edit_button_markdown (1.4s)
+test	層の全件を回す	2026-11-28T17:40:01.2350922Z   ✓  148 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2441:3 › 編集のボタン › edit_button_hidden (1.2s)
+test	層の全件を回す	2026-11-28T17:40:01.9318961Z   ✓  149 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2450:3 › 編集の方式の切り替え › edit_mode_toggle (1.5s)
+test	層の全件を回す	2026-11-28T17:40:02.6476929Z   ✓  150 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2461:3 › 編集の方式の切り替え › edit_mode_toggle_disabled (1.4s)
+test	層の全件を回す	2026-11-28T17:40:03.0216979Z   ✓  151 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2470:3 › 編集の方式の切り替え › edit_mode_toggle_markdown (1.1s)
+test	層の全件を回す	2026-11-28T17:40:04.1485939Z   ✓  152 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2478:3 › 編集を終了 › edit_finish (1.5s)
+test	層の全件を回す	2026-11-28T17:40:04.5012225Z   ✓  153 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2490:3 › 項目のブロックとその場の入力欄 › inline_string (1.5s)
+test	層の全件を回す	2026-11-28T17:40:05.6829311Z   ✓  154 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2507:3 › 項目のブロックとその場の入力欄 › inline_revert (1.5s)
+test	層の全件を回す	2026-11-28T17:40:06.1696729Z   ✓  155 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2516:3 › 項目のブロックとその場の入力欄 › inline_enum (1.6s)
+test	層の全件を回す	2026-11-28T17:40:07.0390780Z   ✓  156 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2525:3 › 項目のブロックとその場の入力欄 › inline_title (1.3s)
+test	層の全件を回す	2026-11-28T17:40:08.0235641Z   ✓  157 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2535:3 › 表のセルの入力欄 › table_cells (1.8s)
+test	層の全件を回す	2026-11-28T17:40:08.9242943Z   ✓  158 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2553:3 › Markdown の項目のパネル › markdown_field_panel (1.9s)
+test	層の全件を回す	2026-11-28T17:40:09.8960007Z   ✓  159 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2576:3 › ファイル全体のエディタとプレビュー › whole_file_yaml (1.9s)
+test	層の全件を回す	2026-11-28T17:40:10.7435543Z   ✓  160 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2592:3 › ファイル全体のエディタとプレビュー › whole_file_invalid (1.8s)
+test	層の全件を回す	2026-11-28T17:40:11.6727764Z   ✓  161 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2607:3 › ファイル全体のエディタとプレビュー › whole_file_fallback (1.8s)
+test	層の全件を回す	2026-11-28T17:40:11.6946915Z   ✓  162 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2616:3 › ファイル全体のエディタとプレビュー › whole_file_markdown (928ms)
+test	層の全件を回す	2026-11-28T17:40:13.6535360Z   ✓  164 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2641:3 › レビュー中のパネル（文書の画面） › refetch_after_commit (1.9s)
+test	層の全件を回す	2026-11-28T17:40:13.7088269Z   ✓  163 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2627:3 › レビュー中のパネル（文書の画面） › pending_panel_on_doc_view (2.0s)
+test	層の全件を回す	2026-11-28T17:40:15.1222006Z   ✓  166 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2671:5 › 本文のスクロール › body_scroll_without_page_scrollbar_390 (1.4s)
+test	層の全件を回す	2026-11-28T17:40:15.1455154Z   ✓  165 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2671:5 › 本文のスクロール › body_scroll_without_page_scrollbar_1280 (1.5s)
+test	層の全件を回す	2026-11-28T17:40:16.5521866Z   ✓  167 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2738:3 › 文書の一覧の長い名前 › sidebar_long_names_truncated (1.4s)
+test	層の全件を回す	2026-11-28T17:40:17.2067546Z   ✓  168 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2774:3 › 差分の案内の文字色 › diff_banner_label_contrast (2.0s)
+test	層の全件を回す	2026-11-28T17:40:18.7527325Z   ✓  169 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2792:3 › コメントのパネルの URL › comment_panel_in_url (2.2s)
+test	層の全件を回す	2026-11-28T17:40:20.0222848Z   ✓  170 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2806:3 › コメントの削除の取り消し › delete_undo (2.8s)
+test	層の全件を回す	2026-11-28T17:40:20.3365912Z   ✓  171 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2824:3 › 本文のスクロール位置 › body_scroll_restored_on_back (1.6s)
+test	層の全件を回す	2026-11-28T17:40:21.5465780Z   ✓  172 [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:2845:3 › 離脱の警告 › leave_guard_on_unload (1.5s)
+test	層の全件を回す	2026-11-28T17:40:21.5615249Z   ✓  173 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:165:3 › ページのタイトルと種類のタブ › page_title (1.2s)
+test	層の全件を回す	2026-11-28T17:40:22.9523288Z   ✓  174 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:185:3 › 絞り込み › filter_rows (1.4s)
+test	層の全件を回す	2026-11-28T17:40:24.0376764Z   ✓  175 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:174:3 › ページのタイトルと種類のタブ › tab_in_url (2.4s)
+test	層の全件を回す	2026-11-28T17:40:24.4566425Z   ✓  176 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:199:3 › 種類を配信していない・参照のみ › kind_not_served (1.5s)
+test	層の全件を回す	2026-11-28T17:40:25.3925917Z   ✓  177 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:207:3 › 種類を配信していない・参照のみ › read_only_kind (1.3s)
+test	層の全件を回す	2026-11-28T17:40:26.7242708Z   ✓  179 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:255:3 › 編集・差分確認・コミット › add_and_delete_rows (1.3s)
+test	層の全件を回す	2026-11-28T17:40:26.7517100Z   ✓  178 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:217:3 › 編集・差分確認・コミット › commit_edits (2.3s)
+test	層の全件を回す	2026-11-28T17:40:28.0984629Z   ✓  180 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:269:3 › 編集・差分確認・コミット › add_row_invalid_id (1.4s)
+test	層の全件を回す	2026-11-28T17:40:29.2139472Z   ✓  181 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:278:3 › 編集・差分確認・コミット › keep_edits_on_reload (2.4s)
+test	層の全件を回す	2026-11-28T17:40:30.1909750Z   ✓  182 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:286:3 › 編集・差分確認・コミット › locate_edit (2.1s)
+test	層の全件を回す	2026-11-28T17:40:31.1955177Z   ✓  183 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:299:3 › 送信の失敗 › validation_failed (2.0s)
+test	層の全件を回す	2026-11-28T17:40:32.4438082Z   ✓  184 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:323:3 › 送信の失敗 › base_commit_unusable (2.2s)
+test	層の全件を回す	2026-11-28T17:40:33.3227674Z   ✓  185 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:350:3 › 送信の失敗 › conflict_kept_on_branch (2.1s)
+test	層の全件を回す	2026-11-28T17:40:34.1982167Z   ✓  186 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:392:3 › 送信の失敗 › dry_run_conflicted (1.7s)
+test	層の全件を回す	2026-11-28T17:40:34.6051147Z   ✓  187 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:432:3 › 行が指す文書のリンク › open_row_document (1.3s)
+test	層の全件を回す	2026-11-28T17:40:35.3870487Z   ✓  188 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:443:3 › 取得の失敗 › source_not_found (1.2s)
+test	層の全件を回す	2026-11-28T17:40:35.7384505Z   ✓  189 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:450:3 › 取得の失敗 › fetch_failed (1.1s)
+test	層の全件を回す	2026-11-28T17:40:36.7861164Z   ✓  190 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:460:5 › キャンセル › cancel_new_row_button (1.4s)
+test	層の全件を回す	2026-11-28T17:40:37.0729468Z   ✓  191 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:460:5 › キャンセル › cancel_new_row_escape (1.3s)
+test	層の全件を回す	2026-11-28T17:40:39.0205950Z   ✓  193 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:474:5 › キャンセル › cancel_commit_escape (1.9s)
+test	層の全件を回す	2026-11-28T17:40:39.0373459Z   ✓  192 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:474:5 › キャンセル › cancel_commit_button (2.2s)
+test	層の全件を回す	2026-11-28T17:40:40.4595481Z   ✓  194 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:493:3 › project-index から受け取れない › project_index_unreachable (1.4s)
+test	層の全件を回す	2026-11-28T17:40:40.6103643Z   ✓  195 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:529:3 › 行の値の入力位置 › row_value_caret_at_click (1.5s)
+test	層の全件を回す	2026-11-28T17:40:41.9679182Z   ✓  196 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:541:3 › 行の値の入力位置 › row_value_caret_at_right_space (1.5s)
+test	層の全件を回す	2026-11-28T17:40:42.0941657Z   ✓  197 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:556:5 › 行の値の入力位置 › row_value_caret_on_enter (1.5s)
+test	層の全件を回す	2026-11-28T17:40:43.3601738Z   ✓  198 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:556:5 › 行の値の入力位置 › row_value_caret_on_space (1.4s)
+test	層の全件を回す	2026-11-28T17:40:43.4708669Z   ✓  199 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:573:3 › 本文の幅 › table_width_without_cap (1.4s)
+test	層の全件を回す	2026-11-28T17:40:44.6275962Z   ✓  200 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:587:3 › 本文の幅 › filter_width (1.3s)
+test	層の全件を回す	2026-11-28T17:40:44.7499398Z   ✓  201 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:598:3 › 狭い幅とアクセシビリティ › narrow_viewport (1.3s)
+test	層の全件を回す	2026-11-28T17:40:46.3251591Z   ✓  203 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:639:3 › 文書の本文の変更 › locate_body_edit (1.6s)
+test	層の全件を回す	2026-11-28T17:40:47.3219138Z   ✓  202 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:606:3 › 狭い幅とアクセシビリティ › axe (2.7s)
+test	層の全件を回す	2026-11-28T17:40:47.8806920Z   ✓  204 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:651:3 › 文書の本文の変更 › locate_whole_file_edit (1.5s)
+test	層の全件を回す	2026-11-28T17:40:49.0277428Z   ✓  206 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:704:3 › 絞り込みの URL › filter_query_in_url (1.1s)
+test	層の全件を回す	2026-11-28T17:40:49.4551077Z   ✓  205 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:660:3 › 文書の本文の変更 › restart_with_body_edit (2.1s)
+test	層の全件を回す	2026-11-28T17:40:50.8050989Z   ✓  208 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:742:3 › 離脱の警告 › leave_guard_on_unload (1.3s)
+test	層の全件を回す	2026-11-28T17:40:50.9970099Z   ✓  207 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:721:3 › 検索とショートカットの一覧 › search_and_shortcut_dialogs (1.9s)
+test	層の全件を回す	2026-11-28T17:40:52.1537252Z   ✓  210 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:43:3 › ページのタイトル › page_title (1.1s)
+test	層の全件を回す	2026-11-28T17:40:52.1862327Z   ✓  209 [chromium] › tests/integration/frontend/metadata-screen.spec.ts:760:3 › 行の削除のツールチップ › delete_button_tooltip (1.4s)
+test	層の全件を回す	2026-11-28T17:40:53.4166645Z   ✓  211 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:53:3 › 本文へスキップ › skip_link (1.2s)
+test	層の全件を回す	2026-11-28T17:40:53.8240631Z   ✓  212 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:69:3 › トップバー › topbar_source_select (1.6s)
+test	層の全件を回す	2026-11-28T17:40:54.9299446Z   ✓  213 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:80:3 › トップバー › topbar_ref_select (1.5s)
+test	層の全件を回す	2026-11-28T17:40:54.9668477Z   ✓  214 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:91:3 › トップバー › topbar_search_open (1.1s)
+test	層の全件を回す	2026-11-28T17:40:56.1019511Z   ✓  216 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:116:3 › トップバー › topbar_without_comment (1.1s)
+test	層の全件を回す	2026-11-28T17:40:56.1502078Z   ✓  215 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:101:3 › トップバー › topbar_color_scheme_toggle (1.2s)
+test	層の全件を回す	2026-11-28T17:40:57.1958835Z   ✓  217 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:126:3 › 見出し › heading_when_doc_missing (1.1s)
+test	層の全件を回す	2026-11-28T17:40:57.3246822Z   ✓  218 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:132:3 › 見出し › heading_when_ref_missing (1.2s)
+test	層の全件を回す	2026-11-28T17:40:58.2924245Z   ✓  219 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:138:3 › 見出し › heading_when_source_not_served (1.1s)
+test	層の全件を回す	2026-11-28T17:40:58.4118401Z   ✓  220 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:144:3 › 見出し › heading_when_source_unknown (1.1s)
+test	層の全件を回す	2026-11-28T17:40:59.4836596Z   ✓  221 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:152:3 › 説明 › description_when_doc_missing (1.2s)
+test	層の全件を回す	2026-11-28T17:40:59.5758513Z   ✓  222 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:158:3 › 説明 › description_when_doc_missing_in_non_git_source (1.1s)
+test	層の全件を回す	2026-11-28T17:41:00.5928776Z   ✓  223 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:171:3 › 説明 › description_when_ref_missing (1.1s)
+test	層の全件を回す	2026-11-28T17:41:00.6774366Z   ✓  224 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:177:3 › 説明 › description_when_source_not_served (1.1s)
+test	層の全件を回す	2026-11-28T17:41:01.6809098Z   ✓  225 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:183:3 › 説明 › description_when_source_unknown (1.1s)
+test	層の全件を回す	2026-11-28T17:41:01.8040641Z   ✓  226 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:191:3 › 見つからなかったものの詳細 › details_when_doc_missing (1.1s)
+test	層の全件を回す	2026-11-28T17:41:02.8442304Z   ✓  227 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:198:3 › 見つからなかったものの詳細 › details_when_ref_missing (1.2s)
+test	層の全件を回す	2026-11-28T17:41:02.9702241Z   ✓  228 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:207:3 › 見つからなかったものの詳細 › details_when_source_not_served (1.1s)
+test	層の全件を回す	2026-11-28T17:41:04.0027139Z   ✓  229 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:216:3 › 見つからなかったものの詳細 › details_when_source_unknown (1.1s)
+test	層の全件を回す	2026-11-28T17:41:04.2883460Z   ✓  230 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:224:3 › 配信元のトップを開く › top_link_when_doc_missing (1.3s)
+test	層の全件を回す	2026-11-28T17:41:05.1166833Z   ✓  231 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:236:3 › 配信元のトップを開く › top_link_when_ref_missing (1.1s)
+test	層の全件を回す	2026-11-28T17:41:05.3978162Z   ✓  232 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:242:3 › 配信元のトップを開く › top_link_when_source_unavailable (1.1s)
+test	層の全件を回す	2026-11-28T17:41:06.7036854Z   ✓  234 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:262:3 › 設定を開く › settings_link_click (1.3s)
+test	層の全件を回す	2026-11-28T17:41:06.9870762Z   ✓  233 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:250:3 › 設定を開く › settings_link_variant (1.9s)
+test	層の全件を回す	2026-11-28T17:41:07.9250911Z   ✓  235 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:271:3 › 配信中の配信元 › serving_sources_when_unavailable (1.2s)
+test	層の全件を回す	2026-11-28T17:41:08.1291513Z   ✓  236 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:282:3 › 配信中の配信元 › serving_sources_when_doc_missing (1.1s)
+test	層の全件を回す	2026-11-28T17:41:09.0353388Z   ✓  237 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:288:3 › 配信中の配信元 › serving_sources_when_none_serving (1.1s)
+test	層の全件を回す	2026-11-28T17:41:09.8840758Z   ✓  238 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:296:3 › 検索のダイアログ › search_dialog_result_select (1.7s)
+test	層の全件を回す	2026-11-28T17:41:09.9813380Z   ✓  239 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:317:3 › 検索のダイアログ › search_dialog_when_source_not_served (935ms)
+test	層の全件を回す	2026-11-28T17:41:11.0847828Z   ✓  240 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:326:3 › ショートカットの一覧 › shortcut_dialog (1.2s)
+test	層の全件を回す	2026-11-28T17:41:11.6991464Z   ✓  241 [chromium] › tests/integration/frontend/not-found-screen.spec.ts:338:3 › 検索のダイアログ › search_dialog_other_source (1.7s)
+test	層の全件を回す	2026-11-28T17:41:19.6960717Z   ✓  243 [chromium] › tests/integration/frontend/pending-panel.spec.ts:30:3 › BodyEdits › body_edits (8.0s)
+test	層の全件を回す	2026-11-28T17:41:19.7325879Z   ✓  242 [chromium] › tests/integration/frontend/pending-panel.spec.ts:14:3 › MetadataEdits › metadata_edits (8.6s)
+test	層の全件を回す	2026-11-28T17:41:21.5630138Z   ✓  245 [chromium] › tests/integration/frontend/pending-panel.spec.ts:58:3 › BodyEditInvalid › body_edit_invalid (1.8s)
+test	層の全件を回す	2026-11-28T17:41:22.4564895Z   ✓  244 [chromium] › tests/integration/frontend/pending-panel.spec.ts:45:3 › DryRunDiff › dry_run_diff (2.7s)
+test	層の全件を回す	2026-11-28T17:41:23.5939209Z   ✓  246 [chromium] › tests/integration/frontend/pending-panel.spec.ts:71:3 › Conflict › conflict (2.0s)
+test	層の全件を回す	2026-11-28T17:41:24.1747825Z   ✓  247 [chromium] › tests/integration/frontend/pending-panel.spec.ts:88:3 › Empty › empty (1.7s)
+test	層の全件を回す	2026-11-28T17:41:25.2220537Z   ✓  248 [chromium] › tests/integration/frontend/pending-panel.spec.ts:100:3 › LongLabels › long_labels (1.6s)
+test	層の全件を回す	2026-11-28T17:41:25.9207708Z   ✓  249 [chromium] › tests/integration/frontend/pending-panel.spec.ts:119:3 › Narrow › narrow (1.7s)
+test	層の全件を回す	2026-11-28T17:41:26.4885040Z   ✓  250 [chromium] › tests/integration/frontend/settings-screen.spec.ts:61:3 › ページのタイトル › page_title (1.2s)
+test	層の全件を回す	2026-11-28T17:41:27.2313584Z   ✓  251 [chromium] › tests/integration/frontend/settings-screen.spec.ts:69:3 › 本文へスキップ › skip_link (1.2s)
+test	層の全件を回す	2026-11-28T17:41:27.8076583Z   ✓  252 [chromium] › tests/integration/frontend/settings-screen.spec.ts:85:3 › トップバー › topbar_home_link (1.3s)
+test	層の全件を回す	2026-11-28T17:41:28.4531388Z   ✓  253 [chromium] › tests/integration/frontend/settings-screen.spec.ts:92:3 › トップバー › topbar_color_scheme_toggle (1.2s)
+test	層の全件を回す	2026-11-28T17:41:28.8509238Z   ✓  254 [chromium] › tests/integration/frontend/settings-screen.spec.ts:107:3 › トップバー › topbar_only_title_and_color_scheme (1.0s)
+test	層の全件を回す	2026-11-28T17:41:29.9638053Z   ✓  255 [chromium] › tests/integration/frontend/settings-screen.spec.ts:117:3 › 文書の画面に戻る › back_link_to_previous_doc (1.5s)
+test	層の全件を回す	2026-11-28T17:41:30.0141172Z   ✓  256 [chromium] › tests/integration/frontend/settings-screen.spec.ts:132:3 › 文書の画面に戻る › back_link_without_previous_doc (1.2s)
+test	層の全件を回す	2026-11-28T17:41:31.1361766Z   ✓  257 [chromium] › tests/integration/frontend/settings-screen.spec.ts:139:3 › 文書の画面に戻る › back_link_when_none_serving (1.2s)
+test	層の全件を回す	2026-11-28T17:41:31.1928094Z   ✓  258 [chromium] › tests/integration/frontend/settings-screen.spec.ts:147:3 › 見出し › heading (1.2s)
+test	層の全件を回す	2026-11-28T17:41:32.3416926Z   ✓  259 [chromium] › tests/integration/frontend/settings-screen.spec.ts:153:3 › 見出し › sources_heading (1.2s)
+test	層の全件を回す	2026-11-28T17:41:32.3991210Z   ✓  260 [chromium] › tests/integration/frontend/settings-screen.spec.ts:159:3 › 見出し › keyboard_heading (1.2s)
+test	層の全件を回す	2026-11-28T17:41:33.5115513Z   ✓  262 [chromium] › tests/integration/frontend/settings-screen.spec.ts:186:3 › 配信元が無いことの表示 › empty_message (1.1s)
+test	層の全件を回す	2026-11-28T17:41:34.2312363Z   ✓  263 [chromium] › tests/integration/frontend/settings-screen.spec.ts:195:3 › 配信元の一覧 › table_columns_and_order (708ms)
+test	層の全件を回す	2026-11-28T17:41:35.0168248Z   ✓  264 [chromium] › tests/integration/frontend/settings-screen.spec.ts:211:3 › 配信元の ID › id_link_when_serving (776ms)
+test	層の全件を回す	2026-11-28T17:41:35.7503247Z   ✓  265 [chromium] › tests/integration/frontend/settings-screen.spec.ts:221:3 › 配信元の ID › id_not_link_when_not_serving (723ms)
+test	層の全件を回す	2026-11-28T17:41:36.3648534Z   ✓  261 [chromium] › tests/integration/frontend/settings-screen.spec.ts:167:3 › 配信元の読み込み中の表示 › loading_skeleton (4.0s)
+test	層の全件を回す	2026-11-28T17:41:36.6355738Z   ✓  266 [chromium] › tests/integration/frontend/settings-screen.spec.ts:232:3 › 設定ファイル › config_paths (870ms)
+test	層の全件を回す	2026-11-28T17:41:37.5581661Z   ✓  267 [chromium] › tests/integration/frontend/settings-screen.spec.ts:249:3 › 状態 › status_serving (1.2s)
+test	層の全件を回す	2026-11-28T17:41:37.7680172Z   ✓  268 [chromium] › tests/integration/frontend/settings-screen.spec.ts:255:3 › 状態 › status_not_served (1.1s)
+test	層の全件を回す	2026-11-28T17:41:38.7297215Z   ✓  269 [chromium] › tests/integration/frontend/settings-screen.spec.ts:263:3 › 状態 › status_disabled (1.2s)
+test	層の全件を回す	2026-11-28T17:41:38.9132615Z   ✓  270 [chromium] › tests/integration/frontend/settings-screen.spec.ts:271:3 › 状態 › status_pending_reload (1.1s)
+test	層の全件を回す	2026-11-28T17:41:40.5479090Z   ✓  271 [chromium] › tests/integration/frontend/settings-screen.spec.ts:280:5 › 状態 › status_not_served_contrast_light (1.8s)
+test	層の全件を回す	2026-11-28T17:41:40.6950514Z   ✓  272 [chromium] › tests/integration/frontend/settings-screen.spec.ts:280:5 › 状態 › status_not_served_contrast_dark (1.8s)
+test	層の全件を回す	2026-11-28T17:41:41.8470025Z   ✓  273 [chromium] › tests/integration/frontend/settings-screen.spec.ts:296:3 › 状態 › no_layout_transition (1.3s)
+test	層の全件を回す	2026-11-28T17:41:41.9137544Z   ✓  274 [chromium] › tests/integration/frontend/settings-screen.spec.ts:319:3 › 状態の補足 › status_note_when_not_served (1.2s)
+test	層の全件を回す	2026-11-28T17:41:42.9545024Z   ✓  275 [chromium] › tests/integration/frontend/settings-screen.spec.ts:333:3 › 状態の補足 › status_note_when_config_version_old (1.1s)
+test	層の全件を回す	2026-11-28T17:41:43.0784376Z   ✓  276 [chromium] › tests/integration/frontend/settings-screen.spec.ts:343:3 › 状態の補足 › status_note_when_disabled (1.1s)
+test	層の全件を回す	2026-11-28T17:41:44.0902081Z   ✓  277 [chromium] › tests/integration/frontend/settings-screen.spec.ts:351:3 › 状態の補足 › status_note_when_pending_reload (1.1s)
+test	層の全件を回す	2026-11-28T17:41:44.2792851Z   ✓  278 [chromium] › tests/integration/frontend/settings-screen.spec.ts:359:3 › 状態の補足 › status_note_when_serving (1.2s)
+test	層の全件を回す	2026-11-28T17:41:45.3581971Z   ✓  279 [chromium] › tests/integration/frontend/settings-screen.spec.ts:368:3 › 配信元を追加 › add_button (1.3s)
+test	層の全件を回す	2026-11-28T17:41:45.6595289Z   ✓  280 [chromium] › tests/integration/frontend/settings-screen.spec.ts:377:3 › 編集ボタン › edit_button (1.4s)
+test	層の全件を回す	2026-11-28T17:41:46.6400236Z   ✓  281 [chromium] › tests/integration/frontend/settings-screen.spec.ts:398:3 › 削除ボタン › delete_button (1.3s)
+test	層の全件を回す	2026-11-28T17:41:46.7717363Z   ✓  282 [chromium] › tests/integration/frontend/settings-screen.spec.ts:407:3 › 1 文字のショートカットのスイッチ › single_key_switch_initial (1.1s)
+test	層の全件を回す	2026-11-28T17:41:47.8549899Z   ✓  283 [chromium] › tests/integration/frontend/settings-screen.spec.ts:416:3 › 1 文字のショートカットのスイッチ › single_key_switch_toggle (1.2s)
+test	層の全件を回す	2026-11-28T17:41:48.0038195Z   ✓  284 [chromium] › tests/integration/frontend/settings-screen.spec.ts:436:3 › ショートカットの一覧 › shortcut_open_button (1.2s)
+test	層の全件を回す	2026-11-28T17:41:49.1047250Z   ✓  285 [chromium] › tests/integration/frontend/settings-screen.spec.ts:443:3 › ショートカットの一覧 › shortcut_key (1.2s)
+test	層の全件を回す	2026-11-28T17:41:49.3716098Z   ✓  286 [chromium] › tests/integration/frontend/settings-screen.spec.ts:452:3 › 配信元のダイアログのタイトル › dialog_title_when_add (1.3s)
+test	層の全件を回す	2026-11-28T17:41:50.4469829Z   ✓  287 [chromium] › tests/integration/frontend/settings-screen.spec.ts:459:3 › 配信元のダイアログのタイトル › dialog_title_when_edit (1.3s)
+test	層の全件を回す	2026-11-28T17:41:50.6466595Z   ✓  288 [chromium] › tests/integration/frontend/settings-screen.spec.ts:469:3 › 配信元の ID の入力欄 › id_input_when_add (1.3s)
+test	層の全件を回す	2026-11-28T17:41:51.8057191Z   ✓  289 [chromium] › tests/integration/frontend/settings-screen.spec.ts:485:3 › 配信元の ID の入力欄 › id_input_when_edit (1.3s)
+test	層の全件を回す	2026-11-28T17:41:51.9476516Z   ✓  290 [chromium] › tests/integration/frontend/settings-screen.spec.ts:492:3 › 配信元の ID の入力欄 › id_input_keeps_value (1.3s)
+test	層の全件を回す	2026-11-28T17:41:53.1517199Z   ✓  291 [chromium] › tests/integration/frontend/settings-screen.spec.ts:502:3 › 設定ファイルの入力欄 › config_input_when_add (1.3s)
+test	層の全件を回す	2026-11-28T17:41:53.2917478Z   ✓  292 [chromium] › tests/integration/frontend/settings-screen.spec.ts:514:3 › 設定ファイルの入力欄 › config_input_when_edit (1.3s)
+test	層の全件を回す	2026-11-28T17:41:54.6171008Z   ✓  293 [chromium] › tests/integration/frontend/settings-screen.spec.ts:532:3 › 配信のスイッチ › enabled_switch_heading (1.4s)
+test	層の全件を回す	2026-11-28T17:41:54.6854966Z   ✓  294 [chromium] › tests/integration/frontend/settings-screen.spec.ts:541:3 › 配信のスイッチ › enabled_switch_when_add (1.4s)
+test	層の全件を回す	2026-11-28T17:41:55.9983613Z   ✓  296 [chromium] › tests/integration/frontend/settings-screen.spec.ts:562:3 › 読み取りの範囲の入力欄 › read_input_when_add (1.3s)
+test	層の全件を回す	2026-11-28T17:41:56.0007443Z   ✓  295 [chromium] › tests/integration/frontend/settings-screen.spec.ts:551:3 › 配信のスイッチ › enabled_switch_when_edit (1.3s)
+test	層の全件を回す	2026-11-28T17:41:57.3088702Z   ✓  298 [chromium] › tests/integration/frontend/settings-screen.spec.ts:587:3 › 書き込みの範囲の入力欄 › write_input_when_add (1.3s)
+test	層の全件を回す	2026-11-28T17:41:57.3759986Z   ✓  297 [chromium] › tests/integration/frontend/settings-screen.spec.ts:574:3 › 読み取りの範囲の入力欄 › read_input_when_edit (1.4s)
+test	層の全件を回す	2026-11-28T17:41:58.9697204Z   ✓  299 [chromium] › tests/integration/frontend/settings-screen.spec.ts:598:3 › 書き込みの範囲の入力欄 › write_input_when_edit (1.6s)
+test	層の全件を回す	2026-11-28T17:41:59.0965683Z   ✓  300 [chromium] › tests/integration/frontend/settings-screen.spec.ts:621:3 › 配信元のダイアログのキャンセル › cancel_button (1.7s)
+test	層の全件を回す	2026-11-28T17:42:00.2985235Z   ✓  301 [chromium] › tests/integration/frontend/settings-screen.spec.ts:636:3 › 配信元のダイアログのキャンセル › cancel_by_escape (1.3s)
+test	層の全件を回す	2026-11-28T17:42:00.8827358Z   ✓  302 [chromium] › tests/integration/frontend/settings-screen.spec.ts:647:3 › 追加・保存ボタン › submit_label (1.8s)
+test	層の全件を回す	2026-11-28T17:42:01.9667992Z   ✓  303 [chromium] › tests/integration/frontend/settings-screen.spec.ts:657:3 › 追加・保存ボタン › submit_add_success (1.7s)
+test	層の全件を回す	2026-11-28T17:42:03.2926503Z   ✓  305 [chromium] › tests/integration/frontend/settings-screen.spec.ts:704:3 › 追加・保存ボタン › submit_failure_422 (1.3s)
+test	層の全件を回す	2026-11-28T17:42:04.1918870Z   ✓  304 [chromium] › tests/integration/frontend/settings-screen.spec.ts:688:3 › 追加・保存ボタン › submit_disabled_while_saving (3.3s)
+test	層の全件を回す	2026-11-28T17:42:04.6391172Z   ✓  306 [chromium] › tests/integration/frontend/settings-screen.spec.ts:725:3 › 保存の失敗のまとめ › failure_summary_when_invalid (1.3s)
+test	層の全件を回す	2026-11-28T17:42:05.7191662Z   ✓  307 [chromium] › tests/integration/frontend/settings-screen.spec.ts:736:3 › 保存の失敗のまとめ › failure_summary_when_422 (1.5s)
+test	層の全件を回す	2026-11-28T17:42:06.3019196Z   ✓  308 [chromium] › tests/integration/frontend/settings-screen.spec.ts:760:3 › 保存の失敗のまとめ › failure_summary_row_click (1.6s)
+test	層の全件を回す	2026-11-28T17:42:07.6536791Z   ✓  309 [chromium] › tests/integration/frontend/settings-screen.spec.ts:781:5 › 削除の確認 › delete_confirm_contrast_light (1.9s)
+test	層の全件を回す	2026-11-28T17:42:08.1989543Z   ✓  310 [chromium] › tests/integration/frontend/settings-screen.spec.ts:781:5 › 削除の確認 › delete_confirm_contrast_dark (1.9s)
+test	層の全件を回す	2026-11-28T17:42:08.9667688Z   ✓  311 [chromium] › tests/integration/frontend/settings-screen.spec.ts:796:3 › 削除の確認 › delete_title (1.3s)
+test	層の全件を回す	2026-11-28T17:42:09.5266884Z   ✓  312 [chromium] › tests/integration/frontend/settings-screen.spec.ts:803:3 › 削除の確認 › delete_description (1.3s)
+test	層の全件を回す	2026-11-28T17:42:10.2066998Z   ✓  313 [chromium] › tests/integration/frontend/settings-screen.spec.ts:814:3 › 削除の確認 › delete_cancel (1.2s)
+test	層の全件を回す	2026-11-28T17:42:11.0955967Z   ✓  314 [chromium] › tests/integration/frontend/settings-screen.spec.ts:829:3 › 削除の確認 › delete_confirm_success (1.6s)
+test	層の全件を回す	2026-11-28T17:42:11.7942096Z   ✓  315 [chromium] › tests/integration/frontend/settings-screen.spec.ts:857:3 › 削除の確認 › delete_confirm_failure (1.6s)
+test	層の全件を回す	2026-11-28T17:42:12.6044558Z   ✓  316 [chromium] › tests/integration/frontend/settings-screen.spec.ts:870:3 › 削除の確認 › delete_confirm_disabled_while_saving (1.5s)
+test	層の全件を回す	2026-11-28T17:42:13.0698877Z   ✓  317 [chromium] › tests/integration/frontend/settings-screen.spec.ts:890:3 › 入力チェック › id_input_check_when_empty (1.3s)
+test	層の全件を回す	2026-11-28T17:42:14.2197309Z   ✓  318 [chromium] › tests/integration/frontend/settings-screen.spec.ts:897:3 › 入力チェック › id_input_check_when_invalid_char (1.6s)
+test	層の全件を回す	2026-11-28T17:42:14.5078950Z   ✓  319 [chromium] › tests/integration/frontend/settings-screen.spec.ts:907:3 › 入力チェック › id_input_check_when_duplicated (1.4s)
+test	層の全件を回す	2026-11-28T17:42:15.8468131Z   ✓  320 [chromium] › tests/integration/frontend/settings-screen.spec.ts:917:3 › 入力チェック › id_input_check_revalidates_on_input (1.6s)
+test	層の全件を回す	2026-11-28T17:42:16.0494246Z   ✓  321 [chromium] › tests/integration/frontend/settings-screen.spec.ts:927:3 › 入力チェック › config_input_check_when_blank (1.5s)
+test	層の全件を回す	2026-11-28T17:42:17.3567458Z   ✓  322 [chromium] › tests/integration/frontend/settings-screen.spec.ts:935:3 › 入力チェック › read_input_check_when_blank (1.5s)
+test	層の全件を回す	2026-11-28T17:42:17.6236824Z   ✓  323 [chromium] › tests/integration/frontend/settings-screen.spec.ts:942:3 › 入力チェック › read_input_check_when_contains_blank (1.5s)
+test	層の全件を回す	2026-11-28T17:42:18.7811637Z   ✓  325 [chromium] › tests/integration/frontend/settings-screen.spec.ts:972:3 › project-index から受け取れないときの表示 › project_index_unreachable_alert (1.1s)
+test	層の全件を回す	2026-11-28T17:42:18.8324559Z   ✓  324 [chromium] › tests/integration/frontend/settings-screen.spec.ts:952:3 › 入力チェック › write_input_check_when_contains_blank (1.5s)
+test	層の全件を回す	2026-11-28T17:42:19.9729154Z   ✓  326 [chromium] › tests/integration/frontend/settings-screen.spec.ts:997:5 › project-index から受け取れないときの表示 › project_index_failed_alert (1.2s)
+test	層の全件を回す	2026-11-28T17:42:20.0404347Z   ✓  327 [chromium] › tests/integration/frontend/settings-screen.spec.ts:997:5 › project-index から受け取れないときの表示 › project_index_timeout_alert (1.2s)
+test	層の全件を回す	2026-11-28T17:42:21.2348721Z   ✓  329 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1035:3 › 範囲の外からの参照の補足 › outside_read_note (1.2s)
+test	層の全件を回す	2026-11-28T17:42:21.5704505Z   ✓  328 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1019:3 › 保存の失敗の通知 › save_failure_toast_when_unreachable (1.6s)
+test	層の全件を回す	2026-11-28T17:42:22.5229859Z   ✓  330 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1052:3 › 範囲の外からの参照のスイッチ › outside_read_switch_when_add (1.3s)
+test	層の全件を回す	2026-11-28T17:42:23.4112405Z   ✓  331 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1063:3 › 範囲の外からの参照のスイッチ › outside_read_switch_when_edit (1.8s)
+test	層の全件を回す	2026-11-28T17:42:24.2794248Z   ✓  332 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1090:3 › 他の変更の表示 › save_conflict (1.7s)
+test	層の全件を回す	2026-11-28T17:42:25.1942890Z   ✓  333 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1124:3 › 配信元が削除されたときの表示 › save_after_source_removed (1.8s)
+test	層の全件を回す	2026-11-28T17:42:25.8379737Z   ✓  334 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1152:3 › 削除の他の変更の表示 › delete_conflict (1.5s)
+test	層の全件を回す	2026-11-28T17:42:26.6217072Z   ✓  335 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1167:3 › 削除する配信元が削除されたときの表示 › delete_after_source_removed (1.4s)
+test	層の全件を回す	2026-11-28T17:42:27.5219534Z   ✓  336 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1194:3 › 読み書きの方法のセレクト › storage_select_when_add (1.7s)
+test	層の全件を回す	2026-11-28T17:42:28.2286776Z   ✓  337 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1209:3 › 読み書きの方法のセレクト › storage_select_when_stored (1.6s)
+test	層の全件を回す	2026-11-28T17:42:29.3829608Z   ✓  339 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1253:3 › 配信元のダイアログの閉じ方 › dialog_outside_click_keeps_input (1.1s)
+test	層の全件を回す	2026-11-28T17:42:29.4801958Z   ✓  338 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1226:3 › 読み書きの方法のセレクト › storage_select_when_saved (1.9s)
+test	層の全件を回す	2026-11-28T17:42:30.9677152Z   ✓  340 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1267:3 › 保存を待つ間の表示 › submit_spinner_while_saving (1.6s)
+test	層の全件を回す	2026-11-28T17:42:31.4361793Z   ✓  341 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1284:3 › 移動の確認のダイアログ › navigation_confirm_cancel (1.9s)
+test	層の全件を回す	2026-11-28T17:42:32.5581446Z   ✓  343 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1321:3 › 操作のボタンのツールチップ › edit_button_tooltip (1.1s)
+test	層の全件を回す	2026-11-28T17:42:33.1250434Z   ✓  342 [chromium] › tests/integration/frontend/settings-screen.spec.ts:1304:3 › 移動の確認のダイアログ › navigation_confirm_discard (2.1s)
+test	層の全件を回す	2026-11-28T17:42:37.2482361Z   ✓  345 [chromium] › tests/integration/frontend/topbar.spec.ts:61:3 › DocView › doc_view_source_menu (4.1s)
+test	層の全件を回す	2026-11-28T17:42:37.9620449Z   ✓  344 [chromium] › tests/integration/frontend/topbar.spec.ts:44:3 › DocView › doc_view (5.4s)
+test	層の全件を回す	2026-11-28T17:42:39.4500448Z   ✓  346 [chromium] › tests/integration/frontend/topbar.spec.ts:72:3 › DocView › doc_view_ref_menu (2.2s)
+test	層の全件を回す	2026-11-28T17:42:39.6176862Z   ✓  347 [chromium] › tests/integration/frontend/topbar.spec.ts:83:3 › DocView › doc_view_menu_keyboard (1.6s)
+test	層の全件を回す	2026-11-28T17:42:42.4201781Z   ✓  349 [chromium] › tests/integration/frontend/topbar.spec.ts:112:3 › DocViewNoComments › doc_view_no_comments (2.8s)
+test	層の全件を回す	2026-11-28T17:42:42.4417792Z   ✓  348 [chromium] › tests/integration/frontend/topbar.spec.ts:99:3 › DocViewNarrow › doc_view_narrow (3.0s)
+test	層の全件を回す	2026-11-28T17:42:44.9115093Z   ✓  351 [chromium] › tests/integration/frontend/topbar.spec.ts:133:3 › Settings › settings (2.5s)
+test	層の全件を回す	2026-11-28T17:42:44.9444285Z   ✓  350 [chromium] › tests/integration/frontend/topbar.spec.ts:123:3 › NonGitSource › non_git_source (2.5s)
+test	層の全件を回す	2026-11-28T17:42:47.0919321Z   ✓  352 [chromium] › tests/integration/frontend/topbar.spec.ts:145:3 › NotFound › not_found (2.2s)
+test	層の全件を回す	2026-11-28T17:42:47.6513671Z   ✓  353 [chromium] › tests/integration/frontend/topbar.spec.ts:160:3 › NotFoundNarrow › not_found_narrow (2.7s)
+test	層の全件を回す	2026-11-28T17:42:49.5334209Z   ✓  354 [chromium] › tests/integration/frontend/topbar.spec.ts:171:3 › NotFoundWithoutSource › not_found_without_source (2.4s)
+test	層の全件を回す	2026-11-28T17:42:49.7641517Z   ✓  355 [chromium] › tests/integration/frontend/topbar.spec.ts:183:3 › DarkScheme › dark_scheme (2.1s)
+test	層の全件を回す	2026-11-28T17:42:52.7829659Z   ✓  357 [chromium] › tests/integration/frontend/topbar.spec.ts:207:3 › LongItemsNarrow › long_items_narrow (3.0s)
+test	層の全件を回す	2026-11-28T17:42:53.0606622Z   ✓  356 [chromium] › tests/integration/frontend/topbar.spec.ts:192:3 › LongItems › long_items (3.5s)
+test	層の全件を回す	2026-11-28T17:42:55.1603114Z   ✓  358 [chromium] › tests/integration/frontend/topbar.spec.ts:218:3 › DocViewWithPendingEdits › doc_view_with_pending_edits (2.4s)
+test	層の全件を回す	2026-11-28T17:42:55.3044585Z   ✓  359 [chromium] › tests/integration/frontend/topbar.spec.ts:231:3 › DocViewWithPendingEditsNarrow › doc_view_with_pending_edits_narrow (2.2s)
+test	層の全件を回す	2026-11-28T17:42:57.5506306Z   ✓  360 [chromium] › tests/integration/frontend/topbar.spec.ts:243:3 › Metadata › metadata (2.4s)
+test	層の全件を回す	2026-11-28T17:42:57.6006645Z   ✓  361 [chromium] › tests/integration/frontend/topbar.spec.ts:256:3 › MetadataNarrow › metadata_narrow (2.3s)
+test	層の全件を回す	2026-11-28T17:42:57.8305725Z 
+test	層の全件を回す	2026-11-28T17:42:57.8312418Z 
+test	層の全件を回す	2026-11-28T17:42:57.8321610Z   1) [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1222:3 › 列の表示のメニュー › columns_menu_visible 
+test	層の全件を回す	2026-11-28T17:42:57.8322360Z 
+test	層の全件を回す	2026-11-28T17:42:57.8322593Z     Error: expect(locator).toBeVisible() failed
+test	層の全件を回す	2026-11-28T17:42:57.8322969Z 
+test	層の全件を回す	2026-11-28T17:42:57.8323482Z     Locator: getByRole('button', { name: '表のメニュー', exact: true })
+test	層の全件を回す	2026-11-28T17:42:57.8324082Z     Expected: visible
+test	層の全件を回す	2026-11-28T17:42:57.8324429Z     Timeout: 15000ms
+test	層の全件を回す	2026-11-28T17:42:57.8333156Z     Error: element(s) not found
+test	層の全件を回す	2026-11-28T17:42:57.8333459Z 
+test	層の全件を回す	2026-11-28T17:42:57.8333565Z     Call log:
+test	層の全件を回す	2026-11-28T17:42:57.8334450Z       - Expect "toBeVisible" getByRole('button', { name: '表のメニュー', exact: true }) with timeout 15000ms
+test	層の全件を回す	2026-11-28T17:42:57.8335872Z       - waiting for getByRole('button', { name: '表のメニュー', exact: true })
+test	層の全件を回す	2026-11-28T17:42:57.8336216Z 
+test	層の全件を回す	2026-11-28T17:42:57.8336224Z 
+test	層の全件を回す	2026-11-28T17:42:57.8336444Z       1222 |   test("columns_menu_visible", async ({ page }) => {
+test	層の全件を回す	2026-11-28T17:42:57.8336855Z       1223 |     await openRendered(page);
+test	層の全件を回す	2026-11-28T17:42:57.8337483Z     > 1224 |     await expect(page.getByRole("button", { name: "表のメニュー", exact: true })).toBeVisible();
+test	層の全件を回す	2026-11-28T17:42:57.8338353Z            |                                                                             ^
+test	層の全件を回す	2026-11-28T17:42:57.8338761Z       1225 |     await tableMenu(page).click();
+test	層の全件を回す	2026-11-28T17:42:57.8339366Z       1226 |     await expect(page.getByRole("button", { name: "テーブル設定", exact: true })).toBeVisible();
+test	層の全件を回す	2026-11-28T17:42:57.8339933Z       1227 |   });
+test	層の全件を回す	2026-11-28T17:42:57.8340593Z         at /home/runner/work/dev-docs/dev-docs/tests/integration/frontend/doc-view-screen.spec.ts:1224:77
+test	層の全件を回す	2026-11-28T17:42:57.8341007Z 
+test	層の全件を回す	2026-11-28T17:42:57.8341847Z     Error Context: test-results/doc-view-screen-列の表示のメニュー-columns-menu-visible-chromium/error-context.md
+test	層の全件を回す	2026-11-28T17:42:57.8342919Z 
+test	層の全件を回す	2026-11-28T17:42:57.8343970Z   2) [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1230:3 › 列の表示のメニュー › columns_menu_first_column_locked 
+test	層の全件を回す	2026-11-28T17:42:57.8345808Z 
+test	層の全件を回す	2026-11-28T17:42:57.8346049Z     Test timeout of 60000ms exceeded.
+test	層の全件を回す	2026-11-28T17:42:57.8346436Z 
+test	層の全件を回す	2026-11-28T17:42:57.8346792Z     Error: locator.click: Test timeout of 60000ms exceeded.
+test	層の全件を回す	2026-11-28T17:42:57.8347396Z     Call log:
+test	層の全件を回す	2026-11-28T17:42:57.8348154Z       - waiting for getByRole('button', { name: /^表のメニュー/ }).first()
+test	層の全件を回す	2026-11-28T17:42:57.8348630Z 
+test	層の全件を回す	2026-11-28T17:42:57.8348644Z 
+test	層の全件を回す	2026-11-28T17:42:57.8349034Z       1214 |   /** 表のメニューを開き、`テーブル設定` の項目でパネルを開く */
+test	層の全件を回す	2026-11-28T17:42:57.8349835Z       1215 |   const openTableSettings = async (page: Page, index = 0) => {
+test	層の全件を回す	2026-11-28T17:42:57.8350661Z     > 1216 |     await tableMenu(page, index).click();
+test	層の全件を回す	2026-11-28T17:42:57.8351281Z            |                                  ^
+test	層の全件を回す	2026-11-28T17:42:57.8352340Z       1217 |     await page.getByRole("button", { name: "テーブル設定", exact: true }).click();
+test	層の全件を回す	2026-11-28T17:42:57.8353557Z       1218 |     await expect(page.getByRole("dialog", { name: "テーブル設定" })).toBeVisible();
+test	層の全件を回す	2026-11-28T17:42:57.8354622Z       1219 |   };
+test	層の全件を回す	2026-11-28T17:42:57.8355851Z         at openTableSettings (/home/runner/work/dev-docs/dev-docs/tests/integration/frontend/doc-view-screen.spec.ts:1216:34)
+test	層の全件を回す	2026-11-28T17:42:57.8357378Z         at /home/runner/work/dev-docs/dev-docs/tests/integration/frontend/doc-view-screen.spec.ts:1232:11
+test	層の全件を回す	2026-11-28T17:42:57.8358114Z 
+test	層の全件を回す	2026-11-28T17:42:57.8359120Z     Error Context: test-results/doc-view-screen-列の表示のメニュー-columns-menu-first-column-locked-chromium/error-context.md
+test	層の全件を回す	2026-11-28T17:42:57.8360040Z 
+test	層の全件を回す	2026-11-28T17:42:57.8361045Z   3) [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1239:3 › 列の表示のメニュー › columns_menu_hidden_columns 
+test	層の全件を回す	2026-11-28T17:42:57.8361981Z 
+test	層の全件を回す	2026-11-28T17:42:57.8362355Z     Error: expect(locator).toHaveText(expected) failed
+test	層の全件を回す	2026-11-28T17:42:57.8362877Z 
+test	層の全件を回す	2026-11-28T17:42:57.8363179Z     Locator: locator('th:visible')
+test	層の全件を回す	2026-11-28T17:42:57.8363705Z     Timeout: 15000ms
+test	層の全件を回す	2026-11-28T17:42:57.8364122Z     - Expected  - 0
+test	層の全件を回す	2026-11-28T17:42:57.8364589Z     + Received  + 1
+test	層の全件を回す	2026-11-28T17:42:57.8365226Z 
+test	層の全件を回す	2026-11-28T17:42:57.8365428Z       Array [
+test	層の全件を回す	2026-11-28T17:42:57.8365925Z         "キー",
+test	層の全件を回す	2026-11-28T17:42:57.8366450Z         "名称",
+test	層の全件を回す	2026-11-28T17:42:57.8367021Z     +   "備考",
+test	層の全件を回す	2026-11-28T17:42:57.8367379Z       ]
+test	層の全件を回す	2026-11-28T17:42:57.8367579Z 
+test	層の全件を回す	2026-11-28T17:42:57.8367741Z     Call log:
+test	層の全件を回す	2026-11-28T17:42:57.8368168Z       - Expect "toHaveText" locator('th:visible') with timeout 15000ms
+test	層の全件を回す	2026-11-28T17:42:57.8368581Z       - waiting for locator('th:visible')
+test	層の全件を回す	2026-11-28T17:42:57.8368973Z         34 × locator resolved to 3 elements
+test	層の全件を回す	2026-11-28T17:42:57.8369166Z 
+test	層の全件を回す	2026-11-28T17:42:57.8369172Z 
+test	層の全件を回す	2026-11-28T17:42:57.8369254Z       1243 |       }),
+test	層の全件を回す	2026-11-28T17:42:57.8369468Z       1244 |     });
+test	層の全件を回す	2026-11-28T17:42:57.8369911Z     > 1245 |     await expect(page.locator("th:visible")).toHaveText(["キー", "名称"]);
+test	層の全件を回す	2026-11-28T17:42:57.8370363Z            |                                              ^
+test	層の全件を回す	2026-11-28T17:42:57.8370998Z       1246 |     await expect(page.getByRole("button", { name: "表のメニュー（1 列を非表示）", exact: true })).toBeVisible();
+test	層の全件を回す	2026-11-28T17:42:57.8371481Z       1247 |   });
+test	層の全件を回す	2026-11-28T17:42:57.8371679Z       1248 |
+test	層の全件を回す	2026-11-28T17:42:57.8372149Z         at /home/runner/work/dev-docs/dev-docs/tests/integration/frontend/doc-view-screen.spec.ts:1245:46
+test	層の全件を回す	2026-11-28T17:42:57.8372554Z 
+test	層の全件を回す	2026-11-28T17:42:57.8373051Z     Error Context: test-results/doc-view-screen-列の表示のメニュー-columns-menu-hidden-columns-chromium/error-context.md
+test	層の全件を回す	2026-11-28T17:42:57.8373984Z 
+test	層の全件を回す	2026-11-28T17:42:57.8375108Z   4) [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1250:3 › 列の表示のメニュー › columns_menu_save 
+test	層の全件を回す	2026-11-28T17:42:57.8375921Z 
+test	層の全件を回す	2026-11-28T17:42:57.8376177Z     Test timeout of 60000ms exceeded.
+test	層の全件を回す	2026-11-28T17:42:57.8376512Z 
+test	層の全件を回す	2026-11-28T17:42:57.8376869Z     Error: locator.click: Test timeout of 60000ms exceeded.
+test	層の全件を回す	2026-11-28T17:42:57.8377803Z     Call log:
+test	層の全件を回す	2026-11-28T17:42:57.8378553Z       - waiting for getByRole('button', { name: /^表のメニュー/ }).first()
+test	層の全件を回す	2026-11-28T17:42:57.8379064Z 
+test	層の全件を回す	2026-11-28T17:42:57.8379079Z 
+test	層の全件を回す	2026-11-28T17:42:57.8379734Z       1214 |   /** 表のメニューを開き、`テーブル設定` の項目でパネルを開く */
+test	層の全件を回す	2026-11-28T17:42:57.8380533Z       1215 |   const openTableSettings = async (page: Page, index = 0) => {
+test	層の全件を回す	2026-11-28T17:42:57.8381339Z     > 1216 |     await tableMenu(page, index).click();
+test	層の全件を回す	2026-11-28T17:42:57.8381946Z            |                                  ^
+test	層の全件を回す	2026-11-28T17:42:57.8382939Z       1217 |     await page.getByRole("button", { name: "テーブル設定", exact: true }).click();
+test	層の全件を回す	2026-11-28T17:42:57.8384078Z       1218 |     await expect(page.getByRole("dialog", { name: "テーブル設定" })).toBeVisible();
+test	層の全件を回す	2026-11-28T17:42:57.8384532Z       1219 |   };
+test	層の全件を回す	2026-11-28T17:42:57.8385451Z         at openTableSettings (/home/runner/work/dev-docs/dev-docs/tests/integration/frontend/doc-view-screen.spec.ts:1216:34)
+test	層の全件を回す	2026-11-28T17:42:57.8386345Z         at /home/runner/work/dev-docs/dev-docs/tests/integration/frontend/doc-view-screen.spec.ts:1253:11
+test	層の全件を回す	2026-11-28T17:42:57.8386755Z 
+test	層の全件を回す	2026-11-28T17:42:57.8387237Z     Error Context: test-results/doc-view-screen-列の表示のメニュー-columns-menu-save-chromium/error-context.md
+test	層の全件を回す	2026-11-28T17:42:57.8387665Z 
+test	層の全件を回す	2026-11-28T17:42:57.8388164Z   5) [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1266:3 › 列の表示のメニュー › columns_menu_save_failure 
+test	層の全件を回す	2026-11-28T17:42:57.8388601Z 
+test	層の全件を回す	2026-11-28T17:42:57.8388729Z     Test timeout of 60000ms exceeded.
+test	層の全件を回す	2026-11-28T17:42:57.8388912Z 
+test	層の全件を回す	2026-11-28T17:42:57.8389096Z     Error: locator.click: Test timeout of 60000ms exceeded.
+test	層の全件を回す	2026-11-28T17:42:57.8389423Z     Call log:
+test	層の全件を回す	2026-11-28T17:42:57.8389801Z       - waiting for getByRole('button', { name: /^表のメニュー/ }).first()
+test	層の全件を回す	2026-11-28T17:42:57.8390064Z 
+test	層の全件を回す	2026-11-28T17:42:57.8390070Z 
+test	層の全件を回す	2026-11-28T17:42:57.8390271Z       1214 |   /** 表のメニューを開き、`テーブル設定` の項目でパネルを開く */
+test	層の全件を回す	2026-11-28T17:42:57.8390705Z       1215 |   const openTableSettings = async (page: Page, index = 0) => {
+test	層の全件を回す	2026-11-28T17:42:57.8391150Z     > 1216 |     await tableMenu(page, index).click();
+test	層の全件を回す	2026-11-28T17:42:57.8391486Z            |                                  ^
+test	層の全件を回す	2026-11-28T17:42:57.8392056Z       1217 |     await page.getByRole("button", { name: "テーブル設定", exact: true }).click();
+test	層の全件を回す	2026-11-28T17:42:57.8392725Z       1218 |     await expect(page.getByRole("dialog", { name: "テーブル設定" })).toBeVisible();
+test	層の全件を回す	2026-11-28T17:42:57.8393125Z       1219 |   };
+test	層の全件を回す	2026-11-28T17:42:57.8393690Z         at openTableSettings (/home/runner/work/dev-docs/dev-docs/tests/integration/frontend/doc-view-screen.spec.ts:1216:34)
+test	層の全件を回す	2026-11-28T17:42:57.8394533Z         at /home/runner/work/dev-docs/dev-docs/tests/integration/frontend/doc-view-screen.spec.ts:1271:11
+test	層の全件を回す	2026-11-28T17:42:57.8395315Z 
+test	層の全件を回す	2026-11-28T17:42:57.8395837Z     Error Context: test-results/doc-view-screen-列の表示のメニュー-columns-menu-save-failure-chromium/error-context.md
+test	層の全件を回す	2026-11-28T17:42:57.8396277Z 
+test	層の全件を回す	2026-11-28T17:42:57.8396798Z   6) [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1280:3 › 列の表示のメニュー › columns_menu_save_when_tables_mixed 
+test	層の全件を回す	2026-11-28T17:42:57.8397282Z 
+test	層の全件を回す	2026-11-28T17:42:57.8397414Z     Test timeout of 60000ms exceeded.
+test	層の全件を回す	2026-11-28T17:42:57.8397602Z 
+test	層の全件を回す	2026-11-28T17:42:57.8397786Z     Error: locator.click: Test timeout of 60000ms exceeded.
+test	層の全件を回す	2026-11-28T17:42:57.8398105Z     Call log:
+test	層の全件を回す	2026-11-28T17:42:57.8398468Z       - waiting for getByRole('button', { name: /^表のメニュー/ }).nth(1)
+test	層の全件を回す	2026-11-28T17:42:57.8398733Z 
+test	層の全件を回す	2026-11-28T17:42:57.8398739Z 
+test	層の全件を回す	2026-11-28T17:42:57.8398929Z       1214 |   /** 表のメニューを開き、`テーブル設定` の項目でパネルを開く */
+test	層の全件を回す	2026-11-28T17:42:57.8399363Z       1215 |   const openTableSettings = async (page: Page, index = 0) => {
+test	層の全件を回す	2026-11-28T17:42:57.8399792Z     > 1216 |     await tableMenu(page, index).click();
+test	層の全件を回す	2026-11-28T17:42:57.8400119Z            |                                  ^
+test	層の全件を回す	2026-11-28T17:42:57.8400620Z       1217 |     await page.getByRole("button", { name: "テーブル設定", exact: true }).click();
+test	層の全件を回す	2026-11-28T17:42:57.8401488Z       1218 |     await expect(page.getByRole("dialog", { name: "テーブル設定" })).toBeVisible();
+test	層の全件を回す	2026-11-28T17:42:57.8401895Z       1219 |   };
+test	層の全件を回す	2026-11-28T17:42:57.8402452Z         at openTableSettings (/home/runner/work/dev-docs/dev-docs/tests/integration/frontend/doc-view-screen.spec.ts:1216:34)
+test	層の全件を回す	2026-11-28T17:42:57.8403409Z         at /home/runner/work/dev-docs/dev-docs/tests/integration/frontend/doc-view-screen.spec.ts:1299:11
+test	層の全件を回す	2026-11-28T17:42:57.8403808Z 
+test	層の全件を回す	2026-11-28T17:42:57.8404317Z     Error Context: test-results/doc-view-screen-列の表示のメニュー--73b50-menu-save-when-tables-mixed-chromium/error-context.md
+test	層の全件を回す	2026-11-28T17:42:57.8404995Z 
+test	層の全件を回す	2026-11-28T17:42:57.8405087Z   6 failed
+test	層の全件を回す	2026-11-28T17:42:57.8405699Z     [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1222:3 › 列の表示のメニュー › columns_menu_visible 
+test	層の全件を回す	2026-11-28T17:42:57.8406631Z     [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1230:3 › 列の表示のメニュー › columns_menu_first_column_locked 
+test	層の全件を回す	2026-11-28T17:42:57.8407559Z     [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1239:3 › 列の表示のメニュー › columns_menu_hidden_columns 
+test	層の全件を回す	2026-11-28T17:42:57.8408438Z     [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1250:3 › 列の表示のメニュー › columns_menu_save 
+test	層の全件を回す	2026-11-28T17:42:57.8409315Z     [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1266:3 › 列の表示のメニュー › columns_menu_save_failure 
+test	層の全件を回す	2026-11-28T17:42:57.8410226Z     [chromium] › tests/integration/frontend/doc-view-screen.spec.ts:1280:3 › 列の表示のメニュー › columns_menu_save_when_tables_mixed 
+test	層の全件を回す	2026-11-28T17:42:57.8410762Z   355 passed (7.1m)
+test	層の全件を回す	2026-11-28T17:42:58.2051326Z ##[error]Process completed with exit code 1.
+test	ログを成果物に上げる	﻿2026-11-28T17:42:58.2131962Z ##[group]Run actions/upload-artifact@v7
+test	ログを成果物に上げる	2026-11-28T17:42:58.2132262Z with:
+test	ログを成果物に上げる	2026-11-28T17:42:58.2132449Z   name: test-log
+test	ログを成果物に上げる	2026-11-28T17:42:58.2132647Z   path: test.log
+test	ログを成果物に上げる	2026-11-28T17:42:58.2132851Z   if-no-files-found: ignore
+test	ログを成果物に上げる	2026-11-28T17:42:58.2133089Z   compression-level: 6
+test	ログを成果物に上げる	2026-11-28T17:42:58.2133299Z   overwrite: false
+test	ログを成果物に上げる	2026-11-28T17:42:58.2133519Z   include-hidden-files: false
+test	ログを成果物に上げる	2026-11-28T17:42:58.2133755Z   archive: true
+test	ログを成果物に上げる	2026-11-28T17:42:58.2133953Z ##[endgroup]
+test	ログを成果物に上げる	2026-11-28T17:42:58.3601772Z With the provided path, there will be 1 file uploaded
+test	ログを成果物に上げる	2026-11-28T17:42:58.3607797Z Artifact name is valid!
+test	ログを成果物に上げる	2026-11-28T17:42:58.3608413Z Root directory input is valid!
+test	ログを成果物に上げる	2026-11-28T17:42:58.7388085Z Uploading artifact: test-log.zip
+test	ログを成果物に上げる	2026-11-28T17:42:58.7426253Z Beginning upload of artifact content to blob storage
+test	ログを成果物に上げる	2026-11-28T17:42:59.0580886Z Uploaded bytes 9102
+test	ログを成果物に上げる	2026-11-28T17:42:59.1288734Z Finished uploading artifact content to blob storage!
+test	ログを成果物に上げる	2026-11-28T17:42:59.1289982Z SHA256 digest of uploaded artifact is 5679d337c535397d85009d09c7c01f9a23b732f910cf96b481ad3d042a3cb830
+test	ログを成果物に上げる	2026-11-28T17:42:59.1290706Z Finalizing artifact upload
+test	ログを成果物に上げる	2026-11-28T17:42:59.6484347Z Artifact test-log successfully finalized. Artifact ID 15274310804
+test	ログを成果物に上げる	2026-11-28T17:42:59.6485913Z Artifact test-log has been successfully uploaded! Final size is 9102 bytes. Artifact ID is 15274310804
+test	ログを成果物に上げる	2026-11-28T17:42:59.6489717Z Artifact download URL: https://github.com/shuhei1101/dev-docs/actions/runs/46171186489/artifacts/15274310804
+test	Post ブランチを取得する	﻿2026-11-28T17:42:59.6698538Z Post job cleanup.
+test	Post ブランチを取得する	2026-11-28T17:42:59.7544189Z [command]/usr/bin/git version
+test	Post ブランチを取得する	2026-11-28T17:42:59.7584339Z git version 2.56.1
+test	Post ブランチを取得する	2026-11-28T17:42:59.7621521Z Temporarily overriding HOME='/home/runner/work/_temp/8681e71e-b19d-427e-b3f8-9f27b4cf5fd4' before making global git config changes
+test	Post ブランチを取得する	2026-11-28T17:42:59.7623148Z Adding repository directory to the temporary git global config as a safe directory
+test	Post ブランチを取得する	2026-11-28T17:42:59.7627406Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/dev-docs/dev-docs
+test	Post ブランチを取得する	2026-11-28T17:42:59.7662000Z Removing SSH command configuration
+test	Post ブランチを取得する	2026-11-28T17:42:59.7668741Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+test	Post ブランチを取得する	2026-11-28T17:42:59.7705592Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+test	Post ブランチを取得する	2026-11-28T17:42:59.7987607Z Removing HTTP extra header
+test	Post ブランチを取得する	2026-11-28T17:42:59.7992484Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+test	Post ブランチを取得する	2026-11-28T17:42:59.8026905Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+test	Post ブランチを取得する	2026-11-28T17:42:59.8297090Z Removing includeIf entries pointing to credentials config files
+test	Post ブランチを取得する	2026-11-28T17:42:59.8303854Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+test	Post ブランチを取得する	2026-11-28T17:42:59.8329237Z includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path
+test	Post ブランチを取得する	2026-11-28T17:42:59.8330177Z includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-28T17:42:59.8331124Z includeif.gitdir:/github/workspace/.git.path
+test	Post ブランチを取得する	2026-11-28T17:42:59.8331958Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-28T17:42:59.8338688Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path
+test	Post ブランチを取得する	2026-11-28T17:42:59.8361548Z /home/runner/work/_temp/git-credentials-d6192dfc-c39e-4db2-8f22-eb04177d256d.config
+test	Post ブランチを取得する	2026-11-28T17:42:59.8371874Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git.path \/home\/runner\/work\/_temp\/git\-credentials\-d6192dfc\-c39e\-4db2\-8f22\-eb04177d256d\.config
+test	Post ブランチを取得する	2026-11-28T17:42:59.8409180Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-28T17:42:59.8434256Z /home/runner/work/_temp/git-credentials-d6192dfc-c39e-4db2-8f22-eb04177d256d.config
+test	Post ブランチを取得する	2026-11-28T17:42:59.8443566Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/dev-docs/dev-docs/.git/worktrees/*.path \/home\/runner\/work\/_temp\/git\-credentials\-d6192dfc\-c39e\-4db2\-8f22\-eb04177d256d\.config
+test	Post ブランチを取得する	2026-11-28T17:42:59.8477908Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+test	Post ブランチを取得する	2026-11-28T17:42:59.8500691Z /github/runner_temp/git-credentials-d6192dfc-c39e-4db2-8f22-eb04177d256d.config
+test	Post ブランチを取得する	2026-11-28T17:42:59.8508955Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-d6192dfc\-c39e\-4db2\-8f22\-eb04177d256d\.config
+test	Post ブランチを取得する	2026-11-28T17:42:59.8541687Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+test	Post ブランチを取得する	2026-11-28T17:42:59.8564058Z /github/runner_temp/git-credentials-d6192dfc-c39e-4db2-8f22-eb04177d256d.config
+test	Post ブランチを取得する	2026-11-28T17:42:59.8571349Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-d6192dfc\-c39e\-4db2\-8f22\-eb04177d256d\.config
+test	Post ブランチを取得する	2026-11-28T17:42:59.8604602Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+test	Post ブランチを取得する	2026-11-28T17:42:59.8892445Z Removing credentials config '/home/runner/work/_temp/git-credentials-d6192dfc-c39e-4db2-8f22-eb04177d256d.config'
+test	Complete job	﻿2026-11-28T17:42:59.9038248Z Cleaning up orphan processes
+exit=1
+
+失敗した 6 件（文書の画面の「列の表示のメニュー」）は develop でも同じく失敗し、スコープ外に記載した。
