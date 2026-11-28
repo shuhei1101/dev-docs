@@ -11,7 +11,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test } from "vitest";
 
-import { type ConfirmRequest, ConfirmDialogProvider } from "@/app/confirm-dialog";
+import { type ConfirmRequest, ConfirmDialogProvider } from "@/shared/components/confirm-dialog";
 import { useLeaveGuard } from "@/shared/hooks/use-leave-guard";
 
 const NAVIGATION: ConfirmRequest = {

@@ -887,7 +887,7 @@ files:
   related:
   - to: LIB-155-10
     type: see_also
-- path: unit/frontend/src/app/confirm-dialog.test.tsx
+- path: unit/frontend/src/shared/components/confirm-dialog.test.tsx
   name: 画面共通の確認のダイアログと、それを開くフックの単体テスト
   description: 画面共通の確認のダイアログと、それを開くフックの単体テストを受け持ち、confirm-dialog.tsx の振る舞いのテストを修正するときに参照する。
   tags:
@@ -895,7 +895,7 @@ files:
   - tool:react
   - topic:ダイアログ
   related:
-  - to: frontend/src/app/confirm-dialog.tsx
+  - to: frontend/src/shared/components/confirm-dialog.tsx
     type: tests
 - path: unit/frontend/src/app/error-fallback.test.tsx
   name: 描画中の例外の表示の単体テスト
@@ -1632,6 +1632,36 @@ files:
   - topic:単体テスト
   related:
   - to: frontend/src/features/metadata/metadata/metadata-screen.tsx
+    type: tests
+- path: unit/frontend/src/shared/hooks/use-leave-guard.test.tsx
+  name: 未保存のまま画面を離れるときの警告のフックの単体テスト
+  description: 未保存のまま画面を離れるときの警告のフックの単体テストを受け持ち、use-leave-guard.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:画面
+  - topic:警告
+  - topic:編集
+  related:
+  - to: frontend/src/shared/hooks/use-leave-guard.ts
+    type: tests
+- path: unit/frontend/src/shared/hooks/use-scroll-restoration.test.tsx
+  name: スクロール位置をキーごとに戻すフックの単体テスト
+  description: スクロール位置をキーごとに戻すフックの単体テストを受け持ち、use-scroll-restoration.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:スクロール
+  - action:保存
+  - topic:画面
+  related:
+  - to: frontend/src/shared/hooks/use-scroll-restoration.ts
+    type: tests
+- path: unit/frontend/src/shared/stores/legacy-key-storage.test.ts
+  name: 旧キーの値を新キーへ移し替える保存先の単体テスト
+  description: 旧キーの値を新キーへ移し替える保存先の単体テストを受け持ち、legacy-key-storage.ts の振る舞いのテストを修正するときに参照する。
+  tags:
+  - topic:ストア
+  - action:保存
+  - topic:画面
+  related:
+  - to: frontend/src/shared/stores/legacy-key-storage.ts
     type: tests
 checkpoint:
   commit: 05915628138ff51e7b1be495775c9f556a2a0825

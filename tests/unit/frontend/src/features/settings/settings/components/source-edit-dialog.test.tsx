@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { expect, test, vi } from "vitest";
 
-import { ConfirmDialogProvider } from "@/app/confirm-dialog";
+import { ConfirmDialogProvider } from "@/shared/components/confirm-dialog";
 import { SourceEditDialog } from "@/features/settings/settings/components/source-edit-dialog";
 import { PROBLEM_HEADERS, problem, settingsSource } from "@tests/helpers/fixtures";
 import { server } from "@tests/helpers/msw-server";

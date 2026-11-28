@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, test } from "vitest";
 
-import { ConfirmDialogProvider, useConfirmDialog } from "@/app/confirm-dialog";
+import { ConfirmDialogProvider, useConfirmDialog } from "@/shared/components/confirm-dialog";
 
 let result: boolean | null = null;
 
