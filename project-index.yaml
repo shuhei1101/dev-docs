@@ -362,24 +362,26 @@ nav:
         - group: 部品設計
           items:
             - auto: {document: component}
-        - group: モジュール構成 / 画面
+        - group: モジュール構成
           items:
-            - auto:
-                document: module
-                filter: {field: name, op: prefix, values: ['画面 / ']}
-        - group: モジュール構成 / 開発ドキュメントサーバー
-          items:
-            - auto:
-                document: module
-                filter: {field: name, op: prefix, values: ['開発ドキュメントサーバー / ']}
-        - group: モジュール構成 / 管理用プラグイン・開発用のスクリプト
-          items:
-            - auto:
-                document: module
-                filter:
-                  or:
-                    - {field: name, op: prefix, values: ['管理用プラグイン / ']}
-                    - {field: name, op: prefix, values: ['開発用のスクリプト / ']}
+            - group: 画面
+              items:
+                - auto:
+                    document: module
+                    filter: {field: name, op: prefix, values: ['画面 / ']}
+            - group: 開発ドキュメントサーバー
+              items:
+                - auto:
+                    document: module
+                    filter: {field: name, op: prefix, values: ['開発ドキュメントサーバー / ']}
+            - group: 管理用プラグイン・開発用のスクリプト
+              items:
+                - auto:
+                    document: module
+                    filter:
+                      or:
+                        - {field: name, op: prefix, values: ['管理用プラグイン / ']}
+                        - {field: name, op: prefix, values: ['開発用のスクリプト / ']}
         - group: 外部 API・外部ライブラリ
           items:
             - page: api
@@ -400,21 +402,166 @@ nav:
       items:
         - group: サーバー
           items:
-            - auto: {document: src}
+            - group: エントリーポイントと起動
+              items:
+                - auto:
+                    document: src
+                    filter:
+                      or:
+                        - {field: id, op: regex, values: ['\Asrc/dev_docs/[^/]+\Z']}
+                        - and:
+                            - {field: id, op: prefix, values: [src/dev_docs/server/]}
+                            - not: {field: id, op: prefix, values: [src/dev_docs/server/mcp/, src/dev_docs/server/origin.py]}
+            - group: 画面のAPI
+              items:
+                - auto:
+                    document: src
+                    filter: {field: id, op: prefix, values: [src/dev_docs/features/view/]}
+            - group: 変換
+              items:
+                - auto:
+                    document: src
+                    filter: {field: id, op: prefix, values: [src/dev_docs/features/convert/]}
+            - group: 文書
+              items:
+                - auto:
+                    document: src
+                    filter: {field: id, op: prefix, values: [src/dev_docs/features/documents/]}
+            - group: 絞り込み
+              items:
+                - auto:
+                    document: src
+                    filter: {field: id, op: prefix, values: [src/dev_docs/features/filter/]}
+            - group: 変更
+              items:
+                - auto:
+                    document: src
+                    filter: {field: id, op: prefix, values: [src/dev_docs/features/changes/]}
+            - group: メタデータ
+              items:
+                - auto:
+                    document: src
+                    filter: {field: id, op: prefix, values: [src/dev_docs/features/metadata/]}
+            - group: 端末の設定
+              items:
+                - auto:
+                    document: src
+                    filter: {field: id, op: prefix, values: [src/dev_docs/features/settings/]}
+            - group: 設定の移し替え
+              items:
+                - auto:
+                    document: src
+                    filter: {field: id, op: prefix, values: [src/dev_docs/features/migrate/, src/dev_docs/migrations/]}
+            - group: プロンプト
+              items:
+                - auto:
+                    document: src
+                    filter: {field: id, op: prefix, values: [src/dev_docs/features/prompt_doc/]}
+            - group: 再起動と更新
+              items:
+                - auto:
+                    document: src
+                    filter: {field: id, op: prefix, values: [src/dev_docs/features/lifecycle/]}
+            - group: 管理のMCP
+              items:
+                - auto:
+                    document: src
+                    filter: {field: id, op: prefix, values: [src/dev_docs/features/admin/, src/dev_docs/server/mcp/]}
+            - group: project-indexの呼び出し
+              items:
+                - auto:
+                    document: src
+                    filter: {field: id, op: prefix, values: [src/dev_docs/integrations/]}
+            - group: 共通
+              items:
+                - auto:
+                    document: src
+                    filter: {field: id, op: prefix, values: [src/dev_docs/shared/, src/dev_docs/schemas/, src/dev_docs/server/origin.py]}
         - group: 画面
           items:
-            - auto: {document: frontend}
-        - group: テスト / 単体
+            - group: アプリとルート
+              items:
+                - auto:
+                    document: frontend
+                    filter: {field: id, op: prefix, values: [frontend/src/app/, frontend/src/routes/, frontend/src/main.tsx]}
+            - group: 文書の画面
+              items:
+                - auto:
+                    document: frontend
+                    filter: {field: id, op: prefix, values: [frontend/src/features/docs/]}
+            - group: メタデータの画面
+              items:
+                - auto:
+                    document: frontend
+                    filter: {field: id, op: prefix, values: [frontend/src/features/metadata/]}
+            - group: 設定画面
+              items:
+                - auto:
+                    document: frontend
+                    filter: {field: id, op: prefix, values: [frontend/src/features/settings/]}
+            - group: 共通の部品
+              items:
+                - auto:
+                    document: frontend
+                    filter: {field: id, op: prefix, values: [frontend/src/shared/components/]}
+            - group: 共通
+              items:
+                - auto:
+                    document: frontend
+                    filter:
+                      and:
+                        - {field: id, op: prefix, values: [frontend/src/shared/]}
+                        - not: {field: id, op: prefix, values: [frontend/src/shared/components/]}
+            - group: ビルドとテストの設定
+              items:
+                - auto:
+                    document: frontend
+                    filter:
+                      or:
+                        - {field: id, op: regex, values: ['\Afrontend/[^/]+\Z']}
+                        - {field: id, op: prefix, values: [frontend/.storybook/, frontend/scripts/, frontend/src/testing/]}
+        - group: テスト
           items:
-            - auto:
-                document: tests
-                filter: {field: id, op: prefix, values: [tests/unit/]}
-        - group: テスト / 結合・E2E
-          items:
-            - auto:
-                document: tests
-                filter:
-                  not: {field: id, op: prefix, values: [tests/unit/]}
+            - group: サーバーの単体テスト
+              items:
+                - auto:
+                    document: tests
+                    filter: {field: id, op: prefix, values: [tests/unit/dev_docs/]}
+            - group: 画面の単体テスト
+              items:
+                - auto:
+                    document: tests
+                    filter: {field: id, op: prefix, values: [tests/unit/frontend/]}
+            - group: プラグイン・スクリプトの単体テスト
+              items:
+                - auto:
+                    document: tests
+                    filter: {field: id, op: prefix, values: [tests/unit/plugins/, tests/unit/scripts/]}
+            - group: サーバーの結合テスト
+              items:
+                - auto:
+                    document: tests
+                    filter: {field: id, op: prefix, values: [tests/integration/server/]}
+            - group: 画面の結合テスト
+              items:
+                - auto:
+                    document: tests
+                    filter: {field: id, op: prefix, values: [tests/integration/frontend/]}
+            - group: プラグインの結合テスト
+              items:
+                - auto:
+                    document: tests
+                    filter: {field: id, op: prefix, values: [tests/integration/plugin/]}
+            - group: E2E
+              items:
+                - auto:
+                    document: tests
+                    filter: {field: id, op: prefix, values: [tests/e2e/]}
+            - group: 共通の設定
+              items:
+                - auto:
+                    document: tests
+                    filter: {field: id, op: regex, values: ['\Atests/[^/]+\Z']}
         - group: リポジトリの設定とスクリプト
           items:
             - auto:
