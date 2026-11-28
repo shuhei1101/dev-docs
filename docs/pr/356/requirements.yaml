@@ -1,0 +1,48 @@
+use_cases:
+  - kind: composite
+    scenario: docs/scenario/SC-155-13.yaml
+    impact: run_only
+    detail: 画面で文書を参照する流れは変えないが、4 画面の振る舞いの修正が流れを壊しうる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-7.yaml
+    impact: run_only
+    detail: 文書の画面・見つからない画面・トップバー・検索のダイアログ・ショートカットの一覧の振る舞いの修正が、参照の流れを壊しうる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-6.yaml
+    impact: run_only
+    detail: 文書の画面とトップバーの振る舞いの修正が、コメントを溜めて送信する流れを壊しうる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-12.yaml
+    impact: run_only
+    detail: 設定画面の振る舞いの修正が、配信元を追加する流れを壊しうる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-11.yaml
+    impact: run_only
+    detail: 設定画面の振る舞いの修正が、配信元を除外する流れを壊しうる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-14.yaml
+    impact: run_only
+    detail: メタデータの画面の振る舞いの修正が、種類ごとの表で参照・絞り込む流れを壊しうる
+    depends_on: []
+  - kind: single
+    scenario: docs/scenario/SC-155-15.yaml
+    impact: run_only
+    detail: メタデータの画面・文書の画面・レビュー中のパネルの振る舞いの修正が、編集中の変更をまとめて直コミットする流れを壊しうる
+    depends_on: []
+docs:
+  - page: project-index.yaml
+    new: false
+    change: 設計書の行の schema.ref を全て design-schemas/v12.0.0 にする
+    status: todo
+scope_out:
+  - item: 画面設計・部品設計以外の種類の設計書を v12.0.0 で新規に追加された任意の欄で書き足すこと
+    reason: 要望に含まれない（ほかの種類は今のまま v12.0.0 の検査に合格する）
+    plan: none
+  - item: シナリオ対応の E2E の新規作成
+    reason: 利用者の操作の流れは変わらず、既存のテストの実行で確かめる
+    plan: none
