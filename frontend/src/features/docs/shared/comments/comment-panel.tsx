@@ -20,6 +20,11 @@ import {
   SheetTitle,
 } from "@/shared/components/ui/sheet";
 import { Textarea } from "@/shared/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/shared/components/ui/tooltip";
 import { useMediaQuery } from "@/shared/hooks/use-media-query";
 
 type Props = {
@@ -42,7 +47,7 @@ export const CommentPanel = ({
   github,
   onLocate,
 }: Props) => {
-  const { comments, setSelected, update, remove } = useCommentStore();
+  const { comments, setSelected, update, remove, restore } = useCommentStore();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [invalid, setInvalid] = useState(false);
@@ -51,6 +56,18 @@ export const CommentPanel = ({
   const chosen = comments.filter((comment) => comment.selected);
   const all = comments.length > 0 && chosen.length === comments.length;
   const mixed = chosen.length > 0 && !all;
+
+  // 削除したコメントは、通知の「元に戻す」で削除する前の位置に戻す
+  const removeWithUndo = (id: string) => {
+    const removed = remove(id);
+    if (removed === null) return;
+    toast("コメントを削除しました。", {
+      action: {
+        label: "元に戻す",
+        onClick: () => restore(removed.comment, removed.index),
+      },
+    });
+  };
 
   const copy = async (text: string): Promise<boolean> => {
     try {
@@ -171,24 +188,36 @@ export const CommentPanel = ({
                       </button>
                       {editingId !== comment.id && (
                         <>
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            aria-label="修正"
-                            onClick={() => startEdit(comment)}
-                          >
-                            <Pencil />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            aria-label="削除"
-                            onClick={() => {
-                              remove(comment.id);
-                            }}
-                          >
-                            <Trash2 />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  aria-label={`${index + 1} 件目のコメントを修正`}
+                                  onClick={() => startEdit(comment)}
+                                />
+                              }
+                            >
+                              <Pencil />
+                            </TooltipTrigger>
+                            <TooltipContent>修正</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  aria-label={`${index + 1} 件目のコメントを削除`}
+                                  onClick={() => removeWithUndo(comment.id)}
+                                />
+                              }
+                            >
+                              <Trash2 />
+                            </TooltipTrigger>
+                            <TooltipContent>削除</TooltipContent>
+                          </Tooltip>
                         </>
                       )}
                     </div>

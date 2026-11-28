@@ -17,6 +17,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/shared/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/shared/components/ui/tooltip";
 
 type Props = {
   sources: SettingsSourceRow[];
@@ -79,22 +84,36 @@ export const SourceTable = ({ sources, onEdit, onRemove }: Props) => {
         const name = row.original.id ?? `${row.index + 1} 行目`;
         return (
           <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`${name} を編集`}
-              onClick={() => onEdit(row.index)}
-            >
-              <Pencil />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`${name} を削除`}
-              onClick={() => onRemove(row.index)}
-            >
-              <Trash2 />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`${name} を編集`}
+                    onClick={() => onEdit(row.index)}
+                  />
+                }
+              >
+                <Pencil />
+              </TooltipTrigger>
+              <TooltipContent>{`${name} を編集`}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`${name} を削除`}
+                    onClick={() => onRemove(row.index)}
+                  />
+                }
+              >
+                <Trash2 />
+              </TooltipTrigger>
+              <TooltipContent>{`${name} を削除`}</TooltipContent>
+            </Tooltip>
           </div>
         );
       },
