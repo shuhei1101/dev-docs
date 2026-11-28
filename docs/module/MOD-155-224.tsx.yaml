@@ -1,9 +1,9 @@
 id: MOD-155-224
 title: 画面 / 共通 / pending-panel.tsx
-lead: 文書の画面とメタデータの画面に共通の編集中のパネルとコミットの確認のダイアログを受け持ち、共通の pending-panel.tsx を修正するときに参照する。
+lead: 文書の画面とメタデータの画面に共通のレビュー中のパネルとコミットの確認のダイアログを受け持ち、共通の pending-panel.tsx を修正するときに参照する。
 components:
   - name: PendingPanel
-    title: 編集中のパネル
+    title: レビュー中のパネル
     kind: コンポーネント
     container: shared/components/pending-panel/pending-panel.tsx
     usecase: 画面で編集中の変更をまとめて直コミットする
@@ -110,10 +110,10 @@ components:
 refs:
   - to: SCR-155-4
     type: requires
-    when: 編集中のパネルとコミットの確認の要素を変えるときに突き合わせる。
+    when: レビュー中のパネルとコミットの確認の要素を変えるときに突き合わせる。
   - to: CMP-155-4
     type: requires
-    when: 編集中のパネルの引数・状態を変えるときに、部品設計『編集中のパネル』と突き合わせる。
+    when: レビュー中のパネルの引数・状態を変えるときに、部品設計『レビュー中のパネル』と突き合わせる。
 tags:
   - name: topic:メタデータ
   - name: topic:画面

@@ -2,7 +2,7 @@ use_cases:
   - kind: composite
     scenario: docs/scenario/SC-155-13.yaml
     impact: following
-    detail: 溜めた変更を確認してまとめて送信する連鎖の中の、パネルの名前の変更に追随する（用語「編集中の変更」は要件の論点で決める）
+    detail: 溜めた変更を確認してまとめて送信する連鎖の中の、パネルの名前の変更に追随する（用語「編集中の変更」は残すため、記述は変わらない）
     depends_on:
       - docs/scenario/SC-155-15.yaml
   - kind: single
@@ -22,12 +22,12 @@ docs:
     status: todo
   - page: docs/guide/用語集.md
     new: false
-    change: 「編集中の変更」の行が指すボタンの名前を `レビュー中` にする（用語そのものは要件の論点で決める）
+    change: 「編集中の変更」の行が指すボタンの名前を `レビュー中` にする（用語そのものは残す）
     status: todo
 scope_out:
   - item: パンくずの group をリンクにして、その group の一番上の文書を開けるようにする
     reason: 要望は外側のグループを並べることで、group のリンクは要望に含まれない
     plan: none
   - item: 用語集の「編集中の変更」の説明が、メタデータの画面の変更だけを挙げ、文書の画面の本文の変更を含めていない
-    reason: ボタン・パネルの名前とは別の記述の不足。用語の扱いを要件の論点で決めた後に、同じ行を書き換えるかを判断する
-    plan: to_file
+    reason: ボタン・パネルの名前とは別の記述の不足で、要望に含まれない。用語「編集中の変更」は残すと決定したので、この作業 PR のマージに関わらず同じ内容で成り立つ
+    plan: '#352'

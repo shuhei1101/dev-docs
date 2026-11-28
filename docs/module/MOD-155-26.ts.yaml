@@ -14,9 +14,9 @@ data_models:
       - name: tab
         type: NavTab
         description: '`active` のタブ'
-      - name: group
-        type: string | null
-        description: ページが入っている group の名前
+      - name: groups
+        type: string[]
+        description: ページを入れている group の名前を、タブの直下の group から外側から順に並べたもの（group に入っていない page と文書の無いタブは空）
       - name: page
         type: NavItem | null
         description: 開いている page（文書の無いタブは null）
@@ -27,7 +27,7 @@ functions:
     container: features/docs/doc-view/nav.ts
     usecase: 文書を参照する
     role: 変換
-    summary: '`active` のタブから `path` の page とその group を探す'
+    summary: '`tabIndex` のタブ（省いたか、`path` がそのタブに無いときは `active` のタブ）から `path` の page と、その page を入れている group の並びを探す'
     scope: public
     args:
       - name: tabs
@@ -40,25 +40,42 @@ functions:
         required: true
         passing: positional
         description: 文書の取得の `path`
+      - name: tabIndex
+        type: number
+        required: false
+        passing: positional
+        description: URL の `tab`（選んだタブの番号）
     returns:
       type: ActivePage
       description: '`active` のタブが無いときは先頭のタブ'
     process: |-
-      1. `active` のタブ（無ければ先頭）を取る
-      2. タブの `items` を深さ優先でたどり、`path` が一致する page と直前の group を返却する
+      1. `tabIndex` のタブがあり、その `items` に `path` の page があればそのタブ、無ければ `active` のタブ（無ければ先頭）を取る
+      2. タブの `items` を深さ優先でたどり、`path` が一致する page と、たどった group の名前を外側から順に並べた配列を返却する（降りるたびに内側の group の名前を末尾へ追加し、外側の名前を残す）
     unit_tests:
       - name: test_find_active_page
         case: 正常
         summary: group の中の page
         condition: '`active` のタブの group `設計` の中に `a.md`'
         mock: なし
-        expected: '`group` が `設計`、`page.path` が `a.md`'
+        expected: '`groups` が `["設計"]`、`page.path` が `a.md`'
+      - name: test_find_active_page_when_nested_group
+        case: 正常
+        summary: 入れ子の group の中の page
+        condition: '`active` のタブの group `設計書` の中の group `画面` の中に `a.md`'
+        mock: なし
+        expected: '`groups` が `["設計書", "画面"]`、`page.path` が `a.md`'
+      - name: test_find_active_page_when_no_group
+        case: 正常
+        summary: タブの直下の page
+        condition: '`active` のタブの直下に `a.md`'
+        mock: なし
+        expected: '`groups` が空、`page.path` が `a.md`'
       - name: test_find_active_page_when_empty_tab
         case: 正常
         summary: 文書の無いタブ
         condition: '`active` のタブの `items` が空'
         mock: なし
-        expected: '`page` が null'
+        expected: '`page` が null、`groups` が空'
   - name: firstPagePath
     title: タブの最初の文書
     kind: 関数
