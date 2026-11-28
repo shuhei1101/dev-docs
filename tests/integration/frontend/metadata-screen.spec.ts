@@ -141,7 +141,7 @@ const committed = (dryRun: boolean): CommitReply => ({
   },
 });
 
-const panel = (page: Page) => page.getByRole("complementary", { name: "編集中" }).or(page.getByRole("dialog", { name: "編集中" }));
+const panel = (page: Page) => page.getByRole("complementary", { name: "レビュー中" }).or(page.getByRole("dialog", { name: "レビュー中" }));
 
 /** タグのタブで n1 のタグを修正する */
 const editTag = async (page: Page, tags: string) => {
@@ -152,7 +152,7 @@ const editTag = async (page: Page, tags: string) => {
   await input.press("Enter");
 };
 
-/** 編集中のパネルからコミットの確認を経てコミットする */
+/** レビュー中のパネルからコミットの確認を経てコミットする */
 const commitFromPanel = async (page: Page, message: string) => {
   await panel(page).getByRole("button", { name: /^(コミット|再試行)$/ }).click();
   const dialog = page.getByRole("dialog", { name: "コミットしますか？" });
@@ -213,13 +213,13 @@ test.describe("種類を配信していない・参照のみ", () => {
 });
 
 test.describe("編集・差分確認・コミット", () => {
-  // 修正をトップバーの件数に出し、差分確認で差分を出してから、コミットで説明と変更を送信して編集中を空にする（正常系）
+  // 修正をトップバーの件数に出し、差分確認で差分を出してから、コミットで説明と変更を送信してレビュー中のパネルを空にする（正常系）
   test("commit_edits", async ({ page }) => {
     // 準備
     const api = await open(page);
     await editTag(page, "topic:a, topic:b");
-    await expect(page.getByRole("button", { name: "編集中 1 件" })).toBeVisible();
-    await page.getByRole("button", { name: "編集中 1 件" }).click();
+    await expect(page.getByRole("button", { name: "レビュー中 1 件" })).toBeVisible();
+    await page.getByRole("button", { name: "レビュー中 1 件" }).click();
     // 実行（差分確認）
     await panel(page).getByRole("button", { name: "差分確認" }).click();
     // 検証（差分確認）
@@ -247,7 +247,7 @@ test.describe("編集・差分確認・コミット", () => {
         },
       ],
     });
-    await expect(page.getByRole("button", { name: "編集中 0 件" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "レビュー中", exact: true })).toBeVisible();
     await expect.poll(api.metadataCalls).toBeGreaterThan(before);
   });
 
@@ -260,9 +260,9 @@ test.describe("編集・差分確認・コミット", () => {
     await page.getByRole("textbox", { name: "用語" }).fill("種類");
     await page.getByRole("button", { name: "追加", exact: true }).click();
     await page.getByRole("button", { name: "旧称 を削除" }).click();
-    await expect(page.getByRole("button", { name: "編集中 2 件" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "レビュー中 2 件" })).toBeVisible();
     await page.getByRole("button", { name: "旧称 を元に戻す" }).click();
-    await expect(page.getByRole("button", { name: "編集中 1 件" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "レビュー中 1 件" })).toBeVisible();
   });
 
   // 追加の行の ID の入力チェックに当たると変更にしない（異常系）
@@ -271,7 +271,7 @@ test.describe("編集・差分確認・コミット", () => {
     await page.getByRole("button", { name: "行追加" }).click();
     await page.getByRole("textbox", { name: "ID" }).fill("Bad ID");
     await page.getByRole("button", { name: "追加", exact: true }).click();
-    await expect(page.getByRole("button", { name: "編集中 0 件" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "レビュー中", exact: true })).toBeVisible();
   });
 
   // 編集中の変更を再読み込みしても残す（正常系）
@@ -279,7 +279,7 @@ test.describe("編集・差分確認・コミット", () => {
     await open(page);
     await editTag(page, "topic:b");
     await page.reload();
-    await expect(page.getByRole("button", { name: "編集中 1 件" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "レビュー中 1 件" })).toBeVisible();
   });
 
   // パネルの変更の行から、その種類のタブの行へ移動する（正常系）
@@ -287,7 +287,7 @@ test.describe("編集・差分確認・コミット", () => {
     await open(page);
     await editTag(page, "topic:b");
     await page.getByRole("tab", { name: /用語集/ }).click();
-    await page.getByRole("button", { name: "編集中 1 件" }).click();
+    await page.getByRole("button", { name: "レビュー中 1 件" }).click();
     await panel(page).getByRole("button", { name: "タグ: docs/note/n1.yaml の行へ移動" }).click();
     await expect(page.getByRole("tab", { name: /タグ/, selected: true })).toBeVisible();
     await expect(page.locator("#metadata-row-tags-n1")).toBeFocused();
@@ -307,7 +307,7 @@ test.describe("送信の失敗", () => {
         }) as CommitReply,
     });
     await editTag(page, "topic:a, 使用できないタグ");
-    await page.getByRole("button", { name: "編集中 1 件" }).click();
+    await page.getByRole("button", { name: "レビュー中 1 件" }).click();
     // 実行
     await commitFromPanel(page, "タグを追加する");
     // 検証
@@ -316,7 +316,7 @@ test.describe("送信の失敗", () => {
     await expect(alert).toContainText("編集中の変更はそのままです。");
     await expect(panel(page)).toContainText("tags[1]: topic: で始まりません");
     await expect(panel(page).getByRole("button", { name: "再試行" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "編集中 1 件" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "レビュー中 1 件" })).toBeVisible();
   });
 
   // 編集を始めたときのコミットを使えない 409 で「最新の内容で続ける」を出し、押すと最新の内容で再取得して食い違う変更を取り消す（異常系）
@@ -332,7 +332,7 @@ test.describe("送信の失敗", () => {
         }) as CommitReply,
     });
     await editTag(page, "topic:b");
-    await page.getByRole("button", { name: "編集中 1 件" }).click();
+    await page.getByRole("button", { name: "レビュー中 1 件" }).click();
     await commitFromPanel(page, "タグを修正する");
     await expect(panel(page).getByRole("alert")).toContainText("「最新の内容で続ける」を押すと");
     // 実行
@@ -369,7 +369,7 @@ test.describe("送信の失敗", () => {
             },
     });
     await editTag(page, "topic:b");
-    await page.getByRole("button", { name: "編集中 1 件" }).click();
+    await page.getByRole("button", { name: "レビュー中 1 件" }).click();
     const before = api.metadataCalls();
     // 実行
     await commitFromPanel(page, "タグを修正する");
@@ -382,7 +382,7 @@ test.describe("送信の失敗", () => {
     await expect(result).toContainText("タグ: docs/note/n1.yaml");
     await expect(result).toContainText("n1 は参照した後に変わっています");
     await expect(result).toContainText("ブランチに残した変更は、編集中の変更から除きました。");
-    await expect(page.getByRole("button", { name: "編集中 0 件" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "レビュー中", exact: true })).toBeVisible();
     await expect.poll(() => api.metadataCalls()).toBeGreaterThan(before);
     expect(api.commits[0]).toMatchObject({ baseCommit: BASE_COMMIT });
     expect(api.commits[0]?.edits).toEqual([expect.objectContaining({ docPath: "docs/note/n1.yaml" })]);
@@ -408,13 +408,13 @@ test.describe("送信の失敗", () => {
       }),
     });
     await editTag(page, "topic:b");
-    await page.getByRole("button", { name: "編集中 1 件" }).click();
+    await page.getByRole("button", { name: "レビュー中 1 件" }).click();
     // 実行
     await panel(page).getByRole("button", { name: "差分確認" }).click();
     // 検証
     await expect(panel(page).getByRole("alert")).toContainText("コミットすると、ほかの変更と衝突して修正がブランチに残ります");
     await expect(panel(page)).toContainText("n1 は参照した後に変わっています");
-    await expect(page.getByRole("button", { name: "編集中 1 件" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "レビュー中 1 件" })).toBeVisible();
   });
 });
 
@@ -465,7 +465,7 @@ test.describe("キャンセル", () => {
       else await page.keyboard.press("Escape");
       await expect(page.getByRole("textbox", { name: "ID" })).toHaveCount(0);
       await expect(page.getByRole("button", { name: "行追加" })).toBeFocused();
-      await expect(page.getByRole("button", { name: "編集中 0 件" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "レビュー中", exact: true })).toBeVisible();
     });
   }
 
@@ -474,7 +474,7 @@ test.describe("キャンセル", () => {
     test(`cancel_commit_${how}`, async ({ page }) => {
       const api = await open(page);
       await editTag(page, "topic:b");
-      await page.getByRole("button", { name: "編集中 1 件" }).click();
+      await page.getByRole("button", { name: "レビュー中 1 件" }).click();
       await panel(page).getByRole("button", { name: "コミット" }).click();
       const dialog = page.getByRole("dialog", { name: "コミットしますか？" });
       await expect(dialog).toBeVisible();
@@ -482,7 +482,7 @@ test.describe("キャンセル", () => {
       else await page.keyboard.press("Escape");
       await expect(dialog).toHaveCount(0);
       await expect(panel(page).getByRole("button", { name: "コミット" })).toBeFocused();
-      await expect(page.getByRole("button", { name: "編集中 1 件" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "レビュー中 1 件" })).toBeVisible();
       expect(api.commits).toHaveLength(0);
     });
   }
@@ -602,11 +602,11 @@ test.describe("狭い幅とアクセシビリティ", () => {
     expect(overflow).toBeLessThanOrEqual(0);
   });
 
-  // 表と編集中のパネルを開いた画面に axe の違反が無い（正常系）
+  // 表とレビュー中のパネルを開いた画面に axe の違反が無い（正常系）
   test("axe", async ({ page }) => {
     await open(page);
     await editTag(page, "topic:b");
-    await page.getByRole("button", { name: "編集中 1 件" }).click();
+    await page.getByRole("button", { name: "レビュー中 1 件" }).click();
     await expect(panel(page)).toBeVisible();
     // パネルの開くアニメーションの途中の色で判定しない
     await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== "running"));
@@ -639,7 +639,7 @@ test.describe("文書の本文の変更", () => {
   test("locate_body_edit", async ({ page }) => {
     await seedBodyEdit(page, "description", "本文を編集する決まり", "修正後の説明");
     await open(page);
-    await page.getByRole("button", { name: "編集中 1 件" }).click();
+    await page.getByRole("button", { name: "レビュー中 1 件" }).click();
     const row = panel(page).getByRole("button", { name: "説明（docs/rule/rule-sample.yaml） の行へ移動" });
     await expect(row).toContainText("本文を編集する決まり → 修正後の説明");
     await row.click();
@@ -651,7 +651,7 @@ test.describe("文書の本文の変更", () => {
   test("locate_whole_file_edit", async ({ page }) => {
     await seedBodyEdit(page, "@file", "id: rule-sample\n", "id: rule-sample\nname: 修正後\n");
     await open(page);
-    await page.getByRole("button", { name: "編集中 1 件" }).click();
+    await page.getByRole("button", { name: "レビュー中 1 件" }).click();
     await panel(page).getByRole("button", { name: "ファイル全体（docs/rule/rule-sample.yaml） の行へ移動" }).click();
     await expect(page).toHaveURL(/\/sample\/docs\/rule\/rule-sample\.yaml\?.*edit=file/);
   });
@@ -688,7 +688,7 @@ test.describe("文書の本文の変更", () => {
         }),
       });
     });
-    await page.getByRole("button", { name: "編集中 1 件" }).click();
+    await page.getByRole("button", { name: "レビュー中 1 件" }).click();
     await commitFromPanel(page, "説明を修正する");
     await panel(page).getByRole("button", { name: "最新の内容で続ける" }).click();
     const dropped = panel(page).getByRole("status");
