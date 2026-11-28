@@ -2,7 +2,7 @@ import {
   Link,
   Outlet,
   RouterProvider,
-  createMemoryHistory,
+  createBrowserHistory,
   createRootRoute,
   createRoute,
   createRouter,
@@ -31,7 +31,9 @@ const renderGuard = (active: boolean, navigation?: ConfirmRequest) => {
     createRoute({ getParentRoute: () => rootRoute, path: "/", component: Guarded }),
     createRoute({ getParentRoute: () => rootRoute, path: "/_settings", component: () => <p>別の画面です</p> }),
   ]);
-  const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: ["/"] }) });
+  // タブを閉じる・再読み込みの警告（beforeunload）はブラウザの履歴だけが受ける
+  window.history.replaceState({}, "", "/");
+  const router = createRouter({ routeTree, history: createBrowserHistory() });
   render(
     <ConfirmDialogProvider>
       <RouterProvider router={router} />

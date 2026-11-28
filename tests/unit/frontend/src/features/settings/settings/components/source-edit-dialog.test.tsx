@@ -11,12 +11,19 @@ import { renderInRouter } from "@tests/helpers/render";
 
 const sources = [settingsSource("a")];
 
-const renderDialog = async (index: number | null, onOpenChange = vi.fn(), rows: unknown[] = sources) => {
+const renderDialog = async (
+  index: number | null,
+  onOpenChange = vi.fn(),
+  rows: unknown[] = sources,
+  browser = false,
+) => {
   const view = renderInRouter(
     <ConfirmDialogProvider>
       <SourceEditDialog open onOpenChange={onOpenChange} sources={rows as never} index={index} />
     </ConfirmDialogProvider>,
     "/_settings",
+    undefined,
+    { browser },
   );
   await screen.findByRole("dialog");
   return { onOpenChange, ...view };
@@ -183,7 +190,7 @@ test("test_source_edit_dialog_when_saving", async () => {
 });
 
 test("test_source_edit_dialog_when_leave_guard", async () => {
-  await renderDialog(null);
+  await renderDialog(null, vi.fn(), sources, true);
   const input = await screen.findByLabelText(/配信元の ID/);
 
   expect(fireBeforeUnload().defaultPrevented).toBe(false);
