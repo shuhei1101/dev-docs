@@ -4,7 +4,7 @@ import { boxOf, viewportOf } from "./support/geometry";
 import { axeViolations, openStory } from "./support/storybook";
 
 const panel = (page: Page) =>
-  page.getByRole("dialog", { name: "編集中" }).or(page.getByRole("complementary", { name: "編集中" }));
+  page.getByRole("dialog", { name: "レビュー中" }).or(page.getByRole("complementary", { name: "レビュー中" }));
 
 const noHorizontalScroll = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);

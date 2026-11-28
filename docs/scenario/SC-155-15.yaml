@@ -44,7 +44,7 @@ scenarios:
         U->>UI: タグのタブで n1 の行にタグ `topic:b` を追加する
         U->>UI: 用語集のタブで用語 `種類` の行を追加し、用語 `旧称` の行を削除する
         UI-->>U: トップバーの編集中の変更の件数 3
-        U->>UI: 編集中の変更のパネルを開き、差分確認を押す
+        U->>UI: レビュー中のパネルを開き、差分確認を押す
         UI->>SRV: sample の変更 3 件を dryRun で送信する
         SRV->>PI: POST /sources/sample/commits（dryRun）
         PI-->>SRV: 検査の合格と差分
@@ -82,7 +82,7 @@ scenarios:
         actor U as 利用者
         participant UI as dev-docs の画面
 
-        U->>UI: 画面を再読み込みし、編集中の変更のパネルを開く
+        U->>UI: 画面を再読み込みし、レビュー中のパネルを開く
         UI-->>U: 編集中の変更 2 件
         U->>UI: 用語の追加の修正を取り消す
         UI-->>U: 編集中の変更 1 件と、元の値の用語集の表
@@ -405,7 +405,7 @@ scenarios:
         U->>UI: n2 の文書の画面を開き、ファイル全体を編集して summary の値を書き換える
         U->>UI: guide.md の文書の画面を開き、ファイル全体を編集して 1 行書き換える
         UI-->>U: トップバーの編集中の変更の件数 5
-        U->>UI: 文書の画面で編集中のパネルを開き、差分確認を押す
+        U->>UI: 文書の画面でレビュー中のパネルを開き、差分確認を押す
         UI->>SRV: sample の変更 5 件を dryRun で送信する
         SRV->>PI: POST /sources/sample/commits（dryRun。n1 は項目のパスへの set、n2 は replace、guide.md は @body）
         PI-->>SRV: 検査の合格と差分
@@ -422,7 +422,7 @@ scenarios:
       <!-- /map -->
     expected:
       - 編集を押すと、`summary`・`items[0].body`・`rows` の各行に編集のボタンが出て、文書の画面の URL とサイドバーはそのまま残る
-      - 差分確認を押すと、編集中のパネルに変更ごとの差分が出て、リモートは変わらない
+      - 差分確認を押すと、レビュー中のパネルに変更ごとの差分が出て、リモートは変わらない
       - コミットすると、リモートの `develop` に 1 コミットだけ増え、変更は n1・n2 の YAML と `guide.md` だけで、n1 の修正していない項目は一字も変わらない
       - パネルにプッシュしたコミットとブランチが出て、編集中の変更が空になり、トップバーの件数が出なくなる
       - n1・n2 と `guide.md` の文書の画面に修正後の本文が出る
@@ -478,7 +478,7 @@ scenarios:
         participant SRV as 開発ドキュメントサーバー
         participant PI as project-index
 
-        U->>UI: 編集中のパネルで差分確認を押す
+        U->>UI: レビュー中のパネルで差分確認を押す
         UI->>SRV: sample の変更 2 件を dryRun で送信する
         SRV->>PI: POST /sources/sample/commits（dryRun）
         PI-->>SRV: 422（n1 の違反）
@@ -513,7 +513,7 @@ scenarios:
         participant SRV as 開発ドキュメントサーバー
         participant PI as project-index
 
-        U->>UI: 編集中のパネルからコミットする
+        U->>UI: レビュー中のパネルからコミットする
         UI->>SRV: sample の変更と、編集を始めたときのコミット
         SRV->>PI: POST /sources/sample/commits（n1 は replace と文書のバージョン、baseCommit）
         PI->>PI: 今のブランチでは n1 の文書のバージョンが合わない

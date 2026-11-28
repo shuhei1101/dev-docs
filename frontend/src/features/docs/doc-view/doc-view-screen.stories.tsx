@@ -352,19 +352,27 @@ export const DeepNestedGroups: Story = {
     await expect(
       await canvas.findByRole("button", { name: "画面の API" }),
     ).toHaveAttribute("aria-expanded", "true");
+    // パンくずは外側から内側までの group を全て並べる
+    const breadcrumb = canvas.getByRole("navigation", { name: "パンくず" });
+    await expect(
+      within(breadcrumb)
+        .getAllByRole("listitem")
+        .map((item) => item.textContent)
+        .slice(2),
+    ).toEqual(["設計書", "サーバー", "画面の API", "文書の取得"]);
   },
 };
 
 const PREVIEW = "*/_api/sources/:source/preview";
 
-const LONG_TITLE = "文書の画面から Markdown と YAML の文書の本文を編集して編集中のパネルからまとめて直コミットする決まり";
+const LONG_TITLE = "文書の画面から Markdown と YAML の文書の本文を編集してレビュー中のパネルからまとめて直コミットする決まり";
 
 /** 規約の文書（YAML）の本文の項目。変換が目印を付けたブロックごとに描く */
 const ruleBlocks = (long = false): DocEdit["blocks"] => {
   const description = long
-    ? "文書の画面から、Markdown の文書とスキーマを持つ YAML の文書の本文を、種類ごとの個別の対応を持たずにスキーマの型から選んだ部品で編集し、編集中のパネルからまとめて直コミットする決まりを定め、本文を編集するときに参照する。"
+    ? "文書の画面から、Markdown の文書とスキーマを持つ YAML の文書の本文を、種類ごとの個別の対応を持たずにスキーマの型から選んだ部品で編集し、レビュー中のパネルからまとめて直コミットする決まりを定め、本文を編集するときに参照する。"
     : "文書の画面から本文を編集する決まりを定め、本文を編集するときに参照する。";
-  const overview = "文書の画面から、どの種類の文書の本文も編集できる。\n編集した内容は編集中のパネルからまとめてコミットする。";
+  const overview = "文書の画面から、どの種類の文書の本文も編集できる。\n編集した内容はレビュー中のパネルからまとめてコミットする。";
   const rows = [
     { word: "直す", replacement: "修正" },
     { word: long ? "書き込みの API から直コミットできる種類の一覧に無い" : "消す", replacement: long ? "write_api_kinds に無い" : "削除" },
@@ -410,7 +418,7 @@ const ruleSource = [
   "    name: 概要",
   "    body: |-",
   "      文書の画面から、どの種類の文書の本文も編集できる。",
-  "      編集した内容は編集中のパネルからまとめてコミットする。",
+  "      編集した内容はレビュー中のパネルからまとめてコミットする。",
   "rows:",
   "  - word: 直す",
   "    replacement: 修正",
@@ -536,7 +544,7 @@ export const EditFieldsInline: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByRole("button", { name: "説明 を編集" }));
     await userEvent.type(canvas.getByRole("textbox", { name: "説明" }), "（追記）");
-    await expect(await canvas.findByRole("button", { name: "編集中 1 件" })).toBeInTheDocument();
+    await expect(await canvas.findByRole("button", { name: "レビュー中 1 件" })).toBeInTheDocument();
   },
 };
 
@@ -631,17 +639,17 @@ export const EditMarkdownDoc: Story = {
   parameters: { initialPath: "/sample/docs/a?edit=file", msw: editHandlers(guideDoc) },
 };
 
-/** 文書の画面で編集中のパネルを開いたとき。本文の変更をメタデータの変更と同じパネルに並べる */
+/** 文書の画面でレビュー中のパネルを開いたとき。本文の変更をメタデータの変更と同じパネルに並べる */
 export const PendingPanelOnDocView: Story = {
   beforeEach: withEdits(bodyEdits),
   parameters: { msw: editHandlers(ruleDoc()) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button", { name: "編集中 2 件" }));
+    await userEvent.click(await canvas.findByRole("button", { name: "レビュー中 2 件" }));
   },
 };
 
-/** 長いラベルの本文の変更を並べた編集中のパネル */
+/** 長いラベルの本文の変更を並べたレビュー中のパネル */
 export const PendingPanelLongLabels: Story = {
   beforeEach: withEdits([
     bodyEdit(
@@ -655,7 +663,7 @@ export const PendingPanelLongLabels: Story = {
   parameters: { msw: editHandlers(ruleDoc()) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button", { name: "編集中 1 件" }));
+    await userEvent.click(await canvas.findByRole("button", { name: "レビュー中 1 件" }));
   },
 };
 
@@ -682,7 +690,7 @@ export const BodyEditInvalid: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button", { name: "編集中 2 件" }));
+    await userEvent.click(await canvas.findByRole("button", { name: "レビュー中 2 件" }));
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(await body.findByRole("button", { name: "差分確認" }));
   },

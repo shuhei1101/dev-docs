@@ -2,41 +2,42 @@ import type { NavItem, NavTab } from "@/shared/api/generated/model";
 
 export type ActivePage = {
   tab: NavTab;
-  group: string | null;
+  /** page を入れている group の名前（タブの直下の group から外側から順） */
+  groups: string[];
   page: NavItem | null;
 };
 
 const findPage = (
   items: NavItem[],
   path: string,
-  group: string | null,
-): { group: string | null; page: NavItem } | null => {
+  groups: string[],
+): { groups: string[]; page: NavItem } | null => {
   for (const item of items) {
     if (item.kind === "page") {
-      if (item.path === path) return { group, page: item };
+      if (item.path === path) return { groups, page: item };
     } else {
-      const found = findPage(item.items ?? [], path, item.title);
+      const found = findPage(item.items ?? [], path, [...groups, item.title]);
       if (found) return found;
     }
   }
   return null;
 };
 
-/** `tabIndex` のタブ（省いたか、`path` がそのタブに無いときは `active` のタブ）から `path` の page とその group を探す */
+/** `tabIndex` のタブ（省いたか、`path` がそのタブに無いときは `active` のタブ）から `path` の page と、その page を入れている group の並びを探す */
 export const findActivePage = (
   tabs: NavTab[],
   path: string,
   tabIndex?: number,
 ): ActivePage => {
   const selected = tabIndex === undefined ? undefined : tabs[tabIndex];
-  const inSelected = selected && findPage(selected.items, path, null);
+  const inSelected = selected && findPage(selected.items, path, []);
   // 選んだタブに文書があればそのタブ、無ければ active のタブを現在地にする
   if (selected && inSelected) {
-    return { tab: selected, group: inSelected.group, page: inSelected.page };
+    return { tab: selected, groups: inSelected.groups, page: inSelected.page };
   }
   const tab = tabs.find((item) => item.active) ?? tabs[0];
-  const found = findPage(tab.items, path, null);
-  return { tab, group: found?.group ?? null, page: found?.page ?? null };
+  const found = findPage(tab.items, path, []);
+  return { tab, groups: found?.groups ?? [], page: found?.page ?? null };
 };
 
 /** タブのサイドバーの一番上の page のパスを返却する */

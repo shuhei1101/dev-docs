@@ -11,7 +11,7 @@ components:
     usecase: 文書を参照する
     role: 画面
     summary: ルートの引数で文書を参照し、トップバー・種類のタブ・サイドバー・本文・コメントのパネルを並べる
-    description: 文書は `useSuspenseQuery(documentQueryOptions(...))`、配信元とリビジョンの一覧は orval が生成した問い合わせで参照する。URL の変更は `search` を書き換える（`rev`・`base` を保つ。文書の画面の移動）。トップバーへは配信中の配信元を指定する（配信中の配信元の取り出し）。文書は本文の領域に出し（目次は mdmark が本文に描き、画面は目次の列を配置しない）、画面の先頭に本文へのスキップを配置する。`document.title` は `pageTitle` で書き換える。サイドバーと本文を並べるコンテナは幅の上限を持たず、本文は画面の幅から左右の余白・サイドバー・間隔を除いた幅になる（画面設計の `本文` の `width`）。幅の切り替え（48rem）は Tailwind の `md:` で行い、JavaScript では幅を参照しない。画面の最上位は `flex h-dvh flex-col overflow-hidden` で表示領域の高さに収め、トップバーと種類のタブを `shrink-0`、サイドバーと本文を並べる行を `min-h-0 flex-1` にして、サイドバー（`overflow-y-auto`）と本文の領域（`id="doc-scroll"` の `overflow-y-auto`）だけを縦にスクロールさせる（`sticky` は使用しない）。検索のダイアログへは、配信中の配信元の ID（配信中の配信元の取り出し）と配信していない配信元（配信していない配信元の取り出し）を指定し、`onResultSelect` は文書の画面の移動の `openSearchResult` につなぐ。48rem 以上のサイドバーは、設定のストアの `sidebarOpen`・`sidebarWidth` で出し分け、開いているときはサイドバー（`id="doc-sidebar"`、`style` の `width` に `sidebarWidth`。上端の右にサイドバーを閉じるボタン）とサイドバーの境目を、閉じているときは本文の左上にサイドバーを開くボタンを並べる。閉じる・開く・幅の変更は `setSidebarOpen`・`setSidebarWidth` で書き換える。文書の `edit` があれば、文書のタイトルの右に編集のボタンの並びを出し、URL の `edit` が `fields` なら本文の代わりに表示した場所で修正（`edit.titleBlock` があればタイトルを文書のタイトルの修正）、`file` ならファイル全体の編集を出す（`edit` が `null` の文書では `edit` を無視する）。編集中のパネルは文書の画面の中で開閉し、`onLocate` は本文の変更なら変更の `docPath` の文書を、`values` のキーが `@file` なら `edit=file`、それ以外は `edit=fields` で開き、メタデータの変更ならメタデータの画面のその行を開く
+    description: 文書は `useSuspenseQuery(documentQueryOptions(...))`、配信元とリビジョンの一覧は orval が生成した問い合わせで参照する。URL の変更は `search` を書き換える（`rev`・`base` を保つ。文書の画面の移動）。トップバーへは配信中の配信元を指定する（配信中の配信元の取り出し）。文書は本文の領域に出し（目次は mdmark が本文に描き、画面は目次の列を配置しない）、画面の先頭に本文へのスキップを配置する。`document.title` は `pageTitle` で書き換える。サイドバーと本文を並べるコンテナは幅の上限を持たず、本文は画面の幅から左右の余白・サイドバー・間隔を除いた幅になる（画面設計の `本文` の `width`）。幅の切り替え（48rem）は Tailwind の `md:` で行い、JavaScript では幅を参照しない。画面の最上位は `flex h-dvh flex-col overflow-hidden` で表示領域の高さに収め、トップバーと種類のタブを `shrink-0`、サイドバーと本文を並べる行を `min-h-0 flex-1` にして、サイドバー（`overflow-y-auto`）と本文の領域（`id="doc-scroll"` の `overflow-y-auto`）だけを縦にスクロールさせる（`sticky` は使用しない）。検索のダイアログへは、配信中の配信元の ID（配信中の配信元の取り出し）と配信していない配信元（配信していない配信元の取り出し）を指定し、`onResultSelect` は文書の画面の移動の `openSearchResult` につなぐ。48rem 以上のサイドバーは、設定のストアの `sidebarOpen`・`sidebarWidth` で出し分け、開いているときはサイドバー（`id="doc-sidebar"`、`style` の `width` に `sidebarWidth`。上端の右にサイドバーを閉じるボタン）とサイドバーの境目を、閉じているときは本文の左上にサイドバーを開くボタンを並べる。閉じる・開く・幅の変更は `setSidebarOpen`・`setSidebarWidth` で書き換える。文書の `edit` があれば、文書のタイトルの右に編集のボタンの並びを出し、URL の `edit` が `fields` なら本文の代わりに表示した場所で修正（`edit.titleBlock` があればタイトルを文書のタイトルの修正）、`file` ならファイル全体の編集を出す（`edit` が `null` の文書では `edit` を無視する）。レビュー中のパネルは文書の画面の中で開閉し、`onLocate` は本文の変更なら変更の `docPath` の文書を、`values` のキーが `@file` なら `edit=file`、それ以外は `edit=fields` で開き、メタデータの変更ならメタデータの画面のその行を開く
     state:
       - name: searchOpen
         type: boolean
@@ -51,7 +51,7 @@ components:
       - name: pendingPanelOpen
         type: boolean
         initial: 'URL の `panel` が `edits`'
-        description: 編集中のパネル
+        description: レビュー中のパネル
         notes: '`useState`（メタデータの画面から移ったときに開いたままにするため、初期値を URL から取る）'
     unit_tests:
       - name: test_doc_view_screen
@@ -92,8 +92,8 @@ components:
         expected: 編集のボタンが無く、本文が出る
       - name: test_doc_view_screen_when_pending_panel
         case: 正常
-        summary: 文書の画面で編集中のパネルを開く
-        condition: トップバーの編集中のボタンを押し、パネルの `@file` の本文の変更の行を押す
+        summary: 文書の画面でレビュー中のパネルを開く
+        condition: トップバーのレビュー中のボタンを押し、パネルの `@file` の本文の変更の行を押す
         mock: MSW のハンドラ・mdmark（偽物）
         expected: URL が変わらずにパネルが開き、行を押すとその文書を `edit=file` で開く
       - name: test_doc_view_screen_when_layout
@@ -108,7 +108,7 @@ refs:
     when: 文書の画面の構成を変えるときに、文書の画面の要素と振る舞いと突き合わせる。
   - to: CMP-155-4
     type: requires
-    when: 文書の画面に配置する編集中のパネルの引数を変えるときに突き合わせる。
+    when: 文書の画面に配置するレビュー中のパネルの引数を変えるときに突き合わせる。
 notes:
   補足: 要素とその振る舞いは画面設計『文書の画面』が持つ。
 tags:

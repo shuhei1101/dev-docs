@@ -128,7 +128,7 @@ test("test_doc_view_screen_when_pending_panel", async () => {
   const { router } = renderApp("/s/notes/n1");
   await screen.findByRole("heading", { level: 1 });
 
-  await userEvent.click(screen.getByRole("button", { name: /編集中/ }));
+  await userEvent.click(screen.getByRole("button", { name: /レビュー中/ }));
 
   expect(router.state.location.pathname).toBe("/s/notes/n1");
   await userEvent.click(await screen.findByText("ファイル全体（notes/n1.yaml）"));

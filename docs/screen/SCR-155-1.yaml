@@ -39,7 +39,7 @@ elements:
     position: 画面の上
     description: 配信元・リビジョンの切り替え、検索、コメント、設定、明暗の切り替え。スクロールしても画面に残す
     visible_when: 常時
-    action: '`sourceSelect` でその配信元のトップ（`/{配信元の ID}`）を開く。`refSelect` で `rev` を書き換えて同じ文書を再度開く。`compareStart` で `base` に、開いているリビジョンが `defaultRef` 以外なら `defaultRef`、`defaultRef` なら最近の commit の 2 件目を入れて再度開く。`searchOpen` で検索のダイアログ、`commentPanelToggle` でコメントのパネル、`sidebarOpen` で文書の一覧のドロワーを開く。`colorSchemeToggle` で明暗を切り替え、ブラウザに保存する。メタデータのボタンでその配信元のメタデータの画面を開き、`pendingPanelToggle` でこの画面の編集中のパネルを開閉する'
+    action: '`sourceSelect` でその配信元のトップ（`/{配信元の ID}`）を開く。`refSelect` で `rev` を書き換えて同じ文書を再度開く。`compareStart` で `base` に、開いているリビジョンが `defaultRef` 以外なら `defaultRef`、`defaultRef` なら最近の commit の 2 件目を入れて再度開く。`searchOpen` で検索のダイアログ、`commentPanelToggle` でコメントのパネル、`sidebarOpen` で文書の一覧のドロワーを開く。`colorSchemeToggle` で明暗を切り替え、ブラウザに保存する。メタデータのボタンでその配信元のメタデータの画面を開き、`pendingPanelToggle` でこの画面のレビュー中のパネルを開閉する'
     action_ref: IF-155-6#
   - name: 種類のタブ
     kind: tab
@@ -86,13 +86,15 @@ elements:
     kind: nav
     position: 本文の上
     description: 開いている文書の階層
-    label: '`{配信元の ID}` / `{タブ名}` / `{group の名前}` / `{文書の名前}`'
+    label: '`{配信元の ID}` / `{タブ名}` / `{外側の group の名前}` / … / `{内側の group の名前}` / `{文書の名前}`（group に入っていない文書は `{配信元の ID}` / `{タブ名}` / `{文書の名前}`）'
     visible_when: 常時（文書の無いタブでは `{配信元の ID}` / `{タブ名}`）
     source: 文書の取得.source・文書の取得.tabs[].items
     action: 配信元の ID のクリックで配信元のトップ、タブ名のクリックで `tab` を保ってそのタブの一番上の文書を開く。group と末尾はリンクにしない
     action_ref: IF-155-10#
     notes:
       読み上げ名: '`パンくず`'
+      入れ子: タブの直下から開いている文書までの group を外側から順に全て並べる。group の階層の数は配信元の設定の `nav` で決まり、パンくずは階層の数を制限しない
+      長い名前: 幅に収まらない項目は次の行へ折り返し、名前を省略しない
   - name: 文書のタイトル
     kind: label
     position: 本文の上
@@ -567,7 +569,7 @@ elements:
     visible_when: '`markdown` の項目の項目の編集ボタンを押した後'
     action: 閉じるボタン・Esc で閉じ、項目の編集ボタンへフォーカスを戻す（入力した値は残す）
     notes:
-      モーダル: モーダルにせず、背景を暗くしない。外を押しても閉じない。編集中のパネル・コメントのパネルと同じく本文の上に重ねる
+      モーダル: モーダルにせず、背景を暗くしない。外を押しても閉じない。レビュー中のパネル・コメントのパネルと同じく本文の上に重ねる
   - name: Markdown の項目のエディタ
     kind: textarea
     position: Markdown の項目のパネル
@@ -636,7 +638,7 @@ elements:
     source: 本文のプレビュー.conversionError
     notes:
       読み上げ: '`role="alert"` で、出たときに読み上げる。エディタに `aria-invalid` を付ける'
-  - name: 編集中のパネル
+  - name: レビュー中のパネル
     kind: sheet
     component: CMP-155-4#
     args:
@@ -648,7 +650,7 @@ elements:
         value: トップバーの `pendingPanelToggle` で開閉
     position: 画面の右（狭い幅では画面の下から出す面）
     description: 開いている配信元の編集中の変更の一覧と、差分確認・コミットの結果。本文を編集しながら開いたままにする
-    visible_when: トップバーの編集中のボタンを押したとき
+    visible_when: トップバーのレビュー中のボタンを押したとき
     action: '`locate` で、文書の本文の変更はその文書を編集の表示（項目のパスの変更は `edit=fields`、`@file` は `edit=file`）で開き、メタデータの変更はメタデータの画面のその行を開く。コミットした後は文書を再取得する'
     action_ref: IF-155-29#
 screen: frontend/src/features/docs/doc-view/doc-view-screen.tsx
@@ -661,7 +663,7 @@ input_checks:
     message: '`コメントを入力してください。`'
     position: 修正欄の下
 notes:
-  URL: '`/{配信元の ID}/{文書のパス}`。文書のパスを省いた `/{配信元の ID}` は配信元のトップ（一番左のタブの一番上の文書）。search パラメータは `rev`（開くリビジョン。省くと `defaultRef`）・`base`（比較元。省くと差分を出さない）・`tab`（選んだタブの番号。省くか、開いている文書がそのタブに無いときは `active` のタブ）・`edit`（本文の編集の方式。`fields`（表示した場所で修正）・`file`（ファイル全体）。省くか、`edit` が `null` の文書では編集しない）・`panel`（`edits` なら編集中のパネルを開いて始める。メタデータの画面の編集中のパネルから文書の本文の変更へ移るときに付ける）で、TanStack Router の `validateSearch` と Zod で検査する。`/` は配信中の配信元の先頭のトップへ移り、配信中の配信元が無ければ設定画面へ移る'
+  URL: '`/{配信元の ID}/{文書のパス}`。文書のパスを省いた `/{配信元の ID}` は配信元のトップ（一番左のタブの一番上の文書）。search パラメータは `rev`（開くリビジョン。省くと `defaultRef`）・`base`（比較元。省くと差分を出さない）・`tab`（選んだタブの番号。省くか、開いている文書がそのタブに無いときは `active` のタブ）・`edit`（本文の編集の方式。`fields`（表示した場所で修正）・`file`（ファイル全体）。省くか、`edit` が `null` の文書では編集しない）・`panel`（`edits` ならレビュー中のパネルを開いて始める。メタデータの画面のレビュー中のパネルから文書の本文の変更へ移るときに付ける）で、TanStack Router の `validateSearch` と Zod で検査する。`/` は配信中の配信元の先頭のトップへ移り、配信中の配信元が無ければ設定画面へ移る'
   コメントの配置先: ブラウザのタブの `sessionStorage` に、配信元の ID・リビジョン・文書のパス・見出しの並び・`quote`・`prefix`・`suffix`・本文・選択を溜める。再読み込みしても残り、タブを閉じると消える。サーバーへは送信しない
   404 のとき: 文書の取得が 404 を返却したら、URL を変えずに見つからない画面を出す（`docs/screen/見つからない画面`）
   補足: 本文の文字列にコメントを溜め、まとめてコピー・起票できる。

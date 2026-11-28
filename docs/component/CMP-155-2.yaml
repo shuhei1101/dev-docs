@@ -95,7 +95,7 @@ states:
       - name: pendingEditCount
         value: '3'
   - name: MetadataNarrow
-    description: メタデータの画面を幅 48rem 未満の場所に配置する。メタデータと編集中のボタンをアイコンと件数だけにする
+    description: メタデータの画面を幅 48rem 未満の場所に配置する。メタデータとレビュー中のボタンをアイコンと件数だけにする
     args:
       - name: screen
         value: metadata
@@ -139,7 +139,7 @@ args:
     type: 列挙
     required: true
     choices: '`doc-view` / `metadata` / `settings` / `not-found`'
-    description: 配置する画面。`settings` は配信元・リビジョンの切り替え・検索・コメント・設定を出さない。`not-found` はコメントを出さない。`doc-view` だけが狭い幅でサイドバーを開くボタンを出す。`doc-view`・`metadata` は `currentSource` があるとき、メタデータの画面を開くボタンと編集中のパネルを開くボタンを出す。`metadata` はコメントを出さない
+    description: 配置する画面。`settings` は配信元・リビジョンの切り替え・検索・コメント・設定を出さない。`not-found` はコメントを出さない。`doc-view` だけが狭い幅でサイドバーを開くボタンを出す。`doc-view`・`metadata` は `currentSource` があるとき、メタデータの画面を開くボタンとレビュー中のパネルを開くボタンを出す。`metadata` はコメントを出さない
   - name: sources
     type: オブジェクトの配列
     required: false
@@ -178,7 +178,7 @@ args:
     type: 整数
     required: false
     default: '0'
-    description: 開いている配信元の編集中の変更の件数。編集中のボタンに出す（0 のときは件数を出さない）
+    description: 開いている配信元の編集中の変更の件数。レビュー中のボタンに出す（0 のときは件数を出さない）
     enabled_when: '`screen` が `doc-view` か `metadata` で、`currentSource` がある'
 events:
   - name: sourceSelect
@@ -206,15 +206,15 @@ events:
     value: 次の `colorScheme`
     description: 明暗を切り替えて保つ
   - name: pendingPanelToggle
-    when: 編集中のボタンを押した
-    description: 開いている画面（文書の画面・メタデータの画面）で編集中のパネルを開閉する
+    when: レビュー中のボタンを押した
+    description: 開いている画面（文書の画面・メタデータの画面）でレビュー中のパネルを開閉する
 accessibility:
   - アイコンだけのボタンは `aria-label` を持つ（文書の一覧を開く・設定・明暗を固定する・`コメント {件数} 件`）
   - 配信元・リビジョンのボタンの読み上げ名に今の値を含める（`配信元を切り替える。今は {ID}`・`リビジョンを切り替える。今は {ref}`）。見える値に全角の括弧を隣接させると axe の `label-content-name-mismatch` に該当する。メニューの今の項目は `aria-current`
   - 検索のボタンは `aria-keyshortcuts="Control+K /"` を持ち、キーを表示する（読み上げ名は `検索 Ctrl K`）
   - 明暗のボタンは `aria-pressed` で固定しているかを示す
   - メニューはキーボードだけで開閉・選択でき、Esc で閉じてボタンへフォーカスを戻す
-  - メタデータのボタンはメタデータの画面へのリンク（読み上げ名 `メタデータ`。メタデータの画面では `aria-current="page"`）。編集中のボタンの読み上げ名は `編集中 {件数} 件`（0 件のときは `編集中`）
+  - メタデータのボタンはメタデータの画面へのリンク（読み上げ名 `メタデータ`。メタデータの画面では `aria-current="page"`）。レビュー中のボタンの読み上げ名は `レビュー中 {件数} 件`（0 件のときは `レビュー中`）
 notes:
   モック: '[docs/mock/components/topbar/index.html](../mock/components/topbar/index.html)'
   メニューの幅: |-

@@ -13,7 +13,7 @@ const renderDocMain = (doc: ReturnType<typeof documentResponse>, emptyTab: unkno
   renderInRouter(
     <DocMain
       doc={doc as never}
-      active={{ tab: doc.tabs[0], group: "設計", page: page("A", "a.md") } as never}
+      active={{ tab: doc.tabs[0], groups: ["設計"], page: page("A", "a.md") } as never}
       search={{}}
       refs={refsResponse() as never}
       emptyTab={emptyTab as never}

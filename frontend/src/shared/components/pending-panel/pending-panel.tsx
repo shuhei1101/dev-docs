@@ -405,7 +405,7 @@ export const PendingPanel = ({ source, branch, open, onOpenChange, onLocate }: P
           }
         >
           <SheetHeader>
-            <SheetTitle>編集中</SheetTitle>
+            <SheetTitle>レビュー中</SheetTitle>
             {edits.length > 0 && (
               <SheetDescription>
                 {source} の {branchLabel} へ、{edits.length} 件の変更をまとめてコミットします。

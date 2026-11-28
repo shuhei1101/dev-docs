@@ -665,6 +665,15 @@ test.describe("パンくず", () => {
     await expect(page).toHaveURL(/\/sample\/docs\/doc-1/);
   });
 
+  // 入れ子の group の中の文書では、外側から内側までの group を全て並べ、group はリンクにしない（正常系）
+  test("breadcrumb_when_nested_group", async ({ page }) => {
+    await openDoc(page, "/sample/docs/deep", { document: withGroups });
+    const crumb = page.getByRole("navigation", { name: "パンくず" });
+    await expect(crumb.getByRole("listitem")).toHaveText(["sample", "規約", "L1", "L2", "L3", "L4", "深い文書"]);
+    await expect(crumb.getByRole("link")).toHaveText(["sample", "規約"]);
+    await expect(crumb.getByText("深い文書")).toHaveAttribute("aria-current", "page");
+  });
+
   // 文書の無いタブでは `{配信元の ID}` / `{タブ名}` だけを出し、タブ名をリンクにしない（正常系）
   test("breadcrumb_when_empty_tab", async ({ page }) => {
     await openDoc(page, "/sample/docs/doc-1", {
@@ -2241,14 +2250,14 @@ test.describe("project-index から文書を受け取れないときの表示", 
   });
 });
 
-test.describe("編集中のボタン", () => {
-  // トップバーの編集中のボタンで、この画面の編集中のパネルを開閉する（正常系）
+test.describe("レビュー中のボタン", () => {
+  // トップバーのレビュー中のボタンで、この画面のレビュー中のパネルを開閉する（正常系）
   test("open_pending_panel", async ({ page }) => {
     await openDoc(page);
-    const button = page.getByRole("button", { name: /^編集中 \d+ 件$/ });
+    const button = page.getByRole("button", { name: /^レビュー中( \d+ 件)?$/ });
     await button.click();
     await expect(page).toHaveURL(/\/sample\/docs\/doc-1$/);
-    const panel = page.getByRole("dialog", { name: "編集中" }).or(page.getByRole("complementary", { name: "編集中" }));
+    const panel = page.getByRole("dialog", { name: "レビュー中" }).or(page.getByRole("complementary", { name: "レビュー中" }));
     await expect(panel).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(panel).toHaveCount(0);
@@ -2400,7 +2409,7 @@ const openEditable = async (
   return env;
 };
 
-const pendingButton = (page: Page, count: number) => page.getByRole("button", { name: `編集中 ${count} 件` });
+const pendingButton = (page: Page, count: number) => page.getByRole("button", { name: count > 0 ? `レビュー中 ${count} 件` : "レビュー中", exact: true });
 
 /** 表示した場所で修正の表示で、文字列の項目を修正する */
 const editInline = async (page: Page, label: string, value: string) => {
@@ -2612,14 +2621,14 @@ test.describe("ファイル全体のエディタとプレビュー", () => {
   });
 });
 
-test.describe("編集中のパネル（文書の画面）", () => {
-  // トップバーの編集中のボタンでこの画面の編集中のパネルを開閉し、本文の変更の行で文書を編集の表示で開く（正常系）
+test.describe("レビュー中のパネル（文書の画面）", () => {
+  // トップバーのレビュー中のボタンでこの画面のレビュー中のパネルを開閉し、本文の変更の行で文書を編集の表示で開く（正常系）
   test("pending_panel_on_doc_view", async ({ page }) => {
     await openEditable(page, `${RULE_URL}?edit=fields`);
     await editInline(page, "説明", "修正後の説明");
     await page.getByRole("button", { name: "編集を終了" }).click();
     await pendingButton(page, 1).click();
-    const panel = page.getByRole("dialog", { name: "編集中" }).or(page.getByRole("complementary", { name: "編集中" }));
+    const panel = page.getByRole("dialog", { name: "レビュー中" }).or(page.getByRole("complementary", { name: "レビュー中" }));
     await expect(panel).toBeVisible();
     await expect(page).toHaveURL(new RegExp(`${RULE_URL}$`));
     await panel.getByRole("button", { name: "説明（docs/rule/rule-sample.yaml） の行へ移動" }).click();

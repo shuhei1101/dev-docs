@@ -224,7 +224,7 @@ type MetadataButtonsProps = {
   onPendingPanelToggle?: () => void;
 };
 
-/** 文書の画面とメタデータの画面で出す、メタデータの画面を開くボタンと編集中のパネルを開くボタン */
+/** 文書の画面とメタデータの画面で出す、メタデータの画面を開くボタンとレビュー中のパネルを開くボタン */
 const MetadataButtons = ({
   screen,
   currentSource,
@@ -253,11 +253,11 @@ const MetadataButtons = ({
         variant="ghost"
         size="sm"
         className="px-1.5 md:px-2.5"
-        aria-label={`編集中 ${pendingEditCount} 件`}
+        aria-label={pendingEditCount > 0 ? `レビュー中 ${pendingEditCount} 件` : "レビュー中"}
         onClick={onPendingPanelToggle}
       >
         <FilePen />
-        <span className="hidden md:inline">編集中</span>
+        <span className="hidden md:inline">レビュー中</span>
         {pendingEditCount > 0 && (
           <span className="text-xs">{pendingEditCount}</span>
         )}

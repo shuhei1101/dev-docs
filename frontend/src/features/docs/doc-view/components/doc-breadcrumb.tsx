@@ -19,7 +19,7 @@ type Props = {
 };
 
 /**
- * `{配信元の ID}` / `{タブ名}` / `{group}` / `{文書の名前}`。配信元とタブだけをリンクにする。
+ * `{配信元の ID}` / `{タブ名}` / `{外側の group}` / … / `{内側の group}` / `{文書の名前}`。配信元とタブだけをリンクにする。
  * 文書の無いタブを選んでいれば `{配信元の ID}` / `{そのタブ名}` だけを並べ、タブ名を末尾の項目にする
  */
 export const DocBreadcrumb = ({ source, active, emptyTab, search }: Props) => {
@@ -27,7 +27,7 @@ export const DocBreadcrumb = ({ source, active, emptyTab, search }: Props) => {
   const query = { rev: search.rev, base: search.base };
   const trail: string[] = emptyTab
     ? []
-    : [active.group, active.page?.title ?? null].filter(
+    : [...active.groups, active.page?.title ?? null].filter(
         (item): item is string => item !== null,
       );
   return (
